@@ -563,6 +563,10 @@ describe('the loader on a page', () => {
     );
     expect(q('[data-own="overview"] .sb-tile-label').textContent).toBe('Participants');
     expect(q('.sb-caveats').textContent).toContain('Every row is synthetic');
+    // The rail folds by layer: the first is unfolded, and a press unfolds another.
+    expect(q('[data-table="adam:ADAE"]')).toBeNull();
+    expect(q('[data-group="Raw"]').getAttribute('aria-expanded')).toBe('true');
+    q('[data-group="ADaM"]').click();
     q('[data-table="adam:ADAE"]').click();
     expect(q('.sv-title').textContent).toContain('ADAE');
     expect(handle.state().viewing).toMatchObject({ view: 'tables', table: 'adam:ADAE' });

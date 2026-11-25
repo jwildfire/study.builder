@@ -287,6 +287,27 @@ describe('the viewer on a page', () => {
     expect(handle.state().view).toBe('tables');
   });
 
+  it('folds the rail by heading when a study has several: the open table’s is unfolded, a press unfolds another, and a search shows every match', () => {
+    const tables = [
+      { id: 'a1', label: 'Alpha one', group: 'A', records: [{ X: '1' }] },
+      { id: 'a2', label: 'Alpha two', group: 'A', records: [{ X: '1' }] },
+      { id: 'b1', label: 'Beta one', group: 'B', records: [{ X: '1' }] }
+    ];
+    mounted({ study: { name: 'Layers', tables } });
+    const picks = () =>
+      [...document.querySelectorAll('.sv-pick')].map((pick) => pick.dataset.table);
+    expect(picks()).toEqual(['a1', 'a2']);
+    expect(document.querySelector('[data-group="B"]').getAttribute('aria-expanded')).toBe('false');
+    press('[data-group="B"]');
+    expect(picks()).toEqual(['a1', 'a2', 'b1']);
+    press('[data-group="A"]');
+    expect(picks()).toEqual(['b1']);
+    // Opening a table from the page unfolds its heading.
+    handle.open('a2');
+    expect(picks()).toContain('a2');
+    expect(document.querySelector('.sv-group').textContent).toBe('A2');
+  });
+
   it('says so when no table names a participant, and when a study has no tables', () => {
     mounted({
       study: { tables: [{ id: 'sites', records: [{ SITE: 'A' }] }] },

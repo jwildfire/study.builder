@@ -98,7 +98,7 @@ p.sb-problems{padding-left:.7rem}
 .sb-table th{text-align:left;padding:.4rem .7rem;border-bottom:1px solid var(--sb-line);font-weight:600}
 .sb-table td{padding:.35rem .7rem;border-bottom:1px solid var(--sb-rule);font-variant-numeric:tabular-nums}
 .sb-caveats{font-size:.86rem;color:var(--sb-soft)}
-.sb-caveats summary{cursor:pointer;min-height:2.4rem;display:flex;align-items:center}
+.sb-caveats summary{cursor:pointer;min-height:2.4rem;line-height:2.4rem;text-decoration:underline}
 .sb-caveats ul{margin:.2rem 0 0;padding-left:1.2rem}
 `;
 

@@ -1,6 +1,6 @@
 # study.builder v0.3.0 (Upcoming)
 
-Release candidate: v0.3.0-rc.1. A study comes in layers, opens without waiting once it is saved or ready-made, and is looked through with study.viewer. v0.2.0 was never released: everything under it is here.
+Release candidate: v0.3.0-rc.2. A study comes in layers, opens without waiting once it is saved or ready-made, and is looked through with study.viewer. v0.2.0 was never released: everything under it is here.
 
 - **Three modules.** The engine (make and keep a study), the viewer (look through any study) and the loader (the screens) are separate folders with boundaries a test holds. `ARCHITECTURE.md` has the picture.
 - **A library first.** The loader opens on the studies you can have at once, ready-made or saved, with the form behind New study. With nothing to list it opens on the form.

@@ -108,6 +108,8 @@ export function mountViewer(
   let shown = PAGE;
   let find = '';
   let adding = false; // whether the form that adds a filter is open
+  const groupsOpen = new Set(); // the headings of the rail that are unfolded
+  const groupsSeen = new Set(); // the headings the open table has unfolded once
   const rolesOpen = new Set(); // the tables whose set mapping rows are unfolded
   let people = null; // the study's participants, found when first asked for
   let person = null;
@@ -153,16 +155,36 @@ export function mountViewer(
     }
     const wanted = find.trim().toLowerCase();
     const open = table();
-    for (const group of groupsOf(study)) {
+    const groups = groupsOf(study);
+    // Several headings fold: the one the open table is under is unfolded, and
+    // the reader unfolds the rest. One heading, or a search, shows everything.
+    const folding = groups.filter((group) => group.name).length > 1 && !wanted;
+    if (folding && open && !groupsSeen.has(open.group)) {
+      groupsSeen.add(open.group);
+      groupsOpen.add(open.group);
+    }
+    for (const group of groups) {
       const listed = group.tables.filter(
         (one) => !wanted || `${one.label} ${one.id}`.toLowerCase().includes(wanted)
       );
       if (!listed.length) continue;
+      const unfolded = !folding || groupsOpen.has(group.name);
       if (group.name) {
-        const head = el('div', 'sv-group');
+        const head = folding
+          ? button('sv-group sv-fold', undefined, () => {
+              if (groupsOpen.has(group.name)) groupsOpen.delete(group.name);
+              else groupsOpen.add(group.name);
+              draw();
+            })
+          : el('div', 'sv-group');
+        if (folding) {
+          head.dataset.group = group.name;
+          head.setAttribute('aria-expanded', String(unfolded));
+        }
         head.append(el('span', null, group.name), el('span', null, String(group.tables.length)));
         nav.append(head);
       }
+      if (!unfolded) continue;
       for (const one of listed) {
         const pick = button('sv-pick', undefined, () => {
           tableId = one.id;
@@ -768,6 +790,8 @@ export function mountViewer(
         tableId = null;
         shown = PAGE;
         find = '';
+        groupsOpen.clear();
+        groupsSeen.clear();
         if (extra.length) view = extra[0].id;
       }
       draw();
@@ -775,7 +799,11 @@ export function mountViewer(
     },
     /** Open a table by its id. */
     open(id) {
-      if (study.tables.some((one) => one.id === id)) tableId = id;
+      const found = study.tables.find((one) => one.id === id);
+      if (found) {
+        tableId = id;
+        groupsOpen.add(found.group);
+      }
       shown = PAGE;
       draw();
       told();

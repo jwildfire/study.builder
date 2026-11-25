@@ -14,12 +14,18 @@ export const VIEWER_STYLES = `
 .sv *,.sv *::before,.sv *::after{box-sizing:border-box}
 .sv button{font:inherit;color:inherit;cursor:pointer}
 .sv :focus-visible{outline:2px solid var(--sv-accent);outline-offset:2px}
-.sv-rail{flex:1 1 13rem;max-width:17rem;min-width:0;display:flex;flex-direction:column;gap:.1rem;padding:0 0 1rem}
+.sv-rail{flex:1 1 13rem;max-width:16rem;min-width:0;display:flex;flex-direction:column;gap:1px;align-self:flex-start;position:sticky;top:.5rem;max-height:calc(100vh - 1rem);overflow-y:auto;padding:.5rem;background:var(--sv-card);border:1px solid var(--sv-rule);border-radius:12px}
 .sv-main{flex:999 1 28rem;min-width:0;display:flex;flex-direction:column;gap:.7rem}
 .sv-find,.sv-input{min-height:2.5rem;padding:0 .6rem;border:1px solid var(--sv-line);border-radius:8px;background:var(--sv-card);color:var(--sv-ink);font:inherit}
-.sv-find{width:100%;margin:0 0 .4rem}
-.sv-group{display:flex;justify-content:space-between;padding:.8rem .6rem .3rem;font:600 .68rem/1.2 var(--sv-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--sv-soft)}
-.sv-pick{display:flex;justify-content:space-between;align-items:center;gap:.6rem;width:100%;min-height:2.5rem;padding:.3rem .6rem;border:0;border-radius:8px;background:none;text-align:left}
+.sv-find{width:100%;min-height:2.2rem;margin:0 0 .3rem}
+.sv-group{display:flex;justify-content:space-between;align-items:center;gap:.5rem;width:100%;margin-top:.2rem;padding:.5rem .5rem .3rem;border:0;background:none;font:600 .68rem/1.2 var(--sv-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--sv-soft)!important;text-align:left}
+.sv-group:first-of-type,.sv-find+.sv-group{margin-top:0}
+.sv-fold{min-height:2.2rem;padding:.3rem .5rem;border-radius:8px}
+.sv-fold:hover{background:var(--sv-sink)}
+.sv-fold span:first-child::before{content:"▸";display:inline-block;width:1.1em;font-size:.8rem}
+.sv-fold[aria-expanded=true] span:first-child::before{content:"▾"}
+.sv-fold[aria-expanded=true]{color:var(--sv-ink)!important}
+.sv-pick{display:flex;justify-content:space-between;align-items:center;gap:.6rem;width:100%;min-height:2rem;padding:.2rem .5rem .2rem 1.1rem;border:0;border-radius:8px;background:none;text-align:left;font-size:.86rem}
 .sv-pick:hover{background:var(--sv-sink)}
 .sv-pick[aria-current=true]{background:var(--sv-accent-soft);color:var(--sv-accent);font-weight:600}
 .sv-pick-name{min-width:0;overflow-wrap:anywhere}
