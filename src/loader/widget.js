@@ -89,6 +89,7 @@ export function sizeSaid(settings) {
  * @param {?string} [options.theme] `light` or `dark`; the reader's own setting unless told.
  * @param {string|Object[]|false} [options.presets] Ready-made studies and settings: the address of a list (`presets/index.json` under the base unless told), the presets themselves, or `false` for none.
  * @param {Object|false} [options.shelf] Where the reader's saved studies and settings are kept (`createShelf`); this browser unless told, and `false` for nowhere.
+ * @param {Array<{label: string, url: string}>|false} [options.protocols] Ready-made protocols the form offers to try, each a name and the address of a protocol file; the CDISC pilot protocol under the base unless told, and `false` for none.
  * @param {Function} [options.createBuilder] Something else to make the builder with; used by the tests.
  * @param {(name: string, bytes: Uint8Array|string, type: string) => void} [options.save] Something else to save a file with; used by the tests.
  * @returns {{build: Function, open: Function, show: Function, study: Function, settings: Function, state: Function, destroy: Function}} The handle.
@@ -109,7 +110,8 @@ export function mount(
     createBuilder: make = createBuilder,
     save = saveFile,
     presets: presetsGiven = undefined,
-    shelf: shelfGiven = undefined
+    shelf: shelfGiven = undefined,
+    protocols: protocolsGiven = undefined
   } = {}
 ) {
   const root = typeof target === 'string' ? document.querySelector(target) : target;
@@ -149,6 +151,18 @@ export function mount(
   };
   take(form);
 
+  const withSlash = base.endsWith('/') ? base : `${base}/`;
+  const readyProtocols =
+    protocolsGiven === false
+      ? []
+      : Array.isArray(protocolsGiven)
+        ? protocolsGiven
+        : [
+            {
+              label: 'CDISC pilot protocol',
+              url: `${withSlash}protocols/cdisc-pilot.protocol.json`
+            }
+          ];
   let presets = Array.isArray(presetsGiven) ? presetsGiven : [];
   const shelf = shelfGiven === false ? null : shelfGiven || createShelf();
   let shelved = [];
@@ -803,6 +817,23 @@ export function mount(
         'Have a protocol? Open a CDISC USDM study definition (the data form of an ICH M11 protocol) and the study is built on its schedule of activities. ',
         fileButton()
       );
+      // A ready-made protocol, to try with no file at hand.
+      for (const ready of readyProtocols) {
+        const tryIt = button(
+          '',
+          `Try the ${ready.label}`,
+          () =>
+            attempt(async () => {
+              const response = await globalThis.fetch(ready.url);
+              if (!response || !response.ok) {
+                throw new Error(`The ${ready.label} could not be fetched from this page.`);
+              }
+              await openDocument(await response.json(), 'a ready-made protocol');
+            }),
+          'try-protocol'
+        );
+        ask.append(tryIt);
+      }
       main.append(ask);
     }
 

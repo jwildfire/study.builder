@@ -228,6 +228,28 @@ describe('a protocol in the loader', () => {
     expect(q('.sb-grid tr[data-simulated="false"] .sb-pill').textContent).toBe('Not simulated');
   });
 
+  it('offers a ready-made protocol to try, fetched from the page; one that cannot be fetched is said', async () => {
+    const fetched = vi.fn(async () => ({ ok: true, json: async () => pilot() }));
+    vi.stubGlobal('fetch', fetched);
+    mounted({ protocols: [{ label: 'pilot protocol', url: './p.json' }] });
+    const tryIt = q('[data-action="try-protocol"]');
+    expect(tryIt.textContent).toBe('Try the pilot protocol');
+    tryIt.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(fetched).toHaveBeenCalledWith('./p.json');
+    expect(handle.settings().protocol.visits).toHaveLength(16);
+    q('[data-action="remove-protocol"]').click();
+    vi.stubGlobal('fetch', async () => ({ ok: false }));
+    q('[data-action="try-protocol"]').click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(handle.state().said).toBe('The pilot protocol could not be fetched from this page.');
+    vi.unstubAllGlobals();
+    mounted({ protocols: false });
+    expect(q('[data-action="try-protocol"]')).toBeNull();
+  });
+
   it('a visit’s day is changed, a visit removed and added, and an activity ticked off; Build sends R the plan as changed', async () => {
     const { runs, saved } = mounted();
     await handle.open(USDM);
