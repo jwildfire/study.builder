@@ -64,9 +64,10 @@
     {
       "id": "cdisc-pilot-protocol",
       "name": "CDISC pilot protocol: 16 visits on its schedule of activities",
-      "about": "Read from the pilot study's CDISC USDM file. Visits, vital signs and labs follow the protocol's schedule of activities.",
+      "about": "Read from the pilot study's CDISC USDM file. Visits, vital signs and labs follow the protocol's schedule of activities. Bilirubin is added to its chemistry panel, which the file's lab list leaves out.",
       "hosted": true,
       "protocol": "protocols/cdisc-pilot.protocol.json",
+      "collects": { "Chemistry": ["Bilirubin"] },
       "settings": {
         "name": "PILOT-PROTOCOL",
         "phase": "P2",

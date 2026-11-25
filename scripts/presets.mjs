@@ -23,16 +23,21 @@ import { readSettings } from '../src/engine/core.js';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const folder = path.join(root, 'presets');
 // A preset may name a protocol file; its settings then carry that protocol.
+// It may also add tests to an activity of that protocol, by the activity's
+// name (`collects`): the protocol file itself stays what its reader made.
+function protocolOf(file, collects = {}) {
+  const protocol = JSON.parse(readFileSync(path.join(folder, '..', file), 'utf8'));
+  for (const [name, tests] of Object.entries(collects)) {
+    const activity = protocol.activities.find((one) => one.name === name);
+    if (!activity) throw new Error(`${file} has no activity named ${name}.`);
+    activity.collects = [...new Set([...activity.collects, ...tests])];
+  }
+  return protocol;
+}
 const source = JSON.parse(readFileSync(path.join(folder, 'presets.json'), 'utf8')).presets.map(
-  ({ protocol, ...preset }) =>
+  ({ protocol, collects, ...preset }) =>
     protocol
-      ? {
-          ...preset,
-          settings: {
-            ...preset.settings,
-            protocol: JSON.parse(readFileSync(path.join(folder, '..', protocol), 'utf8'))
-          }
-        }
+      ? { ...preset, settings: { ...preset.settings, protocol: protocolOf(protocol, collects) } }
       : preset
 );
 // A hosted study is kept gzipped: its tables are text, and shrink to a twentieth.
