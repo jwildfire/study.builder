@@ -1,5 +1,5 @@
-// study.builder on a page: a form for the trial, a card for each domain, and,
-// once a study is built, what each domain holds: its rows, its columns and
+// study.builder on a page: a form for the trial, the layers to build, the raw
+// domains folded into one line, and, once a study is built, what each table holds: its rows, its columns and
 // their types, its first rows, and a download. The standard files made from
 // the raw domains say, column by column, where each came from.
 //
@@ -107,6 +107,7 @@ export function mount(
     )
   );
   let shownLayer = 'raw'; // the layer whose tables are listed, once a study is built
+  let domainsOpen = false; // whether the list of raw domains is unfolded
   // idle → building → done, or → failed.
   let phase = 'idle';
   let stage = '';
@@ -296,52 +297,61 @@ export function mount(
     return button;
   }
 
-  function domainCards() {
+  /**
+   * The raw domains, folded shut: one line saying how many are chosen, and
+   * inside it a tick for each. What a built domain holds is on the Raw tab.
+   */
+  function domainChoices() {
     const included = new Set(withNeeds([...chosen]));
-    const cards = el('ul', 'sb-cards');
+    const fold = el('details', 'sb-domains');
+    fold.open = domainsOpen;
+    fold.addEventListener('toggle', () => {
+      domainsOpen = fold.open;
+    });
+    const summary = el('summary', 'sb-domains-summary');
+    summary.append(
+      el('strong', null, 'Raw domains'),
+      el('span', null, ` ${included.size} of ${DOMAINS.length} in the study. `),
+      el('span', 'sb-domains-hint', 'Change')
+    );
+    fold.append(summary);
+    const list = el('ul', 'sb-domain-list');
     for (const domain of DOMAINS) {
-      const id = `raw:${domain.id}`;
-      const on = included.has(domain.id);
       // A domain another needs is in the study whether or not it is ticked.
       const neededBy = DOMAINS.filter(
         (other) => other.needs === domain.id && chosen.has(other.id)
       ).map((other) => other.label);
-      const card = el('li', 'sb-card');
-      card.dataset.domain = domain.id;
-      card.dataset.on = String(on);
-      card.dataset.open = String(open === id);
-      const head = el('label', 'sb-card-head');
+      const item = el('li', 'sb-domain');
+      item.dataset.domain = domain.id;
+      item.dataset.on = String(included.has(domain.id));
+      // What one row is, said on hover and to a screen reader.
+      item.title = `${domain.grain}.`;
+      const line = el('label', 'sb-domain-line');
       const box = el('input');
       box.type = 'checkbox';
-      box.checked = on;
+      box.checked = included.has(domain.id);
       box.disabled = domain.core || neededBy.length > 0 || phase === 'building';
+      box.setAttribute('aria-label', `${domain.label}: ${domain.grain}`);
       box.onchange = () => {
         if (box.checked) chosen.add(domain.id);
         else chosen.delete(domain.id);
         draw();
       };
-      head.append(
-        box,
-        el('span', 'sb-card-name', domain.label),
-        el('span', 'sb-card-id', domain.table)
-      );
-      card.append(head, el('p', 'sb-card-grain', domain.grain));
-      const foot = el('div', 'sb-card-foot');
-      if (domain.core) foot.append(el('span', 'sb-tag', 'Always'));
-      if (neededBy.length) foot.append(el('span', 'sb-tag', `Needed by ${neededBy.join(', ')}`));
+      line.append(box, el('span', 'sb-domain-name', domain.label));
+      if (domain.core) line.append(el('span', 'sb-domain-note', 'always'));
+      if (neededBy.length) {
+        line.append(el('span', 'sb-domain-note', `needed by ${neededBy.join(', ')}`));
+      }
       if (domain.large) {
-        const tag = el('span', 'sb-tag', 'Large');
+        const tag = el('span', 'sb-domain-note', 'large');
         tag.dataset.kind = 'large';
-        foot.append(tag);
+        line.append(tag);
       }
-      const built = study && study.domains.find((table) => table.id === domain.id);
-      if (built) {
-        foot.append(el('span', 'sb-rows', count(built.rows, 'row')), detailsButton(id));
-      }
-      card.append(foot);
-      cards.append(card);
+      item.append(line);
+      list.append(item);
     }
-    return cards;
+    fold.append(list);
+    return fold;
   }
 
   /** The optional layers, each with a tick: which are built off raw. */
@@ -523,8 +533,7 @@ export function mount(
     );
 
     shell.append(el('h3', null, 'The trial'), trialForm());
-    shell.append(el('h3', null, 'Raw domains'), domainCards());
-    shell.append(el('h3', null, 'Layers'), layerChoices());
+    shell.append(el('h3', null, 'Layers'), layerChoices(), domainChoices());
 
     const actions = el('div', 'sb-actions');
     const go = el('button', 'sb-button', phase === 'building' ? 'Building…' : 'Build');

@@ -423,22 +423,48 @@ describe('the builder on a page', () => {
   const card = (id) => document.querySelector(`[data-domain="${id}"]`);
   const box = (id) => card(id).querySelector('input');
 
-  it('opens on the form and a card for every domain, with nothing asked of R', () => {
+  it('opens on the trial, then the layers, then the raw domains folded into one line, with nothing asked of R', () => {
     const { r } = mounted();
     expect(document.querySelector('[name="participants"]').value).toBe('150');
+    expect([...document.querySelectorAll('.sb h3')].map((h) => h.textContent)).toEqual([
+      'The trial',
+      'Layers',
+      'What a study built here is, and is not'
+    ]);
+    const fold = document.querySelector('.sb-domains');
+    expect(fold.open).toBe(false);
+    expect(fold.querySelector('summary').textContent).toContain(
+      'Raw domains 11 of 19 in the study.'
+    );
+    // The fold comes after the layers, and holds a tick for every domain.
+    expect(
+      document.querySelector('.sb-layer-choices').compareDocumentPosition(fold) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
     expect(document.querySelectorAll('[data-domain]')).toHaveLength(19);
     expect(box('SUBJ').checked && box('SUBJ').disabled).toBe(true);
-    expect(card('SUBJ').textContent).toContain('Always');
+    expect(card('SUBJ').textContent).toContain('always');
+    expect(card('SUBJ').title).toBe('One row per participant, screened or enrolled.');
     expect(box('AE').checked).toBe(true);
     expect(box('DATACHG').checked).toBe(false);
-    expect(card('DATACHG').textContent).toContain('Large');
+    expect(card('DATACHG').textContent).toContain('large');
     expect(document.querySelector('.sb-status').textContent).toContain('downloads about 55 MB');
     expect(r.connect).not.toHaveBeenCalled();
   });
 
+  it('keeps the domains unfolded across a redraw once the reader has opened them', () => {
+    mounted();
+    const fold = document.querySelector('.sb-domains');
+    fold.open = true;
+    fold.dispatchEvent(new Event('toggle'));
+    box('PK').click();
+    expect(document.querySelector('.sb-domains').open).toBe(true);
+    expect(document.querySelector('.sb-domains summary').textContent).toContain('12 of 19');
+  });
+
   it('keeps a domain another needs in the study, and says which needs it', () => {
     mounted();
-    expect(card('VISIT').textContent).toContain('Needed by Vital signs');
+    expect(card('VISIT').textContent).toContain('needed by Vital signs');
     expect(box('VISIT').disabled).toBe(true);
     box('VS').click();
     expect(box('VISIT').disabled).toBe(false);
@@ -480,10 +506,11 @@ describe('the builder on a page', () => {
     expect(document.querySelector('[data-built]').textContent).toContain(
       'BUILT-001 is a simulated Phase 2 Oncology study'
     );
-    expect(card('AE').querySelector('.sb-rows').textContent).toBe('1 row');
-    expect(card('SUBJ').querySelector('.sb-rows').textContent).toBe('2 rows');
-    // A domain the study does not hold has no rows to show.
-    expect(card('LB').querySelector('.sb-rows')).toBeNull();
+    const rows = (id) => document.querySelector(`[data-table="${id}"] .sb-rows`).textContent;
+    expect(rows('raw:AE')).toBe('1 row');
+    expect(rows('raw:SUBJ')).toBe('2 rows');
+    // A domain the study does not hold has no card on the Raw tab.
+    expect(document.querySelector('[data-table="raw:LB"]')).toBeNull();
     // The study, layer by layer: raw is the open layer, and each has a tab.
     expect(
       [...document.querySelectorAll('[data-layer-tab]')].map((tab) => tab.textContent)
@@ -518,7 +545,7 @@ describe('the builder on a page', () => {
     ]);
     expect(preview.querySelectorAll('tbody tr')).toHaveLength(2);
     expect(panel.textContent).toContain('All 2 rows');
-    expect(card('SUBJ').dataset.open).toBe('true');
+    expect(document.querySelector('[data-table="raw:SUBJ"]').dataset.open).toBe('true');
     panel.querySelector('[data-download]').click();
     expect(saved).toEqual([{ name: 'Raw_SUBJ.csv', bytes: RAW[0].text, type: 'text/csv' }]);
     // Pressing it again hides the details.
