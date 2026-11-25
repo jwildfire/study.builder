@@ -31,6 +31,7 @@ study.builder is three modules and a small shared one. Each has one job, and a t
 - **A page's own views.** `mount(..., { views: [{ id, label, render }] })` puts a page's views before the viewer's three. The loader uses it for the study overview.
 - **Mapping.** A table may carry `roles`: what a page reads from it (`{ id, label, kind, value, options, needed }`). The viewer shows them in Columns and calls `onRole(table, role, value)`; the page changes its mapping and hands the study back with `setStudy(next, { keep: true })`. The viewer holds no mapping of its own.
 - **A study, kept.** `savedOf(study)` is the settings and what R returned; `openStudy(document)` rebuilds the same study with no R and checks its key. Presets are a list of settings, some with the address of such a document.
+- **A protocol.** `src/engine/protocol.js` holds study.builder's own small model of a design (visits with day and window, activities, which is at which) and the one reader that fills it from CDISC USDM. Settings carry a `protocol`; R is sent it as text with the plan worked out; nothing else knows USDM.
 - **A host page** (safety.viz) uses the engine to list and open studies, the loader's describe screen to make one, and the viewer to look through whatever is loaded, simulated or not.
 
 ## What moves where later

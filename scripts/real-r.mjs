@@ -257,6 +257,82 @@ check(
   refused
 );
 
+// A protocol's schedule: the CDISC pilot study, read from its USDM file.
+const { planOf, protocolSettings, readUsdm } = await import('../src/engine/protocol.js');
+const { LIMITS } = await import('../src/engine/core.js');
+const protocol = readUsdm(
+  readFileSync(path.join(root, 'vendor/cdisc-ddf-ra/CDISC_Pilot_Study.json'), 'utf8')
+);
+const planned = planOf(protocol);
+const scheduled = await build({
+  ...protocolSettings(protocol, LIMITS).settings,
+  domains: ['VISIT', 'VS', 'LB', 'AE'],
+  participants: 60,
+  sites: 6,
+  seed: 11,
+  protocol
+});
+const visitRows = firstRows(scheduled.table('raw', 'VISIT').text, Infinity);
+const visitAt = visitRows.header.indexOf('visit');
+const visitNames = new Set(visitRows.rows.map((row) => row[visitAt]));
+check(
+  'with a protocol, every visit made is one the schedule names, and the early ones are all there',
+  [...visitNames].every((name) => planned.some((visit) => visit.name === name)) &&
+    ['Screening 1', 'Baseline', 'Week 2'].every((name) => visitNames.has(name)),
+  [...visitNames].join(', ')
+);
+const subjRows = firstRows(scheduled.table('raw', 'SUBJ').text, Infinity);
+const dateOf = Object.fromEntries(
+  subjRows.rows.map((row) => [
+    row[subjRows.header.indexOf('subjid')],
+    row[subjRows.header.indexOf('firstdosedate')] || row[subjRows.header.indexOf('enrolldt')]
+  ])
+);
+const [subjAt, dateAt] = ['subjid', 'visit_dt'].map((name) => visitRows.header.indexOf(name));
+const lateness = visitRows.rows
+  .filter((row) => dateOf[row[subjAt]])
+  .map((row) => {
+    const visit = planned.find((one) => one.name === row[visitAt]);
+    const days = Math.round((new Date(row[dateAt]) - new Date(dateOf[row[subjAt]])) / 864e5);
+    const offset = visit.day > 0 ? visit.day - 1 : visit.day;
+    return days - offset >= -visit.before && days - offset <= visit.after;
+  });
+check(
+  'every visit of an enrolled participant is on its planned day, within its window',
+  lateness.length > 0 && lateness.every(Boolean),
+  `${lateness.filter((ok) => !ok).length} of ${lateness.length} outside`
+);
+const vsRows = firstRows(scheduled.table('raw', 'VS').text, Infinity);
+const vsVisits = new Set(vsRows.rows.map((row) => row[vsRows.header.indexOf('visit')]));
+check(
+  'vital signs are taken only at the visits the schedule takes them',
+  [...vsVisits].every((name) => planned.find((visit) => visit.name === name).vs) &&
+    !vsVisits.has('Week 8 Home'),
+  [...vsVisits].join(', ')
+);
+const lbRows = firstRows(scheduled.table('raw', 'LB').text, Infinity);
+const lbAt = ['visnam', 'battrnam', 'lbtstnam'].map((name) => lbRows.header.indexOf(name));
+const chemistry = new Set(
+  lbRows.rows.filter((row) => row[lbAt[1]] === 'CHEMISTRY').map((row) => row[lbAt[2]])
+);
+check(
+  'labs are drawn where the schedule draws them: chemistry has the seven tests the protocol lists, and Screening 2 has none',
+  chemistry.size === 7 &&
+    !lbRows.rows.some((row) => row[lbAt[0]] === 'Screening 2') &&
+    lbRows.rows.some((row) => row[lbAt[1]] === 'HEMATOLOGY'),
+  `${chemistry.size} chemistry tests`
+);
+check(
+  'the study keeps its protocol, says so in its notes, and still builds every layer',
+  scheduled.protocol.visits.length === 16 &&
+    scheduled.notes.some((note) =>
+      /follow the protocol's schedule: 16 planned visits/.test(note)
+    ) &&
+    scheduled.layers.length === 5 &&
+    scheduled.table('adam', 'ADVS').rows > 0 &&
+    scheduled.table('reporting', 'Results').rows > 0
+);
+
 // A saved study opens to the study it was saved from, with no R.
 const { openStudy, savedOf } = await import('../src/engine/saved.js');
 const reopened = await openStudy(JSON.parse(JSON.stringify(savedOf(first))));

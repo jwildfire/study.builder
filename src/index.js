@@ -72,3 +72,16 @@ export {
   savedOf,
   settingsOfArgs
 } from './engine/saved.js';
+export {
+  ACTIVITY_DOMAINS,
+  PROTOCOL_FORMAT,
+  ProtocolError,
+  daysOf,
+  domainOf,
+  isUsdm,
+  planOf,
+  protocolSaid,
+  protocolSettings,
+  readProtocol,
+  readUsdm
+} from './engine/protocol.js';

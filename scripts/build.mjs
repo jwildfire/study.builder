@@ -80,6 +80,8 @@ for (const [name, text] of built) writeFileSync(path.join(out, name), text);
 cpSync(path.join(root, 'r'), path.join(out, 'r'), { recursive: true });
 cpSync(path.join(root, 'vendor'), path.join(out, 'vendor'), { recursive: true });
 cpSync(path.join(root, 'workflows'), path.join(out, 'workflows'), { recursive: true });
+// The ready-made protocols, for a page that wants one by itself.
+cpSync(path.join(root, 'protocols'), path.join(out, 'protocols'), { recursive: true });
 // The presets a page offers: the list, and each hosted study.
 mkdirSync(path.join(out, 'presets'), { recursive: true });
 for (const name of readdirSync(path.join(root, 'presets'))) {

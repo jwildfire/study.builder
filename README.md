@@ -160,6 +160,23 @@ A second, separate module in this repository: a viewer for any study's tables. I
 
 With no page: `viewerStudy`, `rowsOf`, `filterRows`, `sortRows`, `profileOf`, `participantsOf`, `participantOf`.
 
+## A protocol's schedule of activities
+
+A study can be built on a protocol's schedule in place of the simulator's own eight visits.
+
+```js
+const protocol = StudyBuilder.readUsdm(usdmJson); // a CDISC USDM study definition
+const { settings } = StudyBuilder.protocolSettings(protocol, StudyBuilder.LIMITS);
+const study = await StudyBuilder.buildStudy({ ...settings, protocol });
+study.protocol.visits; // the schedule the build followed
+```
+
+- **What is read.** The first design's main timeline: each visit's name, epoch, study day and window; the activities; which activity is at which visit; and what an activity collects, where the protocol lists it. Also the phase, planned participants, arms and indication.
+- **What a build does with it.** Visits, vital signs and labs follow the schedule. An activity stands for a domain by its name (`ACTIVITY_DOMAINS`); a page may set `activity.domain` itself.
+- **What it does not do yet.** Treatment arms, branching and sub-timelines, eligibility and endpoints are kept and shown, and simulate nothing. FHIR is not read, and a protocol is not written back as USDM.
+- **Why USDM.** ICH M11's technical specification leaves the schedule of activities as a table, text or image. CDISC's USDM is the model that carries it as data.
+- **The example.** `vendor/cdisc-ddf-ra/` holds CDISC's pilot study as a USDM file, from [DDF-RA](https://github.com/cdisc-org/DDF-RA) under CC-BY-4.0, with its record. `npm run protocols` reads it into `protocols/cdisc-pilot.protocol.json`.
+
 ## How it is put together
 
 Three modules with boundaries a test holds: the engine makes and keeps a study, the viewer looks through any study, and the loader is the screens. See [ARCHITECTURE.md](ARCHITECTURE.md).

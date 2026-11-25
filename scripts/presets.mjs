@@ -22,7 +22,19 @@ import { readSettings } from '../src/engine/core.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const folder = path.join(root, 'presets');
-const source = JSON.parse(readFileSync(path.join(folder, 'presets.json'), 'utf8')).presets;
+// A preset may name a protocol file; its settings then carry that protocol.
+const source = JSON.parse(readFileSync(path.join(folder, 'presets.json'), 'utf8')).presets.map(
+  ({ protocol, ...preset }) =>
+    protocol
+      ? {
+          ...preset,
+          settings: {
+            ...preset.settings,
+            protocol: JSON.parse(readFileSync(path.join(folder, '..', protocol), 'utf8'))
+          }
+        }
+      : preset
+);
 // A hosted study is kept gzipped: its tables are text, and shrink to a twentieth.
 const fileOf = (preset) => `${preset.id}.study.json.gz`;
 

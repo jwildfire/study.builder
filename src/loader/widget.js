@@ -39,6 +39,13 @@ import {
   readDocument,
   savedOf
 } from '../engine/saved.js';
+import {
+  ACTIVITY_DOMAINS,
+  planOf,
+  protocolSaid,
+  protocolSettings,
+  readProtocol
+} from '../engine/protocol.js';
 import { mountViewer } from '../viewer/widget.js';
 import { fromBuilt } from '../viewer/built.js';
 import { injectStyles } from './styles.js';
@@ -238,11 +245,215 @@ export function mount(
     if (!destroyed) draw();
   }
 
+  /** Take a protocol: the form is filled from it, and its schedule is the form's. */
+  function takeProtocol(protocol, from) {
+    const filled = protocolSettings(protocol, LIMITS);
+    const { domains, ...settings } = filled.settings;
+    form = { ...form, ...settings, protocol };
+    for (const id of domains) {
+      if (DOMAINS.some((domain) => domain.id === id && !domain.core)) chosen.add(id);
+    }
+    say(
+      [
+        `The protocol ${protocol.name} is in the form, ${from}: ${protocolSaid(protocol)}.`,
+        ...filled.notes,
+        'Build makes a study on its schedule.'
+      ].join(' ')
+    );
+    go('describe');
+  }
+
+  /** Change the form's protocol, and draw. A change that leaves it no protocol is said, not made. */
+  function editProtocol(change) {
+    const next = JSON.parse(JSON.stringify(form.protocol));
+    change(next);
+    try {
+      form = {
+        ...form,
+        protocol: readProtocol({ ...next, source: { ...next.source, edited: true } })
+      };
+      problems = [];
+    } catch (error) {
+      problems = [messageOf(error)];
+    }
+    draw();
+  }
+
+  /**
+   * A protocol's schedule as a grid: a column a visit, a row an activity. In
+   * the form the cells are ticks and a visit's day can be changed; on a study
+   * it is read.
+   */
+  function scheduleGrid(protocol, editable) {
+    const wrap = el('div', 'sb-schedule');
+    const grid = el('table', 'sb-grid');
+    const head = el('tr');
+    const corner = el('th', null, 'Activity');
+    corner.scope = 'col';
+    head.append(corner);
+    for (const visit of protocol.visits) {
+      const th = el('th');
+      th.scope = 'col';
+      th.dataset.visit = visit.id;
+      th.append(el('span', 'sb-grid-visit', visit.name));
+      if (visit.epoch) th.append(el('small', null, visit.epoch));
+      if (editable) {
+        const day = el('input', 'sb-grid-day');
+        day.type = 'number';
+        day.name = `day-${visit.id}`;
+        day.value = String(visit.day);
+        day.setAttribute('aria-label', `Study day of ${visit.name}`);
+        day.disabled = phase === 'building';
+        day.onchange = () =>
+          editProtocol((next) => {
+            next.visits.find((one) => one.id === visit.id).day = day.value;
+          });
+        th.append(day);
+        const remove = el('button', 'sb-grid-remove', '✕');
+        remove.type = 'button';
+        remove.dataset.remove = visit.id;
+        remove.setAttribute('aria-label', `Remove the visit ${visit.name}`);
+        remove.disabled = phase === 'building';
+        remove.onclick = () =>
+          editProtocol((next) => {
+            next.visits = next.visits.filter((one) => one.id !== visit.id);
+          });
+        th.append(remove);
+      } else {
+        th.append(el('small', null, `Day ${visit.day}`));
+      }
+      const window = visit.before || visit.after ? `−${visit.before} / +${visit.after} days` : '';
+      if (window) th.append(el('small', null, window));
+      head.append(th);
+    }
+    const top = el('thead');
+    top.append(head);
+    const body = el('tbody');
+    const at = new Set(Object.values(protocol.schedule).flat());
+    // The activities that simulate something come first.
+    const listed = protocol.activities
+      .filter((activity) => at.has(activity.id) || editable)
+      .sort((a, b) => Number(Boolean(b.domain)) - Number(Boolean(a.domain)));
+    for (const activity of listed) {
+      const row = el('tr');
+      row.dataset.activity = activity.id;
+      if (!activity.domain) row.dataset.simulated = 'false';
+      const name = el('th');
+      name.scope = 'row';
+      name.append(el('span', null, activity.name));
+      const domain = ACTIVITY_DOMAINS.find((one) => one.id === activity.domain);
+      const pill = el('span', 'sb-pill', domain ? domain.label : 'Not simulated');
+      pill.dataset.kind = domain ? 'ready' : 'none';
+      name.append(pill);
+      if (activity.collects.length) {
+        name.title = `Collects: ${activity.collects.join(', ')}`;
+        name.append(el('small', null, `${activity.collects.length} listed`));
+      }
+      row.append(name);
+      for (const visit of protocol.visits) {
+        const cell = el('td');
+        const on = (protocol.schedule[visit.id] || []).includes(activity.id);
+        if (editable) {
+          const box = el('input');
+          box.type = 'checkbox';
+          box.checked = on;
+          box.disabled = phase === 'building';
+          box.setAttribute('aria-label', `${activity.name} at ${visit.name}`);
+          box.onchange = () =>
+            editProtocol((next) => {
+              const here = new Set(next.schedule[visit.id] || []);
+              if (box.checked) here.add(activity.id);
+              else here.delete(activity.id);
+              next.schedule[visit.id] = [...here];
+            });
+          cell.append(box);
+        } else if (on) {
+          cell.textContent = '●';
+          cell.setAttribute('aria-label', `${activity.name} at ${visit.name}`);
+        }
+        row.append(cell);
+      }
+      body.append(row);
+    }
+    grid.append(top, body);
+    wrap.append(grid);
+    return wrap;
+  }
+
+  /** The form's schedule: what the protocol is, its grid, and what can be done to it. */
+  function scheduleSection() {
+    const protocol = form.protocol;
+    const section = el('div', 'sb-protocol');
+    section.dataset.protocol = protocol.name;
+    const from =
+      protocol.source.kind === 'usdm'
+        ? `CDISC USDM ${protocol.source.version || ''}`.trim()
+        : 'study.builder protocol';
+    section.append(
+      el(
+        'p',
+        'sb-soft',
+        [
+          `${protocol.title || protocol.name}. Read from ${from}${protocol.source.edited ? ', and changed here' : ''}.`,
+          protocol.arms.length ? `Arms: ${protocol.arms.join(', ')} (not simulated).` : '',
+          'Visits, vital signs and labs are made on this schedule.'
+        ]
+          .filter(Boolean)
+          .join(' ')
+      )
+    );
+    section.append(scheduleGrid(protocol, true));
+    const acts = el('div', 'sb-row');
+    acts.append(
+      button(
+        '',
+        'Add a visit',
+        () =>
+          editProtocol((next) => {
+            const last = Math.max(...next.visits.map((visit) => visit.day));
+            let number = next.visits.length + 1;
+            while (next.visits.some((visit) => visit.name === `Visit ${number}`)) number += 1;
+            const id = `added-${Date.now().toString(36)}-${number}`;
+            next.visits.push({ id, name: `Visit ${number}`, day: last + 7, before: 0, after: 0 });
+            next.schedule[id] = [];
+          }),
+        'add-visit'
+      ),
+      button(
+        '',
+        'Protocol file',
+        () =>
+          save(
+            `${form.name}.protocol.json`,
+            `${JSON.stringify(form.protocol, null, 2)}\n`,
+            'application/json'
+          ),
+        'download-protocol'
+      ),
+      button(
+        'sb-link',
+        'Remove the protocol',
+        () => {
+          form = { ...form, protocol: null };
+          say('The protocol is removed. The study will have the simulator’s own eight visits.');
+          draw();
+        },
+        'remove-protocol'
+      )
+    );
+    section.append(acts);
+    return section;
+  }
+
   /** Open a document: a study is shown at once, and settings fill the form. */
   async function openDocument(given, from) {
     const { kind, document } = readDocument(given);
-    take(document.settings);
     problems = [];
+    if (kind === 'protocol') {
+      takeProtocol(document, from);
+      return;
+    }
+    take(document.settings);
     if (kind === 'study') {
       const opened = await openStudy(document);
       builds += 1; // a build still running is no longer the one to show
@@ -580,6 +791,20 @@ export function mount(
     );
     trial.append(first, second);
     main.append(el('h3', null, 'The trial'), trial);
+    if (form.protocol) {
+      const planned = planOf(form.protocol);
+      main.append(
+        el('h3', null, `Schedule of activities: ${planned.length} visits, from the protocol`),
+        scheduleSection()
+      );
+    } else {
+      const ask = el('p', 'sb-soft sb-protocol-ask');
+      ask.append(
+        'Have a protocol? Open a CDISC USDM study definition (the data form of an ICH M11 protocol) and the study is built on its schedule of activities. ',
+        fileButton()
+      );
+      main.append(ask);
+    }
 
     // The layers, as the pipeline they are: each is built from the one before.
     const included = new Set(withLayerNeeds([...layersChosen]));
@@ -686,6 +911,7 @@ export function mount(
         fact('Participants', `${read.args.participants} at ${count(read.args.sites, 'site')}`);
         fact('Monthly snapshots', String(read.args.months));
       }
+      if (form.protocol) fact('Planned visits', String(form.protocol.visits.length));
       fact('Raw domains', String(inStudy.size));
       fact('Layers', String(1 + included.size));
       side.append(facts);
@@ -896,7 +1122,28 @@ export function mount(
       save,
       view: viewing.view,
       table: viewing.table,
-      views: [{ id: 'overview', label: 'Overview', render: overview }],
+      views: [
+        { id: 'overview', label: 'Overview', render: overview },
+        // The protocol the build followed, when it followed one.
+        ...(study.protocol
+          ? [
+              {
+                id: 'schedule',
+                label: 'Schedule',
+                render: (box) => {
+                  box.append(
+                    el(
+                      'p',
+                      'sb-soft',
+                      `${study.protocol.title || study.protocol.name}: ${protocolSaid(study.protocol)}.`
+                    ),
+                    scheduleGrid(study.protocol, false)
+                  );
+                }
+              }
+            ]
+          : [])
+      ],
       onChange: (at) => {
         viewing = at;
       }

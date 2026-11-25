@@ -17,6 +17,7 @@
 import { DEFAULTS, OUTLIERS, readSettings } from './core.js';
 import { StudyBuilderError, studyOf } from './build.js';
 import { manifestOf } from './manifest.js';
+import { PROTOCOL_FORMAT, ProtocolError, isUsdm, readProtocol, readUsdm } from './protocol.js';
 
 /** The formats, by name and version. */
 export const CONFIG_FORMAT = 'study.builder/config/1';
@@ -25,6 +26,13 @@ export const PRESETS_FORMAT = 'study.builder/presets/1';
 
 const isRecord = (value) => typeof value === 'object' && value !== null && !Array.isArray(value);
 const text = (value) => (typeof value === 'string' ? value.trim() : '');
+
+/** The protocol a study was built to, from what R was asked for. */
+export function protocolOfArgs(args) {
+  if (!args || !args.protocol) return null;
+  const { plan: _plan, ...protocol } = JSON.parse(args.protocol);
+  return protocol;
+}
 
 /**
  * Settings as a form holds them, from what R was asked for.
@@ -43,7 +51,8 @@ export function settingsOfArgs(args) {
     outliers: outliers ? outliers.id : DEFAULTS.outliers,
     seed: args.seed === undefined ? null : args.seed,
     domains: [...args.domains],
-    layers: [...args.layers]
+    layers: [...args.layers],
+    ...(args.protocol ? { protocol: protocolOfArgs(args) } : {})
   };
 }
 
@@ -126,7 +135,7 @@ export async function openStudy(document) {
 /**
  * Read a document a reader chose or a page fetched: what kind it is, and it.
  * @param {string|Object} given The file's text, or what it parsed to.
- * @returns {{kind: 'config'|'study', document: Object}} The kind and the document. Throws a StudyBuilderError that says why when it is neither.
+ * @returns {{kind: 'config'|'study'|'protocol', document: Object}} The kind and the document; a protocol's document is the protocol, read. Throws a StudyBuilderError that says why when it is neither.
  */
 export function readDocument(given) {
   let document = given;
@@ -138,12 +147,22 @@ export function readDocument(given) {
     }
   }
   if (isRecord(document) && document.format === STUDY_FORMAT) return { kind: 'study', document };
+  // A protocol: study.builder's own, or a CDISC USDM study definition.
+  if (isRecord(document) && (document.format === PROTOCOL_FORMAT || isUsdm(document))) {
+    try {
+      const protocol = isUsdm(document) ? readUsdm(document) : readProtocol(document);
+      return { kind: 'protocol', document: protocol };
+    } catch (error) {
+      if (error instanceof ProtocolError) throw new StudyBuilderError(error.message);
+      throw error;
+    }
+  }
   if (isRecord(document) && document.format === CONFIG_FORMAT) {
     const whole = wholeSettings(document.settings, 'The settings file');
     return { kind: 'config', document: { ...document, settings: whole.settings } };
   }
   throw new StudyBuilderError(
-    `This file is not one study.builder saved: its format is neither ${STUDY_FORMAT} nor ${CONFIG_FORMAT}.`
+    `This file is not one study.builder saved: its format is neither ${STUDY_FORMAT} nor ${CONFIG_FORMAT}, and it is not a protocol.`
   );
 }
 

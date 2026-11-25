@@ -68,6 +68,24 @@ export const STYLES = `
 .sb-chip{min-height:2.4rem;padding:0 .8rem;border:1px solid var(--sb-line);border-radius:999px;background:var(--sb-card);font-size:.84rem;font-weight:500}
 .sb-chip[aria-pressed=true]{background:var(--sb-accent-soft);border-color:var(--sb-accent);color:var(--sb-accent)}
 .sb-chip:disabled[aria-pressed=true]{background:var(--sb-sink);border-color:var(--sb-sink);color:var(--sb-soft)}
+.sb-protocol{display:flex;flex-direction:column;gap:.6rem;min-width:0}
+.sb-protocol-ask{margin-top:.8rem!important;display:flex;flex-wrap:wrap;align-items:center;gap:.5rem .8rem}
+.sb-schedule{overflow-x:auto;max-width:100%;background:var(--sb-card);border:1px solid var(--sb-rule);border-radius:10px}
+.sb-grid{border-collapse:collapse;font-size:.8rem}
+.sb-grid th,.sb-grid td{padding:.35rem .5rem;border-bottom:1px solid var(--sb-rule);border-right:1px solid var(--sb-rule);text-align:center;vertical-align:top}
+.sb-grid thead th{min-width:5.5rem;font-weight:600;background:var(--sb-sink)}
+.sb-grid th small{display:block;font-weight:400;color:var(--sb-soft);font-size:.7rem}
+.sb-grid tbody th,.sb-grid thead th:first-child{position:sticky;left:0;z-index:1;min-width:13rem;text-align:left;background:var(--sb-card)}
+.sb-grid thead th:first-child{background:var(--sb-sink)}
+.sb-grid tbody th{font-weight:500;display:flex;flex-wrap:wrap;align-items:center;gap:.3rem .5rem;border-right:1px solid var(--sb-rule)}
+.sb-grid tr[data-simulated=false] th span:first-child,.sb-grid tr[data-simulated=false] td{color:var(--sb-soft)}
+.sb-grid td{color:var(--sb-accent)}
+.sb-grid input[type=checkbox]{width:1.1rem;height:1.1rem;accent-color:var(--sb-accent)}
+.sb-grid-visit{display:block}
+.sb-grid-day{width:4.2rem;min-height:2rem;margin:.2rem 0;padding:0 .3rem;border:1px solid var(--sb-line);border-radius:6px;background:var(--sb-card);color:var(--sb-ink);font:inherit;text-align:center}
+.sb-grid-remove{display:block;margin:0 auto;min-width:2rem;min-height:2rem;border:0;border-radius:6px;background:none;color:var(--sb-soft)!important}
+.sb-grid-remove:hover{background:var(--sb-sink)}
+.sb-pill[data-kind=none]{background:var(--sb-sink);color:var(--sb-soft)}
 .sb-facts{margin:0;display:grid;grid-template-columns:auto 1fr;gap:.4rem 1rem;font-size:.9rem}
 .sb-facts dt{color:var(--sb-soft)}
 .sb-facts dd{margin:0;text-align:right;font-weight:600}

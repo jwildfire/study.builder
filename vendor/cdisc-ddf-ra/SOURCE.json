@@ -1,0 +1,16 @@
+{
+  "what": "The CDISC pilot study (LZZT) as a USDM 4.0.0 study definition: the example protocol study.builder's reader is held to",
+  "repository": "https://github.com/cdisc-org/DDF-RA",
+  "ref": "main",
+  "commit": "aa303cb32f5d3ceecc68a16803e26720d2c1fc26",
+  "license": "CC-BY-4.0 (the repository's content licence)",
+  "attribution": "Content based on DDF-RA (GitHub), https://github.com/cdisc-org/DDF-RA, used under the CC-BY-4.0 licence.",
+  "files": [
+    {
+      "file": "CDISC_Pilot_Study.json",
+      "source": "Documents/Examples/CDISC_Pilot/CDISC_Pilot_Study.json",
+      "sha256": "67ab5e35cadc9f900d19403341ec7f89d500aaf692aae328dd3037c31d609aa2",
+      "bytes": 1057705
+    }
+  ]
+}

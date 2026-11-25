@@ -7,6 +7,8 @@
 // here a phase fills in a typical size, which may be changed, and both are
 // written into the study table as chosen.
 
+import { planOf, readProtocol } from './protocol.js';
+
 const isRecord = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 const isText = (value) => typeof value === 'string' && value.trim() !== '';
 
@@ -208,6 +210,7 @@ export const DEFAULTS = Object.freeze({
   months: 9,
   outliers: 'typical',
   seed: null,
+  protocol: null,
   domains: DEFAULT_DOMAINS,
   layers: DEFAULT_LAYERS
 });
@@ -260,7 +263,7 @@ function whole(value) {
  * Read settings: every problem with them, each a sentence, and, when there is
  * none, what R is asked for. A setting left out is the default's; numbers may
  * be numbers or the text a form field holds.
- * @param {Object} [settings] `name`, `phase`, `area`, `participants`, `sites`, `months`, `outliers`, `seed`, `domains` and `layers`.
+ * @param {Object} [settings] `name`, `phase`, `area`, `participants`, `sites`, `months`, `outliers`, `seed`, `domains`, `layers` and `protocol` (a protocol whose schedule the build follows; protocol.js).
  * @returns {{problems: string[], args: ?Object, domains: string[]}} The problems; the arguments of `builder_run` less the folders R is told; and every domain the study will hold.
  */
 export function readSettings(settings = {}) {
@@ -317,6 +320,28 @@ export function readSettings(settings = {}) {
   // In the order the layers are shown, whatever order they were asked for
   // in, with each layer one of them is made from.
   const layers = withLayerNeeds(askedLayers.filter((id) => layerIds.includes(id)));
+  // A protocol, when there is one: the build follows its schedule, so the
+  // study has visits and whatever its activities collect.
+  let protocol = null;
+  if (given.protocol !== null && given.protocol !== undefined) {
+    try {
+      protocol = readProtocol(given.protocol);
+    } catch (error) {
+      problems.push(error.message);
+    }
+  }
+  const withProtocol = protocol
+    ? withNeeds([
+        ...new Set([
+          ...optional,
+          'VISIT',
+          ...planOf(protocol).flatMap((visit) => [
+            ...(visit.vs ? ['VS'] : []),
+            ...(visit.lb.length ? ['LB'] : [])
+          ])
+        ])
+      ]).filter((id) => !DOMAINS.find((domain) => domain.id === id).core)
+    : optional;
   if (problems.length) return { problems, args: null, domains };
   return {
     problems,
@@ -329,10 +354,12 @@ export function readSettings(settings = {}) {
       outlier_intensity: outliers.intensity,
       phase: phase.id,
       therapeutic_area: given.area,
-      domains: optional,
+      domains: withProtocol,
       layers,
       // A seed left empty is not sent: R then draws as it will.
-      ...(seed === null ? {} : { seed })
+      ...(seed === null ? {} : { seed }),
+      // The protocol goes to R as text, with the plan R follows worked out here.
+      ...(protocol ? { protocol: JSON.stringify({ ...protocol, plan: planOf(protocol) }) } : {})
     }
   };
 }

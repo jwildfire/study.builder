@@ -10,6 +10,7 @@ import { DOMAINS, LAYERS, STANDARD, readSettings, studySaid } from './core.js';
 import { createConnection } from './r.js';
 import { GSM_FILES, SIMULATOR_FILES, VITALS_FILE, WORKFLOW_FILES } from './files.js';
 import { metadataOf } from './metadata.js';
+import { readProtocol } from './protocol.js';
 import { manifestOf } from './manifest.js';
 
 /** The packages R installs: the ones gsm.datasim's code calls, and three of gsm's own. */
@@ -294,6 +295,8 @@ export function studyOf(value, args) {
     simulator: value.simulator,
     packages: value.packages && typeof value.packages === 'object' ? { ...value.packages } : {},
     args,
+    // The protocol the build followed, when it followed one.
+    protocol: args.protocol ? readProtocol(JSON.parse(args.protocol)) : null,
     notes: list(value.notes),
     layers,
     domains: raw.tables,
