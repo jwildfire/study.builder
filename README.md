@@ -132,6 +132,34 @@ const built = await StudyBuilder.buildStudy(config.settings);
 | `study.builder/study/1`   | Settings, the key, and what R returned for them                                |
 | `study.builder/presets/1` | A list of presets: each one settings, and for some the address of a study file |
 
+## study.viewer
+
+A second, separate module in this repository: a viewer for any study's tables. It knows nothing of the builder or of R.
+
+```html
+<script src="https://jwildfire.github.io/study.builder/study.viewer.js"></script>
+<div id="viewer"></div>
+<script>
+  StudyViewer.mount('#viewer', {
+    study: {
+      name: 'My files',
+      tables: [
+        { id: 'dm.csv', text: dmCsvText },
+        { id: 'ae.csv', records: aeRows, group: 'Clinical' }
+      ]
+    }
+  });
+  // A study.builder study, listed by layer, with what built each table:
+  // StudyViewer.mount('#viewer', { study: StudyViewer.fromBuilt(study) });
+</script>
+```
+
+- **Tables**: the open table's rows, filtered (`is`, `is not`, `contains`, `at least`, `at most`) and sorted by a header.
+- **Columns**: each column's kind, how full it is, its range or commonest values and a spread. Pressing a bar filters the rows to it. A column may carry `used` (what a page uses it as) or `todo` (a button, for a page that maps columns; `onColumn` is told).
+- **One participant**: one person's rows in every table that names them, found by a column called `USUBJID`, `SUBJID`, `SubjectID` or the like, or one given `role: 'participant'`.
+
+With no page: `viewerStudy`, `rowsOf`, `filterRows`, `sortRows`, `profileOf`, `participantsOf`, `participantOf`.
+
 ## Settings
 
 | Setting        | Values                                       | Default                                                 |

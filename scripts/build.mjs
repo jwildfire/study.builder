@@ -5,6 +5,8 @@
 //
 //   _site/study.builder.js       script tag: defines the global StudyBuilder
 //   _site/study.builder.mjs      the same, as a module
+//   _site/study.viewer.js        script tag: defines the global StudyViewer
+//   _site/study.viewer.mjs       the same, as a module
 //   _site/r/, _site/vendor/,     what R in the browser fetches
 //   _site/workflows/
 //   _site/index.html             the builder on a page of its own
@@ -37,9 +39,13 @@ const shared = {
   legalComments: 'none',
   write: false
 };
+// study.viewer is a module of its own: its bundles hold nothing of the builder.
+const viewer = { entryPoints: [path.join(root, 'src/viewer/index.js')] };
 const bundles = [
   ['study.builder.js', { format: 'iife', globalName: 'StudyBuilder' }],
-  ['study.builder.mjs', { format: 'esm' }]
+  ['study.builder.mjs', { format: 'esm' }],
+  ['study.viewer.js', { ...viewer, format: 'iife', globalName: 'StudyViewer' }],
+  ['study.viewer.mjs', { ...viewer, format: 'esm' }]
 ];
 const built = new Map();
 for (const [name, format] of bundles) {
