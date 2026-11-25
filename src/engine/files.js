@@ -29,6 +29,7 @@ export const SIMULATOR_FILES = [
   "vendor/gsm.datasim/R/Raw_gilda_STUDY.R",
   "vendor/gsm.datasim/R/column_type_generator.R",
   "vendor/gsm.datasim/R/create_longitudinal_study.R",
+  "vendor/gsm.datasim/R/study_design.R",
   "vendor/gsm.datasim/R/create_snapshot_reports.R",
   "vendor/gsm.datasim/R/domain_registry.R",
   "vendor/gsm.datasim/R/endpoints_domains_helper.R",
@@ -80,9 +81,8 @@ export const WORKFLOW_FILES = [
 /** What each copy was copied from. */
 export const COPIED_FROM = {
   "vendor/gsm.datasim": {
-    "repository": "https://github.com/Gilead-Public/gsm.datasim",
-    "tag": "v2.1.0",
-    "commit": "29fc61c1ca83ceaf38c4c2ba54613872aa5a1d66"
+    "repository": "https://github.com/jwildfire/gsm.datasim",
+    "commit": "08ed93f050c3a77916f059fc6caff44b4bb323dd"
   },
   "vendor/gsm.mapping-vitals": {
     "repository": "https://github.com/Gilead-Public/gsm.mapping",

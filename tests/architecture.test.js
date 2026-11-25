@@ -75,7 +75,6 @@ describe('the builder makes no data', () => {
     const defined = [...inside.matchAll(/^(\.builder_[a-z_]+) <- function/gm)].map((m) => m[1]);
     expect(defined.sort()).toEqual([
       '.builder_gsm_names',
-      '.builder_schedule',
       '.builder_site_id',
       '.builder_site_ids',
       '.builder_study',

@@ -4,7 +4,7 @@ Everything here is copied from another repository, unedited but for the one line
 
 | Folder | What | From |
 | --- | --- | --- |
-| `gsm.datasim/` | The simulator's R source, evaluated as it is | Gilead-Public/gsm.datasim v2.1.0 |
+| `gsm.datasim/` | The simulator's R source, evaluated as it is | A staging copy under jwildfire: Gilead-Public/gsm.datasim v2.1.0 plus the study design feature (`R/study_design.R`), not yet raised upstream |
 | `gsm.mapping-vitals/` | The vital signs mapping workflow, for its spec | Gilead-Public/gsm.mapping v1.3.0 |
 | `gsm.kri/` | Eight site metric workflows, and one R file the reporting needs | Gilead-Public/gsm.kri v1.7.0, by way of safety.viz |
 | `gsm.reporting/` | The four reporting workflows | Gilead-Public/gsm.reporting v1.1.7, by way of safety.viz |

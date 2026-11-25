@@ -130,7 +130,7 @@ describe('what R is given', () => {
       url: 'https://example.org/sb/r/builder.R'
     });
     expect(options.files.filter((file) => /gsm\.datasim\/R\/.+\.R$/.test(file.path))).toHaveLength(
-      41
+      42
     );
     expect(options.files.map((file) => file.path)).toContain(
       '/study.builder/vendor/gsm.mapping-vitals/workflow/1_mappings/VS.yaml'
