@@ -6,7 +6,9 @@ import {
   AREAS,
   DEFAULTS,
   DEFAULT_DOMAINS,
+  DEFAULT_LAYERS,
   DOMAINS,
+  LAYERS,
   LIMITS,
   OUTLIERS,
   PHASES,
@@ -18,10 +20,15 @@ import {
 import { PACKAGES } from '../src/build.js';
 import { firstRows } from '../src/csv.js';
 import { crc32, zipOf } from '../src/zip.js';
-import { COPIES, copyProblems, filesModule } from '../scripts/files.mjs';
+import { COPIES, copyProblems, filesModule, workflowFiles } from '../scripts/files.mjs';
+import { WORKFLOW_FILES } from '../src/files.js';
+import { parse as parseYaml } from 'yaml';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const builderR = readFileSync(path.join(root, 'r/builder.R'), 'utf8');
+const adamWorkflows = workflowFiles()
+  .filter((file) => file.startsWith('workflows/adam/'))
+  .map((file) => parseYaml(readFileSync(path.join(root, file), 'utf8')));
 const listed = (name) =>
   [...builderR.match(new RegExp(`${name} <- c\\(([^)]*)\\)`))[1].matchAll(/"([^"]+)"/g)].map(
     (match) => match[1]
@@ -39,7 +46,8 @@ describe('settings', () => {
       outlier_intensity: 1,
       phase: 'P2',
       therapeutic_area: 'Oncology',
-      domains: ['VISIT', 'AE', 'LB', 'VS', 'PD', 'STUDCOMP', 'SDRGCOMP']
+      domains: ['VISIT', 'AE', 'LB', 'VS', 'PD', 'STUDCOMP', 'SDRGCOMP'],
+      layers: ['raw.rbqm', 'adam']
     });
     expect(domains.slice(0, 4)).toEqual(['STUDY', 'SITE', 'SUBJ', 'ENROLL']);
   });
@@ -72,6 +80,18 @@ describe('settings', () => {
       'Death'
     ]);
     expect(withNeeds(['OverallResponse'])).toContain('VISIT');
+  });
+
+  it('take the layers wanted besides raw, in the order they are shown, and refuse one they do not know', () => {
+    expect(readSettings({ layers: ['adam', 'raw'] }).args.layers).toEqual(['adam']);
+    expect(readSettings({ layers: ['adam', 'raw.rbqm'] }).args.layers).toEqual([
+      'raw.rbqm',
+      'adam'
+    ]);
+    expect(readSettings({ layers: [] }).args.layers).toEqual([]);
+    expect(readSettings({ layers: ['sdtm'] }).problems).toEqual([
+      'Not a layer study.builder makes: sdtm.'
+    ]);
   });
 
   it('name every problem, each in a sentence', () => {
@@ -154,9 +174,23 @@ describe('the page and R agree', () => {
     expect([...PACKAGES].sort()).toEqual(listed('builder_packages').sort());
   });
 
-  it('on the standard files and the domain each is made from', () => {
+  it('on the layers built off raw', () => {
+    const made = [...builderR.matchAll(/list\(id = "([a-z.]+)", label = "([^"]+)", type = /g)].map(
+      (match) => [match[1], match[2]]
+    );
+    expect(made).toEqual(
+      LAYERS.filter((layer) => layer.optional).map((layer) => [layer.id, layer.label])
+    );
+    expect(builderR).toContain('layers = c("raw.rbqm", "adam")');
+    expect([...DEFAULT_LAYERS]).toEqual(['raw.rbqm', 'adam']);
+  });
+
+  it('on the standard files: each is an ADaM workflow’s table, made from the domain that feeds it', () => {
     for (const file of STANDARD) {
-      expect(builderR, file.id).toContain(`id = "${file.id}", name = "${file.name}"`);
+      const workflow = adamWorkflows.find((entry) => entry.meta.Domain === file.id);
+      expect(workflow, file.id).toBeTruthy();
+      expect(workflow.meta.File).toBe(file.name);
+      expect(Object.keys(workflow.spec)).toContain(`Raw_${file.from}`);
       expect(DOMAINS.find((domain) => domain.id === file.from).feeds).toBe(file.id);
     }
   });
@@ -166,24 +200,65 @@ describe('the page and R agree', () => {
     for (const area of AREAS) expect(study).toContain(`"${area}"`);
     for (const phase of PHASES) expect(study).toContain(`"${phase.id}"`);
   });
+});
 
-  it('every standard column has a line saying where it came from', () => {
-    for (const [frame, mapping] of [
-      ['.builder_subject', '.builder_subject_mapping'],
-      ['.builder_events', '.builder_events_mapping'],
-      ['.builder_results', '.builder_results_mapping']
-    ]) {
-      const body = builderR.slice(builderR.indexOf(`${frame} <- function`));
-      const made = [
-        ...body.slice(0, body.indexOf('stringsAsFactors')).matchAll(/^\s{4,6}([A-Z]+) = /gm)
-      ].map((match) => match[1]);
-      const lines = builderR.slice(builderR.indexOf(`${mapping} <- list(`));
-      const mapped = [
-        ...lines.slice(0, lines.indexOf('\n)\n')).matchAll(/\.builder_line\("([A-Z]+)"/g)
-      ].map((match) => match[1]);
-      expect(made.length, frame).toBeGreaterThan(4);
-      expect(mapped, frame).toEqual(made);
+describe('the ADaM workflows', () => {
+  it('are workr workflows: a type, an id, a spec of what they read, and steps', () => {
+    expect(adamWorkflows.map((workflow) => workflow.meta.ID).sort()).toEqual([
+      'ADAE',
+      'ADSL',
+      'ADVS'
+    ]);
+    for (const workflow of adamWorkflows) {
+      expect(workflow.meta.Type).toBe('ADaM');
+      expect(Object.keys(workflow.spec).length).toBeGreaterThan(0);
+      expect(workflow.steps.length).toBeGreaterThan(0);
+      // The last step writes the table the workflow is named for.
+      expect(workflow.steps.at(-1).output).toBe(`ADaM_${workflow.meta.ID}`);
+      // A query step names its table as workr asks, once.
+      for (const step of workflow.steps.filter((entry) => entry.name === 'workr::RunQuery')) {
+        expect(step.params.strQuery.match(/FROM df\b/g), workflow.meta.ID).toHaveLength(1);
+      }
     }
+  });
+
+  it('say where every column they write came from, and no column they do not write', () => {
+    for (const workflow of adamWorkflows) {
+      const query = workflow.steps.at(-1).params.strQuery;
+      // The columns the last query selects, by the names it gives them.
+      // The select list, split at the commas that are not inside brackets;
+      // the column an item writes is its last word.
+      const list = query.slice('SELECT '.length, query.indexOf(' FROM '));
+      const items = [];
+      let depth = 0;
+      let item = '';
+      for (const char of list) {
+        if (char === '(') depth += 1;
+        if (char === ')') depth -= 1;
+        if (char === ',' && depth === 0) {
+          items.push(item);
+          item = '';
+        } else item += char;
+      }
+      items.push(item);
+      const selected = items.map((entry) => entry.trim().split(' ').at(-1));
+      expect(selected.length, workflow.meta.ID).toBeGreaterThan(5);
+      expect(Object.keys(workflow.columns).sort(), workflow.meta.ID).toEqual(
+        [...new Set(selected)].sort()
+      );
+      for (const line of Object.values(workflow.columns)) expect(line.how).toBeTruthy();
+    }
+  });
+
+  it('read a join’s second table under a quoted key, which YAML would otherwise read as true', () => {
+    for (const file of WORKFLOW_FILES) {
+      const text = readFileSync(path.join(root, file), 'utf8');
+      expect(text, file).not.toMatch(/^\s+y:/m);
+    }
+  });
+
+  it('are listed in src/files.js, so R is given every one', () => {
+    expect([...WORKFLOW_FILES]).toEqual(workflowFiles());
   });
 });
 

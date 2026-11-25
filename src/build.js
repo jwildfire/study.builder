@@ -6,9 +6,10 @@
 //   study.standard     the standard files made from them, each with its mapping
 //   study.files()      { raw: [{ name, text }], standard: [{ name, text }] }
 
-import { DOMAINS, STANDARD, readSettings, studySaid } from './core.js';
+import { DOMAINS, LAYERS, STANDARD, readSettings, studySaid } from './core.js';
 import { createConnection } from './r.js';
-import { SIMULATOR_FILES, VITALS_FILE } from './files.js';
+import { SIMULATOR_FILES, VITALS_FILE, WORKFLOW_FILES } from './files.js';
+import { manifestOf } from './manifest.js';
 
 /** The packages R installs: the ones gsm.datasim's code calls, and three of gsm's own. */
 export const PACKAGES = Object.freeze([
@@ -41,6 +42,7 @@ export const DOWNLOADS = Object.freeze([
 const ROOT = '/study.builder';
 const SIMULATOR = `${ROOT}/vendor/gsm.datasim`;
 const VITALS = `${ROOT}/${VITALS_FILE}`;
+const WORKFLOWS = `${ROOT}/workflows`;
 
 /** An error whose message is a sentence a page can show, with every problem found. */
 export class StudyBuilderError extends Error {
@@ -63,7 +65,7 @@ const withSlash = (base) => (base.endsWith('/') ? base : `${base}/`);
  */
 export function rOptions(base, { repository = null } = {}) {
   const from = withSlash(base);
-  const files = ['r/builder.R', ...SIMULATOR_FILES, VITALS_FILE].map((file) => ({
+  const files = ['r/builder.R', ...SIMULATOR_FILES, VITALS_FILE, ...WORKFLOW_FILES].map((file) => ({
     path: `${ROOT}/${file}`,
     url: `${from}${file}`
   }));
@@ -125,7 +127,10 @@ export function createBuilder({
         args: {
           simulator: SIMULATOR,
           ...(read.args.domains.includes('VS') ? { vitals: VITALS } : {}),
-          ...read.args
+          ...(read.args.layers.includes('adam') ? { workflows: WORKFLOWS } : {}),
+          ...read.args,
+          // Raw is always named: an empty list does not cross to R.
+          layers: ['raw', ...read.args.layers]
         }
       });
       if (!answer || answer.status !== 'ok') {
@@ -139,7 +144,10 @@ export function createBuilder({
           `The study was not built. R said: ${answer ? answer.message : 'nothing'}`
         );
       }
-      return studyOf(answer.value, read.args);
+      const study = studyOf(answer.value, read.args);
+      // Every table's checksum, and one for the whole study.
+      study.manifest = await manifestOf(study);
+      return study;
     },
 
     /** Let go of R, when it is study.builder's own: not a page's connection, nor one a page's own factory made. */
@@ -156,68 +164,121 @@ export function createBuilder({
 const list = (value) => (Array.isArray(value) ? value : value == null ? [] : [value]);
 
 /** One table R returned, as the study holds it. */
-function tableOf(entry, more) {
+function tableOf(entry, layer) {
   if (!entry || typeof entry.name !== 'string' || typeof entry.text !== 'string') {
     throw new StudyBuilderError('The study was not built: R returned a table that cannot be read.');
   }
-  return {
-    ...more,
+  const made = entry.made || {};
+  const table = {
+    layer: layer.id,
     id: entry.id,
+    table: entry.table,
     name: entry.name,
+    label: entry.description || entry.id,
     rows: Number(entry.rows) || 0,
     columns: list(entry.columns).map((column) => ({ name: column.name, type: column.type })),
-    text: entry.text
+    text: entry.text,
+    // What made it: the workflow, and the tables that workflow read.
+    made: { workflow: made.workflow || '', from: list(made.from) }
   };
+  if (entry.mapping !== undefined) {
+    table.mapping = list(entry.mapping).map((line) => ({
+      column: line.column,
+      from: line.from || '',
+      how: line.how
+    }));
+  }
+  if (entry.domain) table.domain = entry.domain;
+  return table;
 }
 
 /**
  * What `builder_run` returned, as a study.
+ *
+ *   study.layers                 raw first, then each layer built off it
+ *   study.table(layer, id)       one table, or null: study.table('adam', 'ADAE')
+ *   study.files()                the files a page loads, by layer
+ *
+ * `study.domains` (the raw tables) and `study.standard` (the ADaM tables, each
+ * with its `mapping`) are the v0.1 names for two of the layers, and stay.
  * @param {Object} value R's answer.
  * @param {Object} args What R was asked for.
  * @returns {Object} The study.
  */
 export function studyOf(value, args) {
-  if (!value || !list(value.domains).length) {
+  const given = list(value && value.layers);
+  const rawGiven = given.find((layer) => layer.id === 'raw');
+  if (!rawGiven || !list(rawGiven.tables).length) {
     throw new StudyBuilderError('The study was not built: R returned no domains.');
   }
-  const domains = list(value.domains).map((entry) => {
-    const known = DOMAINS.find((domain) => domain.id === entry.id) || {};
-    return tableOf(entry, {
-      kind: 'raw',
-      table: entry.table,
-      label: known.label || entry.id,
-      grain: known.grain || '',
-      core: Boolean(known.core),
-      feeds: known.feeds || null
-    });
-  });
-  const standard = list(value.standard).map((entry) => {
-    const known = STANDARD.find((file) => file.id === entry.id) || {};
-    return tableOf(entry, {
-      kind: 'standard',
+  const layers = given.map((entry) => {
+    const known = LAYERS.find((layer) => layer.id === entry.id) || {};
+    const layer = {
+      id: entry.id,
       label: entry.label || known.label || entry.id,
-      from: list(entry.from),
-      mapping: list(entry.mapping).map((line) => ({
-        column: line.column,
-        from: line.from || '',
-        how: line.how
-      }))
-    });
+      about: known.about || ''
+    };
+    layer.tables = list(entry.tables).map((table) => tableOf(table, layer));
+    return layer;
   });
+  // A raw table takes its name and what one row is from the list of domains.
+  const raw = layers.find((layer) => layer.id === 'raw');
+  for (const table of raw.tables) {
+    const known = DOMAINS.find((domain) => domain.id === table.id) || {};
+    table.kind = 'raw';
+    table.label = known.label || table.id;
+    table.grain = known.grain || '';
+    table.core = Boolean(known.core);
+    table.feeds = known.feeds || null;
+  }
+  // An ADaM table is a standard file a chart of participants reads: its id
+  // there is the standard domain's (subject, ae, bds).
+  const adam = layers.find((layer) => layer.id === 'adam');
+  const standard = (adam ? adam.tables : []).map((table) => {
+    const known = STANDARD.find((file) => file.id === table.domain) || {};
+    return {
+      ...table,
+      kind: 'standard',
+      id: table.domain || table.id,
+      label: known.label || table.label,
+      from: table.made.from.map((name) => name.replace(/^(Raw|ADaM)_/, '')),
+      mapping: table.mapping || []
+    };
+  });
+  const texts = (tables) => tables.map(({ name, text }) => ({ name, text }));
   const study = {
     id: value.study_id,
     snapshotDate: value.snapshot_date,
     snapshots: Number(value.snapshots) || 0,
     seconds: Number(value.seconds),
     simulator: value.simulator,
+    packages: value.packages && typeof value.packages === 'object' ? { ...value.packages } : {},
     args,
     notes: list(value.notes),
-    domains,
+    layers,
+    domains: raw.tables,
     standard,
-    /** The study's files, as a page loads files: each a name and its text. */
+    manifest: null,
+    /**
+     * One table of the study.
+     * @param {string} layer A layer's id: `raw`, `raw.rbqm` or `adam`.
+     * @param {string} id The table's id in that layer: `AE`, `ADAE`.
+     * @returns {?Object} The table, or null when the study does not hold it.
+     */
+    table(layer, id) {
+      const found = layers.find((entry) => entry.id === layer);
+      return (found && found.tables.find((table) => table.id === id)) || null;
+    },
+    /**
+     * The study's files, as a page loads files: each a name and its text.
+     * `raw` and `standard` are the raw and the ADaM layer; `layers` has every layer by its id.
+     */
     files() {
-      const texts = (tables) => tables.map(({ name, text }) => ({ name, text }));
-      return { raw: texts(domains), standard: texts(standard) };
+      return {
+        raw: texts(raw.tables),
+        standard: texts(standard),
+        layers: Object.fromEntries(layers.map((layer) => [layer.id, texts(layer.tables)]))
+      };
     }
   };
   study.said = studySaid(study);

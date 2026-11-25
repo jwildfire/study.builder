@@ -17,6 +17,7 @@ import { PACKAGES, PUBLIC_INDEX, rOptions, studyOf } from '../src/build.js';
 import { DOMAINS, readSettings } from '../src/core.js';
 import { foldersOf } from '../src/r.js';
 import { firstRows } from '../src/csv.js';
+import { manifestOf } from '../src/manifest.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const failures = [];
@@ -63,8 +64,12 @@ async function build(settings) {
   if (!read.args) throw new Error(read.problems.join(' '));
   const args = {
     simulator: '/study.builder/vendor/gsm.datasim',
-    ...(read.args.domains.includes('VS') ? { vitals: options.files.at(-1).path } : {}),
-    ...read.args
+    ...(read.args.domains.includes('VS')
+      ? { vitals: options.files.find((file) => file.path.endsWith('/VS.yaml')).path }
+      : {}),
+    ...(read.args.layers.includes('adam') ? { workflows: '/study.builder/workflows' } : {}),
+    ...read.args,
+    layers: ['raw', ...read.args.layers]
   };
   const shelter = await new webR.Shelter();
   try {
@@ -73,7 +78,9 @@ async function build(settings) {
       'jsonlite::toJSON(do.call(.name, .args), auto_unbox = TRUE, null = "null", na = "null", digits = NA)',
       { env: { '.name': 'builder_run', '.args': list } }
     );
-    return studyOf(JSON.parse(await answer.toString()), read.args);
+    const study = studyOf(JSON.parse(await answer.toString()), read.args);
+    study.manifest = await manifestOf(study);
+    return study;
   } finally {
     await shelter.purge();
   }
@@ -137,12 +144,52 @@ check(
   ).size >= 8
 );
 
+// The layers built off raw.
+check(
+  'three layers: raw, Raw.RBQM and ADaM',
+  first.layers.map((layer) => layer.id).join() === 'raw,raw.rbqm,adam'
+);
+const rbqm = first.layers[1].tables;
+check(
+  'Raw.RBQM has a mapped table for each raw domain, by gsm.mapping workflows',
+  rbqm.length === 11 &&
+    rbqm.every(
+      (table) => table.table === `Mapped_${table.id}` && table.made.workflow === table.table
+    ),
+  rbqm.map((table) => table.table).join(' ')
+);
+check(
+  'the mapped vital signs carry the site, joined from the mapped participants',
+  first.table('raw.rbqm', 'VS').columns.some((column) => column.name === 'invid') &&
+    first.table('raw.rbqm', 'VS').made.from.includes('Mapped_SUBJ')
+);
+check(
+  'ADaM is ADSL, ADAE and ADVS, each built by its workflow from raw and ADSL',
+  first.layers[2].tables.map((table) => table.id).join() === 'ADSL,ADAE,ADVS' &&
+    first.table('adam', 'ADAE').made.from.join() === 'Raw_AE,ADaM_ADSL'
+);
+const startDays = firstRows(first.table('adam', 'ADAE').text, 500).rows.map((row) => row[8]);
+check(
+  'a study day counts from day one and is never 0',
+  startDays.length > 100 && !startDays.includes('0'),
+  startDays.slice(0, 8).join(' ')
+);
+check(
+  'every table of every layer is in the manifest with a checksum',
+  first.manifest.tables.length === 25 &&
+    first.manifest.tables.every((table) => /^[0-9a-f]{64}$/.test(table.sha256)),
+  String(first.manifest.tables.length)
+);
+
 // 2. The same seed builds the same study.
 const again = await build({ seed: 7 });
 check(
-  'the same seed builds the same study',
+  'the same seed builds the same study, table for table',
   again.domains.every((domain, index) => domain.text === first.domains[index].text)
 );
+check('and the same study has the same key', again.manifest.key === first.manifest.key);
+const other = await build({ seed: 8 });
+check('a different seed has a different key', other.manifest.key !== first.manifest.key);
 
 // 3. Every optional domain.
 const every = await build({
@@ -158,11 +205,16 @@ check(
   every.domains.map((domain) => domain.id).join(' ')
 );
 
-// 4. One optional domain, and no standard file it cannot make.
+// 4. One optional domain, and no table it cannot make.
 const small = await build({ participants: 20, sites: 2, months: 3, domains: ['PD'] });
 check(
-  'a study of one optional domain has five domains and only the participants file',
+  'a study of one optional domain has five raw tables, and only ADSL in ADaM',
   small.domains.length === 5 && small.standard.map((file) => file.id).join() === 'subject'
+);
+const rawOnly = await build({ participants: 20, sites: 2, months: 3, domains: ['AE'], layers: [] });
+check(
+  'a study asked for no layer but raw has only raw',
+  rawOnly.layers.length === 1 && rawOnly.standard.length === 0
 );
 
 // 5. R refuses what the page refuses.

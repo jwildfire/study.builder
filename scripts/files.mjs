@@ -8,7 +8,7 @@
 //                                    file does not match its record
 
 import { createHash } from 'node:crypto';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -44,6 +44,19 @@ export function copyProblems() {
   return problems;
 }
 
+/** study.builder's own workflow files, by layer folder, as R is given them. */
+export function workflowFiles() {
+  const folder = path.join(root, 'workflows');
+  return readdirSync(folder)
+    .sort()
+    .flatMap((layer) =>
+      readdirSync(path.join(folder, layer))
+        .filter((file) => file.endsWith('.yaml'))
+        .sort()
+        .map((file) => `workflows/${layer}/${file}`)
+    );
+}
+
 /** The text of src/files.js. */
 export function filesModule() {
   const [simulator, vitals] = COPIES.map(({ directory, skip }) =>
@@ -65,6 +78,8 @@ export function filesModule() {
     `export const SIMULATOR_FILES = ${JSON.stringify(simulator, null, 2)};\n\n` +
     '/** gsm.mapping’s vital signs mapping workflow. */\n' +
     `export const VITALS_FILE = ${JSON.stringify(vitals[0])};\n\n` +
+    '/** study.builder’s own workflows, which build the layers off raw. */\n' +
+    `export const WORKFLOW_FILES = ${JSON.stringify(workflowFiles(), null, 2)};\n\n` +
     '/** What each copy was copied from. */\n' +
     `export const COPIED_FROM = ${JSON.stringify(versions, null, 2)};\n`
   );

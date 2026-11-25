@@ -52,6 +52,13 @@ export const SIMULATOR_FILES = [
 /** gsm.mapping’s vital signs mapping workflow. */
 export const VITALS_FILE = "vendor/gsm.mapping-vitals/workflow/1_mappings/VS.yaml";
 
+/** study.builder’s own workflows, which build the layers off raw. */
+export const WORKFLOW_FILES = [
+  "workflows/adam/ADAE.yaml",
+  "workflows/adam/ADSL.yaml",
+  "workflows/adam/ADVS.yaml"
+];
+
 /** What each copy was copied from. */
 export const COPIED_FROM = {
   "vendor/gsm.datasim": {

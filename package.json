@@ -1,6 +1,6 @@
 {
   "name": "study.builder",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Simulate a clinical trial in the browser with gsm.datasim and hand its data to any page.",
   "license": "Apache-2.0",
   "private": true,
@@ -22,6 +22,7 @@
     "jsdom": "^29.1.1",
     "prettier": "^3.9.4",
     "vitest": "^4.1.9",
-    "webr": "0.6.0"
+    "webr": "0.6.0",
+    "yaml": "^2.9.1"
   }
 }

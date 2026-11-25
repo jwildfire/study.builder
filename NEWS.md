@@ -1,3 +1,25 @@
+# study.builder v0.2.0 (Upcoming)
+
+A study now comes in layers, each built off raw by workflows.
+
+## What's new
+
+- **Layers.** Raw is the root. Raw.RBQM is raw under gsm's names, by gsm.mapping's own workflows (the tables gsm calls Mapped). ADaM is the tables charts of participants read. `study.layers` lists them, `study.table(layer, id)` returns one, and the widget has a tab for each.
+- **Every table says what made it.** `table.made` names the workflow and the tables it read. The widget says it on each card.
+- **ADaM by workflow.** ADSL, ADAE and ADVS are written by three workr workflows in `workflows/adam/`, in place of the R code that wrote v0.1.0's three standard files. Each workflow says, column by column, where its table came from.
+- **A manifest.** `study.manifest` has a checksum for every table, the versions of the packages that built the study, its settings, and one key. The same seed and settings give the same key. It is in the zip as `manifest.json`.
+- **Choose the layers.** The `layers` setting, and ticks in the widget, leave a layer out.
+
+## Changed
+
+- ADSL gains `TRTSDT`, each participant's day one, which the other ADaM tables count study days from.
+- The zip has a folder for each layer: `raw/`, `raw.rbqm/`, `adam/`.
+- `study.domains`, `study.standard` and `study.files()`'s `raw` and `standard` still work as in v0.1.0. `study.standard[].from` now names the tables read, such as `AE` and `ADSL`.
+
+## Fixed
+
+- Asking for a study with no layer but raw no longer fails on the way to R.
+
 # study.builder v0.1.0
 
 **Try it:** https://jwildfire.github.io/study.builder/

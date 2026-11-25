@@ -116,6 +116,38 @@ export const DOMAINS = Object.freeze(
   )
 );
 
+/**
+ * The layers of a study. Raw is the root: every other layer is built off it by
+ * workflows. `optional` layers are made unless the caller says otherwise.
+ */
+export const LAYERS = Object.freeze([
+  Object.freeze({
+    id: 'raw',
+    label: 'Raw',
+    about: 'What gsm.datasim simulates: one table per domain, as a study database gives them.',
+    optional: false
+  }),
+  Object.freeze({
+    id: 'raw.rbqm',
+    label: 'Raw.RBQM',
+    about:
+      'Raw under gsm’s names, by gsm.mapping’s own workflows. gsm calls these tables Mapped; its site metrics read them.',
+    optional: true
+  }),
+  Object.freeze({
+    id: 'adam',
+    label: 'ADaM',
+    about:
+      'Analysis-ready tables for charts of participants, by study.builder’s workflows. Each column says where it came from.',
+    optional: true
+  })
+]);
+
+/** The layers built off raw unless the caller says otherwise. */
+export const DEFAULT_LAYERS = Object.freeze(
+  LAYERS.filter((layer) => layer.optional).map((layer) => layer.id)
+);
+
 /** The standard files that can be made, with the domain each is made from. */
 export const STANDARD = Object.freeze([
   Object.freeze({ id: 'subject', name: 'adsl.csv', label: 'Subject-level', from: 'SUBJ' }),
@@ -138,7 +170,8 @@ export const DEFAULTS = Object.freeze({
   months: 9,
   outliers: 'typical',
   seed: null,
-  domains: DEFAULT_DOMAINS
+  domains: DEFAULT_DOMAINS,
+  layers: DEFAULT_LAYERS
 });
 
 /** What every study built here is, and is not: one sentence each. */
@@ -146,6 +179,7 @@ export const CAVEATS = Object.freeze([
   'Every row is synthetic, made by gsm.datasim. No real participant or site is in it.',
   'Phase and therapeutic area are labels. gsm.datasim does not shape the data by either, so a phase only fills in a typical size.',
   'Only the study’s last monthly snapshot is returned.',
+  'Every table that is not raw is built off raw by a workflow, and says which. The ADaM tables are a light form: enough for charts, not a submission.',
   'gsm.datasim makes no lab results (only toxicity grades), no treatment arms and no ECGs. Adverse event terms are its placeholders.'
 ]);
 
@@ -187,7 +221,7 @@ function whole(value) {
  * Read settings: every problem with them, each a sentence, and, when there is
  * none, what R is asked for. A setting left out is the default's; numbers may
  * be numbers or the text a form field holds.
- * @param {Object} [settings] `name`, `phase`, `area`, `participants`, `sites`, `months`, `outliers`, `seed` and `domains`.
+ * @param {Object} [settings] `name`, `phase`, `area`, `participants`, `sites`, `months`, `outliers`, `seed`, `domains` and `layers`.
  * @returns {{problems: string[], args: ?Object, domains: string[]}} The problems; the arguments of `builder_run` less the folders R is told; and every domain the study will hold.
  */
 export function readSettings(settings = {}) {
@@ -235,6 +269,14 @@ export function readSettings(settings = {}) {
     problems.push('Choose at least one domain besides the four every study has.');
   }
   const domains = withNeeds(optional);
+  const layerIds = LAYERS.filter((layer) => layer.optional).map((layer) => layer.id);
+  const askedLayers = Array.isArray(given.layers) ? given.layers.filter((id) => id !== 'raw') : [];
+  const unknownLayers = askedLayers.filter((id) => !layerIds.includes(id));
+  if (unknownLayers.length) {
+    problems.push(`Not a layer study.builder makes: ${unknownLayers.join(', ')}.`);
+  }
+  // In the order the layers are shown, whatever order they were asked for in.
+  const layers = layerIds.filter((id) => askedLayers.includes(id));
   if (problems.length) return { problems, args: null, domains };
   return {
     problems,
@@ -248,6 +290,7 @@ export function readSettings(settings = {}) {
       phase: phase.id,
       therapeutic_area: given.area,
       domains: optional,
+      layers,
       // A seed left empty is not sent: R then draws as it will.
       ...(seed === null ? {} : { seed })
     }
@@ -271,7 +314,8 @@ export function studySaid(study) {
   return (
     `${study.id} is a simulated ${phase ? phase.label : 'study'} ${args.therapeutic_area} study: ` +
     `${count(args.participants, 'participant')} at ${count(args.sites, 'site')} over ` +
-    `${count(args.months, 'month')}, in ${count(study.domains.length, 'domain')}, made by ` +
+    `${count(args.months, 'month')}, in ${count(study.domains.length, 'domain')} and ` +
+    `${count(study.layers.length, 'layer')}, made by ` +
     `gsm.datasim${version} in this browser${seconds}. Every row is synthetic.`
   );
 }

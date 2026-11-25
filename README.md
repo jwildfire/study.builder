@@ -6,13 +6,28 @@ You describe a trial: its phase, therapeutic area, participants, sites, months a
 
 Try it: https://jwildfire.github.io/study.builder/
 
-Status: experimental, v0.1.0. Every row is synthetic.
+Status: experimental, v0.2.0 in development (v0.1.0 is the latest release). Every row is synthetic.
 
 ## What it gives you
 
-- **A widget.** A form for the trial and a card for each of 19 domains. Once a study is built, each domain shows its rows, its columns and their types, its first rows, and a download.
+- **A study in layers.** Raw is the root: what gsm.datasim simulates. Every other layer is built off it by workflows, and every table says which workflow made it and what that workflow read.
+- **A widget.** A form for the trial, a card for each of 19 raw domains, and, once a study is built, a tab for each layer. Every table shows its rows, its columns and their types, its first rows, and a download.
 - **A plain function.** Settings in, data out, with no page at all. This is how another package loads simulated data.
-- **Standard files.** Three files made from the raw domains for charts of participants (subject-level, adverse events, labs and vitals). Each says, column by column, where it came from and what was derived.
+- **A manifest.** A checksum for every table and one key for the whole study. The same tables always give the same key.
+
+## Layers
+
+| Layer    | Id         | What it is                                                                      | Built by                                        |
+| -------- | ---------- | ------------------------------------------------------------------------------- | ----------------------------------------------- |
+| Raw      | `raw`      | One table per domain, as a study database gives them                            | gsm.datasim                                     |
+| Raw.RBQM | `raw.rbqm` | Raw under gsm's names: the tables gsm calls Mapped, which its site metrics read | gsm.mapping's own workflows                     |
+| ADaM     | `adam`     | Analysis-ready tables for charts of participants: ADSL, ADAE, ADVS              | study.builder's workflows, in `workflows/adam/` |
+
+- Every step off raw is a [workr](https://github.com/Gilead-Public/workr) workflow: a YAML file with a spec (the tables and columns it reads) and steps. No table is derived by hand-written code.
+- A workflow runs only when every table it reads is there, so a study with no adverse events has no ADAE and nothing fails.
+- Each ADaM workflow has a `columns` block that says where every column it writes came from. That is the mapping the widget shows, and where custom column transformers will be edited.
+- The ADaM tables are a light form: enough for charts, not a submission. There is no SDTM layer yet.
+- Analysis and reporting layers, which work out statistics from any data layer, are planned and not in this version.
 
 ## Use it on a page
 
@@ -55,9 +70,14 @@ const study = await StudyBuilder.buildStudy({
   domains: ['AE', 'LB', 'VS']
 });
 
-study.domains; // every raw domain: id, name, rows, columns, text (CSV)
-study.standard; // the standard files, each with its mapping
-study.files(); // { raw: [{ name, text }], standard: [{ name, text }] }
+study.layers; // raw first, then each layer built off it, each with its tables
+study.table('adam', 'ADAE'); // one table: rows, columns, text (CSV), made, mapping
+study.manifest; // a checksum per table, the package versions, the settings, one key
+study.files(); // { raw, standard, layers }: each a list of { name, text }, layers by id
+
+// The v0.1 names still work: the raw layer and the ADaM layer.
+study.domains;
+study.standard;
 ```
 
 To build more than one study, keep a builder so R starts once:
@@ -72,17 +92,18 @@ A build that cannot be made rejects with a `StudyBuilderError` whose message is 
 
 ## Settings
 
-| Setting        | Values                                  | Default                                                 |
-| -------------- | --------------------------------------- | ------------------------------------------------------- |
-| `name`         | Any text                                | `BUILT-001`                                             |
-| `phase`        | `P1`, `P2`, `P3`, `P4`                  | `P2`                                                    |
-| `area`         | `Oncology`, `Virology`, `Inflammation`  | `Oncology`                                              |
-| `participants` | 20 to 500                               | 150                                                     |
-| `sites`        | 2 to 100, no more than the participants | 20                                                      |
-| `months`       | 3 to 12                                 | 9                                                       |
-| `outliers`     | `few`, `typical`, `many`                | `typical`                                               |
-| `seed`         | A whole number, or left out             | None: each build differs                                |
-| `domains`      | A list of domain ids (see below)        | Visits, AE, labs, vitals, PD, the two completion tables |
+| Setting        | Values                                       | Default                                                 |
+| -------------- | -------------------------------------------- | ------------------------------------------------------- |
+| `name`         | Any text                                     | `BUILT-001`                                             |
+| `phase`        | `P1`, `P2`, `P3`, `P4`                       | `P2`                                                    |
+| `area`         | `Oncology`, `Virology`, `Inflammation`       | `Oncology`                                              |
+| `participants` | 20 to 500                                    | 150                                                     |
+| `sites`        | 2 to 100, no more than the participants      | 20                                                      |
+| `months`       | 3 to 12                                      | 9                                                       |
+| `outliers`     | `few`, `typical`, `many`                     | `typical`                                               |
+| `seed`         | A whole number, or left out                  | None: each build differs                                |
+| `domains`      | A list of domain ids (see below)             | Visits, AE, labs, vitals, PD, the two completion tables |
+| `layers`       | The layers built off raw: `raw.rbqm`, `adam` | Both                                                    |
 
 ## Domains
 
@@ -91,7 +112,7 @@ Four are in every study: `STUDY`, `SITE`, `SUBJ` and `ENROLL`.
 The rest are optional: `VISIT`, `AE`, `LB`, `VS`, `PD`, `STUDCOMP`, `SDRGCOMP`, `IE`, `PK`, `Randomization`, `OverallResponse`, `Death`, `QUERY`, `DATAENT` and `DATACHG`.
 
 - A domain that is made from another brings it: vital signs and overall response bring visits, and deaths bring study completion.
-- `LB`, `QUERY`, `DATAENT` and `DATACHG` grow fast. A 500-participant, 12-month study with the default domains is about 34 MB of text.
+- `LB`, `QUERY`, `DATAENT` and `DATACHG` grow fast. A 500-participant, 12-month study with the default domains and both layers is about 65 MB of text; leave a layer out with `layers` when you do not need it.
 
 `StudyBuilder.DOMAINS` lists every domain with its label and what one row is.
 
@@ -132,7 +153,8 @@ A connection is anything with `run(name, { args })` that resolves to `{ status: 
 
 ## How it works
 
-- `r/builder.R` is the whole of the R. It evaluates gsm.datasim's own source, asks it for the study, and writes each domain out.
+- `r/builder.R` is the whole of the R. It evaluates gsm.datasim's own source, asks it for the study, runs the workflows that build each layer, and writes every table out.
+- `workflows/adam/` holds study.builder's own workflows. Raw.RBQM uses the mapping workflows installed with gsm.mapping.
 - gsm.datasim has no WebAssembly build, and it is plain R, so its source is copied from its release tag into `vendor/gsm.datasim/` and evaluated as it is. Nothing in it is edited.
 - Vital signs come from gsm.datasim's own generator, given the spec of gsm.mapping v1.3.0's `VS.yaml`, copied into `vendor/gsm.mapping-vitals/`.
 - `vendor/r-wasm/` holds WebAssembly builds of workr, gsm.core, gsm.mapping and gsm.reporting, built by [safety.viz](https://github.com/jwildfire/safety.viz)'s workflow and copied from it with their record.
@@ -154,7 +176,9 @@ The unit tests use a stand-in for R. `npm run test:r` builds studies with real R
 
 ## Not done yet
 
-- Custom column transformers: letting a user say how a raw column becomes a standard one. The mapping view is where they will live.
+- An SDTM layer between raw and ADaM, and analysis and reporting layers that work on any data layer.
+- Custom column transformers: letting a user edit how a column is made. The workflows' `columns` blocks and the mapping view are where they will live.
+- Opening a ready-made study without starting R.
 - An R wrapper (an htmlwidget).
 - Tests of the widget in a real browser. Real R is tested without one.
 - Lab results, treatment arms and ECGs, which need work in gsm.datasim itself.

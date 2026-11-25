@@ -5,7 +5,8 @@
 //
 //   _site/study.builder.js       script tag: defines the global StudyBuilder
 //   _site/study.builder.mjs      the same, as a module
-//   _site/r/, _site/vendor/      what R in the browser fetches
+//   _site/r/, _site/vendor/,     what R in the browser fetches
+//   _site/workflows/
 //   _site/index.html             the builder on a page of its own
 
 import { build } from 'esbuild';
@@ -72,6 +73,7 @@ for (const [name, text] of built) writeFileSync(path.join(out, name), text);
 
 cpSync(path.join(root, 'r'), path.join(out, 'r'), { recursive: true });
 cpSync(path.join(root, 'vendor'), path.join(out, 'vendor'), { recursive: true });
+cpSync(path.join(root, 'workflows'), path.join(out, 'workflows'), { recursive: true });
 const page = readFileSync(path.join(root, 'site/index.html'), 'utf8').replaceAll(
   '{{version}}',
   version

@@ -15,6 +15,7 @@ import {
   CAVEATS,
   DEFAULTS,
   DOMAINS,
+  LAYERS,
   LIMITS,
   OUTLIERS,
   PHASES,
@@ -100,6 +101,12 @@ export function mount(
       DOMAINS.some((domain) => domain.id === id && !domain.core)
     )
   );
+  let layersChosen = new Set(
+    (Array.isArray(form.layers) ? form.layers : DEFAULTS.layers).filter((id) =>
+      LAYERS.some((layer) => layer.id === id && layer.optional)
+    )
+  );
+  let shownLayer = 'raw'; // the layer whose tables are listed, once a study is built
   // idle → building → done, or → failed.
   let phase = 'idle';
   let stage = '';
@@ -123,7 +130,11 @@ export function mount(
     }
   });
 
-  const current = () => ({ ...form, domains: [...chosen] });
+  const current = () => ({
+    ...form,
+    domains: [...chosen],
+    layers: LAYERS.filter((layer) => layersChosen.has(layer.id)).map((layer) => layer.id)
+  });
   const key = () => JSON.stringify(current());
 
   async function build() {
@@ -156,16 +167,17 @@ export function mount(
     phase = 'done';
     // The details that were open stay open when the new study has that table.
     if (open && !tableOf(open)) open = null;
+    if (!study.layers.some((layer) => layer.id === shownLayer)) shownLayer = 'raw';
     draw();
     if (typeof onBuilt === 'function') onBuilt(study);
     return study;
   }
 
+  /** The table a details id names: `raw:AE`, `adam:ADAE`. */
   function tableOf(id) {
     if (!study || !id) return null;
-    const [kind, name] = id.split(':');
-    const tables = kind === 'standard' ? study.standard : study.domains;
-    return tables.find((table) => table.id === name) || null;
+    const at = id.lastIndexOf(':');
+    return study.table(id.slice(0, at), id.slice(at + 1));
   }
 
   // ---- drawing ----
@@ -332,26 +344,82 @@ export function mount(
     return cards;
   }
 
-  function standardCards() {
+  /** The optional layers, each with a tick: which are built off raw. */
+  function layerChoices() {
+    const row = el('div', 'sb-layer-choices');
+    for (const layer of LAYERS) {
+      const choice = el('label', 'sb-layer-choice');
+      const box = el('input');
+      box.type = 'checkbox';
+      box.dataset.layer = layer.id;
+      box.checked = !layer.optional || layersChosen.has(layer.id);
+      box.disabled = !layer.optional || phase === 'building';
+      box.onchange = () => {
+        if (box.checked) layersChosen.add(layer.id);
+        else layersChosen.delete(layer.id);
+        draw();
+      };
+      const words = el('span');
+      words.append(el('strong', null, layer.label), ` ${layer.about}`);
+      choice.append(box, words);
+      row.append(choice);
+    }
+    return row;
+  }
+
+  /** The built study's layers: a tab for each, and the open layer's tables. */
+  function layerRail() {
+    const wrap = el('div', 'sb-layers');
+    const tabs = el('div', 'sb-layer-tabs');
+    tabs.setAttribute('role', 'tablist');
+    for (const layer of study.layers) {
+      const tab = el('button', 'sb-layer-tab');
+      tab.type = 'button';
+      tab.dataset.layerTab = layer.id;
+      tab.setAttribute('role', 'tab');
+      tab.setAttribute('aria-selected', String(shownLayer === layer.id));
+      tab.append(
+        el('span', null, layer.label),
+        el('span', 'sb-layer-count', count(layer.tables.length, 'table'))
+      );
+      tab.onclick = () => {
+        shownLayer = layer.id;
+        draw();
+      };
+      tabs.append(tab);
+    }
+    wrap.append(tabs);
+    const layer = study.layers.find((entry) => entry.id === shownLayer);
+    if (layer.about) wrap.append(el('p', 'sb-layer-about', layer.about));
+    if (!layer.tables.length) {
+      wrap.append(el('p', 'sb-layer-about', 'This study has no tables in this layer.'));
+      return wrap;
+    }
     const cards = el('ul', 'sb-cards');
-    for (const file of study.standard) {
-      const id = `standard:${file.id}`;
+    for (const made of layer.tables) {
+      const id = `${layer.id}:${made.id}`;
       const card = el('li', 'sb-card');
-      card.dataset.standard = file.id;
+      card.dataset.table = id;
       card.dataset.on = 'true';
       card.dataset.open = String(open === id);
       const head = el('div', 'sb-card-head');
-      head.append(el('span', 'sb-card-name', file.label), el('span', 'sb-card-id', file.name));
-      const from = file.from
-        .map((source) => (DOMAINS.find((domain) => domain.id === source) || {}).label || source)
-        .join(' and ');
-      card.append(head, el('p', 'sb-card-grain', `Made from ${from}.`));
+      head.append(el('span', 'sb-card-name', made.label), el('span', 'sb-card-id', made.table));
+      card.append(head, el('p', 'sb-card-grain', madeSaid(made)));
       const foot = el('div', 'sb-card-foot');
-      foot.append(el('span', 'sb-rows', count(file.rows, 'row')), detailsButton(id));
+      foot.append(el('span', 'sb-rows', count(made.rows, 'row')), detailsButton(id));
       card.append(foot);
       cards.append(card);
     }
-    return cards;
+    wrap.append(cards);
+    return wrap;
+  }
+
+  /** What made a table, in a sentence. */
+  function madeSaid(made) {
+    if (made.layer === 'raw') return made.grain ? `${made.grain}.` : 'Simulated by gsm.datasim.';
+    return made.made.from.length
+      ? `Built from ${made.made.from.join(' and ')} by the ${made.made.workflow} workflow.`
+      : `Built by the ${made.made.workflow} workflow.`;
   }
 
   function table(header, rows, kind) {
@@ -394,9 +462,9 @@ export function mount(
     download.onclick = () => save(shown.name, shown.text, 'text/csv');
     head.append(download);
     panel.append(head);
-    if (shown.grain) panel.append(el('p', 'sb-detail-meta', `${shown.grain}.`));
+    panel.append(el('p', 'sb-detail-meta', madeSaid(shown)));
 
-    if (shown.kind === 'standard') {
+    if (shown.mapping && shown.mapping.length) {
       panel.append(el('h5', null, 'Where each column came from'));
       const types = new Map(shown.columns.map((column) => [column.name, column.type]));
       panel.append(
@@ -449,13 +517,14 @@ export function mount(
       el(
         'p',
         'sb-pitch',
-        'Describe a trial and choose its domains. gsm.datasim simulates it in this browser, and ' +
-          'every domain can be looked at and downloaded.'
+        'Describe a trial and choose its domains. gsm.datasim simulates it in this browser, the ' +
+          'layers are built off the raw tables by workflows, and every table can be looked at and downloaded.'
       )
     );
 
     shell.append(el('h3', null, 'The trial'), trialForm());
-    shell.append(el('h3', null, 'Domains'), domainCards());
+    shell.append(el('h3', null, 'Raw domains'), domainCards());
+    shell.append(el('h3', null, 'Layers'), layerChoices());
 
     const actions = el('div', 'sb-actions');
     const go = el('button', 'sb-button', phase === 'building' ? 'Building…' : 'Build');
@@ -508,6 +577,15 @@ export function mount(
       done.dataset.built = 'true';
       done.setAttribute('role', 'status');
       done.append(el('p', null, study.said));
+      if (study.manifest) {
+        const key = el(
+          'p',
+          'sb-detail-meta',
+          `Study key ${study.manifest.key.slice(0, 19)}…: the same tables always give the same key.`
+        );
+        key.dataset.key = study.manifest.key;
+        done.append(key);
+      }
       const uses = el('div', 'sb-actions');
       uses.style.margin = '0';
       if (typeof onStudy === 'function') {
@@ -522,12 +600,14 @@ export function mount(
       all.type = 'button';
       all.dataset.action = 'zip';
       all.onclick = () => {
-        const { raw, standard } = study.files();
+        const { layers } = study.files();
         save(
           `${study.id}.zip`,
           zipOf([
-            ...raw.map((file) => ({ ...file, name: `raw/${file.name}` })),
-            ...standard.map((file) => ({ ...file, name: `standard/${file.name}` }))
+            { name: 'manifest.json', text: `${JSON.stringify(study.manifest, null, 2)}\n` },
+            ...Object.entries(layers).flatMap(([layer, files]) =>
+              files.map((file) => ({ ...file, name: `${layer}/${file.name}` }))
+            )
           ]),
           'application/zip'
         );
@@ -536,9 +616,7 @@ export function mount(
       done.append(uses);
       shell.append(done);
 
-      if (study.standard.length) {
-        shell.append(el('h3', null, 'Standard files, made from the domains'), standardCards());
-      }
+      shell.append(el('h3', null, 'The study, layer by layer'), layerRail());
       const panel = detail();
       if (panel) shell.append(panel);
     }
