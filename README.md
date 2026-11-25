@@ -11,7 +11,7 @@ Status: experimental, v0.2.0 in development (v0.1.0 is the latest release). Ever
 ## What it gives you
 
 - **A study in layers.** Raw is the root: what gsm.datasim simulates. Every other layer is built off it by workflows, and every table says which workflow made it and what that workflow read.
-- **A widget.** A form for the trial, a card for each of 19 raw domains, and, once a study is built, a tab for each layer. Every table shows its rows, its columns and their types, its first rows, and a download.
+- **A widget.** A form for the trial and the layers to build, with the 19 raw domains folded into one line. A built study opens on an overview, with a tab for each layer: a short list of its tables beside a viewer that shows the open table's first rows, a summary of every column, and a download.
 - **A plain function.** Settings in, data out, with no page at all. This is how another package loads simulated data.
 - **A manifest.** A checksum for every table and one key for the whole study. The same tables always give the same key.
 
@@ -73,6 +73,8 @@ const study = await StudyBuilder.buildStudy({
 study.layers; // raw first, then each layer built off it, each with its tables
 study.table('adam', 'ADAE'); // one table: rows, columns, text (CSV), made, mapping
 study.manifest; // a checksum per table, the package versions, the settings, one key
+StudyBuilder.overviewOf(study); // the trial, its counts, its countries, what each layer holds
+StudyBuilder.columnsOf(study.table('raw', 'AE')); // each column: how full, how many values, its range
 study.files(); // { raw, standard, layers }: each a list of { name, text }, layers by id
 
 // The v0.1 names still work: the raw layer and the ADaM layer.

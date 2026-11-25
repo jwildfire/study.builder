@@ -25,8 +25,14 @@ import {
 } from './core.js';
 import { DOWNLOADS, createBuilder } from './build.js';
 import { firstRows } from './csv.js';
+import { columnsOf, overviewOf } from './overview.js';
 import { injectStyles } from './styles.js';
 import { zipOf } from './zip.js';
+
+/** The tab that is not a layer. */
+const OVERVIEW = 'overview';
+/** How many rows a preview shows, and how many more each press adds. */
+const PREVIEW_STEP = 50;
 
 /** What R is doing while it starts, by the step the connection names. */
 const STAGE_WORDS = {
@@ -106,7 +112,10 @@ export function mount(
       LAYERS.some((layer) => layer.id === id && layer.optional)
     )
   );
-  let shownLayer = 'raw'; // the layer whose tables are listed, once a study is built
+  let shownLayer = OVERVIEW; // the tab that is open, once a study is built: the overview, or a layer
+  const openIn = new Map(); // layer → the id of the table open in it
+  let viewerPart = 'preview'; // which part of the open table is shown
+  let previewRows = PREVIEW_STEP; // how many rows of the open table are shown
   let domainsOpen = false; // whether the list of raw domains is unfolded
   // idle → building → done, or → failed.
   let phase = 'idle';
@@ -115,7 +124,6 @@ export function mount(
   let failure = '';
   let study = null;
   let builtWith = '';
-  let open = null; // 'raw:AE' or 'standard:ae': the table whose details are shown
   let builds = 0;
   let destroyed = false;
 
@@ -167,18 +175,13 @@ export function mount(
     builtWith = asked;
     phase = 'done';
     // The details that were open stay open when the new study has that table.
-    if (open && !tableOf(open)) open = null;
-    if (!study.layers.some((layer) => layer.id === shownLayer)) shownLayer = 'raw';
+    if (shownLayer !== OVERVIEW && !study.layers.some((layer) => layer.id === shownLayer)) {
+      shownLayer = OVERVIEW;
+    }
+    previewRows = PREVIEW_STEP;
     draw();
     if (typeof onBuilt === 'function') onBuilt(study);
     return study;
-  }
-
-  /** The table a details id names: `raw:AE`, `adam:ADAE`. */
-  function tableOf(id) {
-    if (!study || !id) return null;
-    const at = id.lastIndexOf(':');
-    return study.table(id.slice(0, at), id.slice(at + 1));
   }
 
   // ---- drawing ----
@@ -280,23 +283,6 @@ export function mount(
     return body;
   }
 
-  function detailsButton(id) {
-    const button = el('button', 'sb-button', open === id ? 'Hide' : 'Details');
-    button.type = 'button';
-    button.dataset.kind = 'small';
-    button.dataset.details = id;
-    button.setAttribute('aria-expanded', String(open === id));
-    button.onclick = () => {
-      open = open === id ? null : id;
-      draw();
-      const panel = root.querySelector('.sb-detail');
-      if (panel && typeof panel.scrollIntoView === 'function') {
-        panel.scrollIntoView({ block: 'nearest' });
-      }
-    };
-    return button;
-  }
-
   /**
    * The raw domains, folded shut: one line saying how many are chosen, and
    * inside it a tick for each. What a built domain holds is on the Raw tab.
@@ -377,53 +363,6 @@ export function mount(
     return row;
   }
 
-  /** The built study's layers: a tab for each, and the open layer's tables. */
-  function layerRail() {
-    const wrap = el('div', 'sb-layers');
-    const tabs = el('div', 'sb-layer-tabs');
-    tabs.setAttribute('role', 'tablist');
-    for (const layer of study.layers) {
-      const tab = el('button', 'sb-layer-tab');
-      tab.type = 'button';
-      tab.dataset.layerTab = layer.id;
-      tab.setAttribute('role', 'tab');
-      tab.setAttribute('aria-selected', String(shownLayer === layer.id));
-      tab.append(
-        el('span', null, layer.label),
-        el('span', 'sb-layer-count', count(layer.tables.length, 'table'))
-      );
-      tab.onclick = () => {
-        shownLayer = layer.id;
-        draw();
-      };
-      tabs.append(tab);
-    }
-    wrap.append(tabs);
-    const layer = study.layers.find((entry) => entry.id === shownLayer);
-    if (layer.about) wrap.append(el('p', 'sb-layer-about', layer.about));
-    if (!layer.tables.length) {
-      wrap.append(el('p', 'sb-layer-about', 'This study has no tables in this layer.'));
-      return wrap;
-    }
-    const cards = el('ul', 'sb-cards');
-    for (const made of layer.tables) {
-      const id = `${layer.id}:${made.id}`;
-      const card = el('li', 'sb-card');
-      card.dataset.table = id;
-      card.dataset.on = 'true';
-      card.dataset.open = String(open === id);
-      const head = el('div', 'sb-card-head');
-      head.append(el('span', 'sb-card-name', made.label), el('span', 'sb-card-id', made.table));
-      card.append(head, el('p', 'sb-card-grain', madeSaid(made)));
-      const foot = el('div', 'sb-card-foot');
-      foot.append(el('span', 'sb-rows', count(made.rows, 'row')), detailsButton(id));
-      card.append(foot);
-      cards.append(card);
-    }
-    wrap.append(cards);
-    return wrap;
-  }
-
   /** What made a table, in a sentence. */
   function madeSaid(made) {
     if (made.layer === 'raw') return made.grain ? `${made.grain}.` : 'Simulated by gsm.datasim.';
@@ -437,7 +376,13 @@ export function mount(
     const grid = el('table', 'sb-table');
     if (kind) grid.dataset.kind = kind;
     const head = el('tr');
-    for (const name of header) head.append(el('th', null, name));
+    for (const name of header) {
+      const cell = el('th');
+      // A header may be a name alone, or a name with a line under it.
+      if (Array.isArray(name)) cell.append(name[0], el('span', 'sb-th-note', name[1]));
+      else cell.textContent = name;
+      head.append(cell);
+    }
     const top = el('thead');
     top.append(head);
     const body = el('tbody');
@@ -451,18 +396,64 @@ export function mount(
     return scroll;
   }
 
-  function detail() {
-    const shown = tableOf(open);
-    if (!shown) return null;
-    const panel = el('section', 'sb-detail');
-    panel.setAttribute('aria-label', `${shown.label} details`);
-    const head = el('div', 'sb-detail-head');
-    head.append(
+  /** The study at a glance: what the trial is, its counts, its countries and its layers. */
+  function overview() {
+    const said = overviewOf(study);
+    const wrap = el('div', 'sb-overview');
+    wrap.dataset.overview = study.id;
+    const facts = el('dl', 'sb-facts');
+    for (const fact of said.facts) {
+      // A term and its value, kept together in one cell.
+      const pair = el('div', 'sb-fact');
+      pair.append(el('dt', null, fact.label), el('dd', null, fact.value));
+      facts.append(pair);
+    }
+    const tiles = el('ul', 'sb-tiles');
+    for (const one of said.counts) {
+      const tile = el('li', 'sb-tile');
+      tile.append(
+        el('span', 'sb-tile-value', Number(one.value).toLocaleString('en-US')),
+        el('span', 'sb-tile-label', one.label)
+      );
+      if (one.note) tile.append(el('span', 'sb-tile-note', one.note));
+      tiles.append(tile);
+    }
+    const lower = el('div', 'sb-overview-lower');
+    const places = el('div');
+    places.append(
+      el('h5', null, 'Sites and participants by country'),
+      table(
+        ['Country', 'Sites', 'Participants'],
+        said.countries.map((row) => [row.country, String(row.sites), String(row.participants)])
+      )
+    );
+    const held = el('div');
+    held.append(
+      el('h5', null, 'What each layer holds'),
+      table(
+        ['Layer', 'Tables', 'Rows'],
+        said.layers.map((row) => [row.label, String(row.tables), row.rows.toLocaleString('en-US')])
+      )
+    );
+    lower.append(places, held);
+    wrap.append(tiles, facts, lower);
+    return wrap;
+  }
+
+  /** One table, looked into: its first rows, its columns, and where it came from. */
+  function viewer(shown) {
+    const id = `${shown.layer}:${shown.id}`;
+    const panel = el('section', 'sb-viewer');
+    panel.dataset.viewer = id;
+    panel.setAttribute('aria-label', `${shown.label}, ${shown.table}`);
+    const head = el('div', 'sb-viewer-head');
+    const title = el('div', 'sb-viewer-title');
+    title.append(
       el('h4', null, shown.label),
       el(
         'span',
-        'sb-detail-meta',
-        `${shown.name} · ${count(shown.rows, 'row')} · ${count(shown.columns.length, 'column')}`
+        'sb-viewer-meta',
+        `${shown.table} · ${count(shown.rows, 'row')} · ${count(shown.columns.length, 'column')}`
       )
     );
     const download = el('button', 'sb-button', 'Download CSV');
@@ -470,12 +461,33 @@ export function mount(
     download.dataset.kind = 'small';
     download.dataset.download = shown.name;
     download.onclick = () => save(shown.name, shown.text, 'text/csv');
-    head.append(download);
-    panel.append(head);
-    panel.append(el('p', 'sb-detail-meta', madeSaid(shown)));
+    head.append(title, download);
+    panel.append(head, el('p', 'sb-viewer-meta', madeSaid(shown)));
 
-    if (shown.mapping && shown.mapping.length) {
-      panel.append(el('h5', null, 'Where each column came from'));
+    const hasMapping = Boolean(shown.mapping && shown.mapping.length);
+    const parts = [
+      ['preview', 'Preview'],
+      ['columns', 'Columns'],
+      ...(hasMapping ? [['mapping', 'Where it came from']] : [])
+    ];
+    if (!parts.some(([part]) => part === viewerPart)) viewerPart = 'preview';
+    const tabs = el('div', 'sb-viewer-tabs');
+    tabs.setAttribute('role', 'tablist');
+    for (const [part, label] of parts) {
+      const tab = el('button', 'sb-viewer-tab', label);
+      tab.type = 'button';
+      tab.dataset.part = part;
+      tab.setAttribute('role', 'tab');
+      tab.setAttribute('aria-selected', String(viewerPart === part));
+      tab.onclick = () => {
+        viewerPart = part;
+        draw();
+      };
+      tabs.append(tab);
+    }
+    panel.append(tabs);
+
+    if (viewerPart === 'mapping') {
       const types = new Map(shown.columns.map((column) => [column.name, column.type]));
       panel.append(
         table(
@@ -489,28 +501,128 @@ export function mount(
           'wrap'
         )
       );
-    } else {
-      panel.append(el('h5', null, 'Columns'));
+    } else if (viewerPart === 'columns') {
+      const said = columnsOf(shown);
+      if (said.read < said.of) {
+        panel.append(
+          el(
+            'p',
+            'sb-viewer-meta',
+            `Summarised from the first ${said.read.toLocaleString('en-US')} of ${said.of.toLocaleString('en-US')} rows.`
+          )
+        );
+      }
       panel.append(
         table(
-          ['Column', 'Type'],
-          shown.columns.map((column) => [column.name, column.type])
+          ['Column', 'Type', 'Filled', 'Different values', 'Range or commonest values'],
+          said.columns.map((column) => [
+            column.name,
+            column.type,
+            `${Math.round(column.filled * 100)}%`,
+            column.distinct.toLocaleString('en-US'),
+            column.says
+          ]),
+          'wrap'
         )
       );
+    } else {
+      const types = new Map(shown.columns.map((column) => [column.name, column.type]));
+      const preview = firstRows(shown.text, previewRows);
+      panel.append(
+        table(
+          preview.header.map((name) => [name, types.get(name) || '']),
+          preview.rows
+        )
+      );
+      const foot = el('div', 'sb-viewer-foot');
+      foot.append(
+        el(
+          'span',
+          'sb-viewer-meta',
+          preview.rows.length < shown.rows
+            ? `Rows 1 to ${preview.rows.length} of ${shown.rows.toLocaleString('en-US')}`
+            : `All ${count(shown.rows, 'row')}`
+        )
+      );
+      if (preview.rows.length < shown.rows) {
+        const more = el('button', 'sb-button', 'Show 50 more');
+        more.type = 'button';
+        more.dataset.kind = 'small';
+        more.dataset.action = 'more';
+        more.onclick = () => {
+          previewRows += PREVIEW_STEP;
+          draw();
+        };
+        foot.append(more);
+      }
+      panel.append(foot);
     }
-
-    const preview = firstRows(shown.text, 20);
-    panel.append(
-      el(
-        'h5',
-        null,
-        preview.rows.length < shown.rows
-          ? `First ${preview.rows.length} of ${shown.rows.toLocaleString('en-US')} rows`
-          : `All ${count(shown.rows, 'row')}`
-      )
-    );
-    panel.append(table(preview.header, preview.rows));
     return panel;
+  }
+
+  /**
+   * The built study: an overview, and a tab for each layer. A layer shows a
+   * short list of its tables beside the one that is open.
+   */
+  function layerRail() {
+    const wrap = el('div', 'sb-layers');
+    const tabs = el('div', 'sb-layer-tabs');
+    tabs.setAttribute('role', 'tablist');
+    const tabFor = (id, label, note) => {
+      const tab = el('button', 'sb-layer-tab');
+      tab.type = 'button';
+      tab.dataset.layerTab = id;
+      tab.setAttribute('role', 'tab');
+      tab.setAttribute('aria-selected', String(shownLayer === id));
+      tab.append(el('span', null, label));
+      if (note) tab.append(el('span', 'sb-layer-count', note));
+      tab.onclick = () => {
+        shownLayer = id;
+        draw();
+      };
+      tabs.append(tab);
+    };
+    tabFor(OVERVIEW, 'Overview');
+    for (const layer of study.layers) tabFor(layer.id, layer.label, String(layer.tables.length));
+    wrap.append(tabs);
+    if (shownLayer === OVERVIEW) {
+      wrap.append(overview());
+      return wrap;
+    }
+    const layer = study.layers.find((entry) => entry.id === shownLayer);
+    if (layer.about) wrap.append(el('p', 'sb-layer-about', layer.about));
+    if (!layer.tables.length) {
+      wrap.append(el('p', 'sb-layer-about', 'This study has no tables in this layer.'));
+      return wrap;
+    }
+    // The table that is open in this layer: the one last chosen, or its first.
+    const chosenId = openIn.get(layer.id);
+    const shown = layer.tables.find((made) => made.id === chosenId) || layer.tables[0];
+    const browser = el('div', 'sb-browser');
+    const list = el('ul', 'sb-table-list');
+    for (const made of layer.tables) {
+      const item = el('li');
+      const pick = el('button', 'sb-table-pick');
+      pick.type = 'button';
+      pick.dataset.table = `${layer.id}:${made.id}`;
+      pick.setAttribute('aria-current', String(made === shown));
+      pick.title = madeSaid(made);
+      pick.append(
+        el('span', 'sb-pick-name', made.label),
+        el('span', 'sb-pick-id', made.table),
+        el('span', 'sb-pick-rows', made.rows.toLocaleString('en-US'))
+      );
+      pick.onclick = () => {
+        openIn.set(layer.id, made.id);
+        previewRows = PREVIEW_STEP;
+        draw();
+      };
+      item.append(pick);
+      list.append(item);
+    }
+    browser.append(list, viewer(shown));
+    wrap.append(browser);
+    return wrap;
   }
 
   function draw() {
@@ -625,9 +737,7 @@ export function mount(
       done.append(uses);
       shell.append(done);
 
-      shell.append(el('h3', null, 'The study, layer by layer'), layerRail());
-      const panel = detail();
-      if (panel) shell.append(panel);
+      shell.append(el('h3', null, 'The study'), layerRail());
     }
 
     shell.append(el('h3', null, 'What a study built here is, and is not'));
@@ -653,7 +763,14 @@ export function mount(
     /** What the form holds now. */
     settings: current,
     /** What is on the page: for the tests, and a host that wants to follow along. */
-    state: () => ({ phase, stage, problems: [...problems], failure, open }),
+    state: () => ({
+      phase,
+      stage,
+      problems: [...problems],
+      failure,
+      tab: shownLayer,
+      part: viewerPart
+    }),
     /** Empty the element and let go of R, when it is study.builder's own. */
     destroy() {
       destroyed = true;

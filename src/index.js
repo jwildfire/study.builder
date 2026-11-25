@@ -51,5 +51,6 @@ export {
 export { DOWNLOADS, PACKAGES, StudyBuilderError, rOptions, studyOf } from './build.js';
 export { WEBR_VERSION, createConnection } from './r.js';
 export { firstRows } from './csv.js';
+export { columnsOf, overviewOf } from './overview.js';
 export { zipOf } from './zip.js';
 export { COPIED_FROM } from './files.js';

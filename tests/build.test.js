@@ -506,65 +506,104 @@ describe('the builder on a page', () => {
     expect(document.querySelector('[data-built]').textContent).toContain(
       'BUILT-001 is a simulated Phase 2 Oncology study'
     );
-    const rows = (id) => document.querySelector(`[data-table="${id}"] .sb-rows`).textContent;
-    expect(rows('raw:AE')).toBe('1 row');
-    expect(rows('raw:SUBJ')).toBe('2 rows');
-    // A domain the study does not hold has no card on the Raw tab.
-    expect(document.querySelector('[data-table="raw:LB"]')).toBeNull();
-    // The study, layer by layer: raw is the open layer, and each has a tab.
+    // The study opens on its overview; each layer has a tab that counts its tables.
     expect(
       [...document.querySelectorAll('[data-layer-tab]')].map((tab) => tab.textContent)
-    ).toEqual(['Raw2 tables', 'Raw.RBQM1 table', 'ADaM1 table']);
-    expect(document.querySelector('[data-table="raw:AE"]')).not.toBeNull();
+    ).toEqual(['Overview', 'Raw2', 'Raw.RBQM1', 'ADaM1']);
+    expect(handle.state().tab).toBe('overview');
+    expect(document.querySelector('.sb-overview')).not.toBeNull();
+    // A layer is a short list of its tables, each one line, beside the open one.
+    document.querySelector('[data-layer-tab="raw"]').click();
+    const pick = (id) => document.querySelector(`.sb-table-pick[data-table="${id}"]`);
+    expect(pick('raw:SUBJ').textContent).toBe('ParticipantsRaw_SUBJ2');
+    expect(pick('raw:AE').textContent).toBe('Adverse eventsRaw_AE1');
+    expect(pick('raw:LB')).toBeNull();
+    // The first table of a layer is open until another is chosen.
+    expect(pick('raw:SUBJ').getAttribute('aria-current')).toBe('true');
+    expect(document.querySelector('.sb-viewer').dataset.viewer).toBe('raw:SUBJ');
     document.querySelector('[data-layer-tab="adam"]').click();
-    expect(document.querySelector('[data-table="adam:ADAE"]').textContent).toContain(
+    expect(pick('adam:ADAE').textContent).toBe('ADAEADaM_ADAE1');
+    expect(document.querySelector('.sb-viewer').textContent).toContain(
       'Built from Raw_AE and ADaM_ADSL by the ADaM_ADAE workflow.'
     );
-    expect(document.querySelector('[data-table="raw:AE"]')).toBeNull();
     // The study's key is said, whole, where a page can read it.
     expect(document.querySelector('[data-key]').dataset.key).toBe(handle.study().manifest.key);
     expect(onBuilt).toHaveBeenCalledWith(handle.study());
   });
 
-  it('shows a domain’s columns, types and first rows, and downloads it', async () => {
+  it('shows the open table’s first rows with each column’s type, and downloads it', async () => {
     const { saved } = mounted();
     await handle.build();
-    document.querySelector('[data-details="raw:SUBJ"]').click();
-    const panel = document.querySelector('.sb-detail');
-    expect(panel.textContent).toContain('Raw_SUBJ.csv · 2 rows · 3 columns');
-    const [columns, preview] = panel.querySelectorAll('table');
-    expect([...columns.querySelectorAll('tbody tr')].map((row) => row.textContent)).toEqual([
+    document.querySelector('[data-layer-tab="raw"]').click();
+    const panel = () => document.querySelector('.sb-viewer');
+    expect(panel().textContent).toContain('Raw_SUBJ · 2 rows · 3 columns');
+    expect(panel().textContent).toContain('One row per participant, screened or enrolled.');
+    expect([...panel().querySelectorAll('th')].map((th) => th.textContent)).toEqual([
       'studyidcharacter',
       'subjidcharacter',
       'agerepinteger'
     ]);
-    expect([...preview.querySelectorAll('th')].map((th) => th.textContent)).toEqual([
-      'studyid',
-      'subjid',
-      'agerep'
-    ]);
-    expect(preview.querySelectorAll('tbody tr')).toHaveLength(2);
-    expect(panel.textContent).toContain('All 2 rows');
-    expect(document.querySelector('[data-table="raw:SUBJ"]').dataset.open).toBe('true');
-    panel.querySelector('[data-download]').click();
+    expect(panel().querySelectorAll('tbody tr')).toHaveLength(2);
+    expect(panel().textContent).toContain('All 2 rows');
+    expect(panel().querySelector('[data-action="more"]')).toBeNull();
+    panel().querySelector('[data-download]').click();
     expect(saved).toEqual([{ name: 'Raw_SUBJ.csv', bytes: RAW[0].text, type: 'text/csv' }]);
-    // Pressing it again hides the details.
-    document.querySelector('[data-details="raw:SUBJ"]').click();
-    expect(document.querySelector('.sb-detail')).toBeNull();
+    // Choosing another table of the layer opens it in the same place.
+    document.querySelector('.sb-table-pick[data-table="raw:AE"]').click();
+    expect(panel().dataset.viewer).toBe('raw:AE');
+    // And the layer remembers it across a visit to another tab.
+    document.querySelector('[data-layer-tab="overview"]').click();
+    document.querySelector('[data-layer-tab="raw"]').click();
+    expect(panel().dataset.viewer).toBe('raw:AE');
+  });
+
+  it('summarises the open table’s columns: how full, how many values, and their range', async () => {
+    mounted();
+    await handle.build();
+    document.querySelector('[data-layer-tab="raw"]').click();
+    document.querySelector('[data-part="columns"]').click();
+    const rows = [...document.querySelectorAll('.sb-viewer tbody tr')].map((row) =>
+      [...row.children].map((cell) => cell.textContent)
+    );
+    expect(rows).toEqual([
+      ['studyid', 'character', '100%', '1', 'BUILT-001'],
+      ['subjid', 'character', '100%', '2', 'S1, S2'],
+      ['agerep', 'integer', '100%', '2', '40 to 51']
+    ]);
+    expect(handle.state().part).toBe('columns');
   });
 
   it('says what built a table off raw, and where each of its columns came from', async () => {
     mounted();
     await handle.build();
     document.querySelector('[data-layer-tab="adam"]').click();
-    document.querySelector('[data-details="adam:ADAE"]').click();
-    expect(document.querySelector('.sb-detail').textContent).toContain(
-      'Built from Raw_AE and ADaM_ADSL by the ADaM_ADAE workflow.'
-    );
-    const rows = [...document.querySelectorAll('.sb-detail table')[0].querySelectorAll('tbody tr')];
+    // A table with no mapping has no such part; this one has.
+    document.querySelector('[data-part="mapping"]').click();
+    const rows = [...document.querySelectorAll('.sb-viewer tbody tr')];
     expect(rows.map((row) => [...row.children].map((cell) => cell.textContent))).toEqual([
       ['USUBJID', 'character', 'Raw_AE.subjid', 'Copied'],
       ['AESEV', 'character', 'Raw_AE.aetoxgr', 'Derived: the toxicity grade in words']
+    ]);
+    document.querySelector('[data-layer-tab="raw"]').click();
+    expect(document.querySelector('[data-part="mapping"]')).toBeNull();
+    expect(handle.state().part).toBe('preview');
+  });
+
+  it('opens a built study on its overview: the trial, its counts and what each layer holds', async () => {
+    mounted();
+    await handle.build();
+    const overview = document.querySelector('.sb-overview');
+    expect([...overview.querySelectorAll('.sb-tile')].map((tile) => tile.textContent)).toEqual([
+      '2Participants0 enrolled',
+      '0Sites0 countries',
+      '1Adverse events0 serious'
+    ]);
+    expect(overview.querySelector('.sb-facts').textContent).toContain('StudyBUILT-001');
+    const layers = [...overview.querySelectorAll('table')].at(-1);
+    expect([...layers.querySelectorAll('tbody tr')].map((row) => row.textContent)).toEqual([
+      'Raw23',
+      'Raw.RBQM11',
+      'ADaM11'
     ]);
   });
 

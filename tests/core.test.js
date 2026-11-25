@@ -19,6 +19,8 @@ import {
 } from '../src/core.js';
 import { PACKAGES } from '../src/build.js';
 import { firstRows } from '../src/csv.js';
+import { columnsOf, overviewOf } from '../src/overview.js';
+import { studyOf } from '../src/build.js';
 import { crc32, zipOf } from '../src/zip.js';
 import { COPIES, copyProblems, filesModule, workflowFiles } from '../scripts/files.mjs';
 import { WORKFLOW_FILES } from '../src/files.js';
@@ -319,5 +321,82 @@ describe('a zip file', () => {
     expect(
       decoder.decode(bytes.slice(offset + 30 + nameLength, offset + 30 + nameLength + size))
     ).toBe('é\n');
+  });
+});
+
+describe('a study’s overview', () => {
+  const raw = (id, text, rows) => ({
+    id,
+    table: `Raw_${id}`,
+    name: `Raw_${id}.csv`,
+    rows,
+    columns: text
+      .split('\n')[0]
+      .split(',')
+      .map((name) => ({ name, type: 'character' })),
+    text,
+    made: { workflow: 'gsm.datasim', from: [] }
+  });
+  const study = studyOf(
+    {
+      study_id: 'OV-001',
+      snapshot_date: '2012-06-30',
+      snapshots: 6,
+      layers: [
+        {
+          id: 'raw',
+          label: 'Raw',
+          tables: [
+            raw('STUDY', 'studyid,phase,therapeutic_area,status\nOV-001,P3,Virology,Active\n', 1),
+            raw('SITE', 'invid,Country\nSITE1,US\nSITE2,US\nSITE3,Japan\n', 3),
+            raw(
+              'SUBJ',
+              'subjid,invid,enrollyn\nS1,SITE1,Y\nS2,SITE1,Y\nS3,SITE3,N\nS4,SITE9,Y\n',
+              4
+            ),
+            raw('AE', 'subjid,aeser\nS1,Y\nS1,N\nS2,N\n', 3),
+            raw('PD', 'subjid\nS1\n', 1)
+          ]
+        }
+      ]
+    },
+    readSettings().args
+  );
+
+  it('says what the trial is and counts what it holds', () => {
+    const said = overviewOf(study);
+    expect(said.facts).toEqual([
+      { label: 'Study', value: 'OV-001' },
+      { label: 'Phase', value: 'P3' },
+      { label: 'Therapeutic area', value: 'Virology' },
+      { label: 'Status', value: 'Active' },
+      { label: 'Snapshot', value: '2012-06-30' },
+      { label: 'Monthly snapshots', value: '6' }
+    ]);
+    expect(said.counts).toEqual([
+      { label: 'Participants', value: 4, note: '3 enrolled' },
+      { label: 'Sites', value: 3, note: '2 countries' },
+      { label: 'Adverse events', value: 3, note: '1 serious' },
+      { label: 'Protocol deviations', value: 1 }
+    ]);
+    expect(said.layers).toEqual([{ id: 'raw', label: 'Raw', tables: 5, rows: 12 }]);
+  });
+
+  it('counts sites and participants by country, and says so when a site is not on the list', () => {
+    expect(overviewOf(study).countries).toEqual([
+      { country: 'US', sites: 2, participants: 2 },
+      { country: 'Japan', sites: 1, participants: 1 },
+      { country: 'Not recorded', sites: 0, participants: 1 }
+    ]);
+  });
+
+  it('summarises a table’s columns, from its first rows when it is long', () => {
+    const table = study.table('raw', 'SUBJ');
+    expect(columnsOf(table).columns).toEqual([
+      { name: 'subjid', type: 'character', filled: 1, distinct: 4, says: 'S1, S2, S3, S4' },
+      { name: 'invid', type: 'character', filled: 1, distinct: 3, says: 'SITE1, SITE3, SITE9' },
+      { name: 'enrollyn', type: 'character', filled: 1, distinct: 2, says: 'Y, N' }
+    ]);
+    expect(columnsOf(table, 2)).toMatchObject({ read: 2, of: 4 });
   });
 });

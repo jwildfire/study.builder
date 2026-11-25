@@ -9,6 +9,9 @@ A study now comes in layers, each built off raw by workflows.
 - **ADaM by workflow.** ADSL, ADAE and ADVS are written by three workr workflows in `workflows/adam/`, in place of the R code that wrote v0.1.0's three standard files. Each workflow says, column by column, where its table came from.
 - **A manifest.** `study.manifest` has a checksum for every table, the versions of the packages that built the study, its settings, and one key. The same seed and settings give the same key. It is in the zip as `manifest.json`.
 - **Choose the layers.** The `layers` setting, and ticks in the widget, leave a layer out.
+- **A study overview.** A built study opens on an overview: what the trial is, its headline counts, sites and participants by country, and what each layer holds. `StudyBuilder.overviewOf(study)` returns the same for another page to draw.
+- **A table viewer.** Each layer is a short list of its tables beside the open one. The viewer shows its first rows with each column's type, a summary of every column (how full, how many different values, its range or commonest values), and where an ADaM table's columns came from. `StudyBuilder.columnsOf(table)` returns the column summary.
+- **The trial and the layers come first.** The raw domains are one folded line with a compact tick list.
 
 ## Changed
 

@@ -231,6 +231,17 @@ export function studyOf(value, args) {
     table.core = Boolean(known.core);
     table.feeds = known.feeds || null;
   }
+  // A Raw.RBQM table is named for the domain it maps, as its raw table is.
+  const mapped = layers.find((layer) => layer.id === 'raw.rbqm');
+  for (const table of mapped ? mapped.tables : []) {
+    const known = DOMAINS.find((domain) => domain.id === table.id);
+    if (known) table.label = known.label;
+  }
+  // An ADaM table is named by its id, which is what an analyst calls it.
+  for (const table of (layers.find((layer) => layer.id === 'adam') || { tables: [] }).tables) {
+    table.description = table.label;
+    table.label = table.id;
+  }
   // An ADaM table is a standard file a chart of participants reads: its id
   // there is the standard domain's (subject, ae, bds).
   const adam = layers.find((layer) => layer.id === 'adam');
