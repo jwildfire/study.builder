@@ -2,5 +2,5 @@ node_modules
 _site
 vendor
 package-lock.json
-src/files.js
+src/engine/files.js
 dist

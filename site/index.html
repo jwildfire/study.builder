@@ -113,15 +113,6 @@
       <noscript>study.builder needs JavaScript: it runs R in this browser.</noscript>
       <p id="handed" role="status"></p>
 
-      <section class="use" id="look" hidden>
-        <h2>Look through the study</h2>
-        <p>
-          This is <code>study.viewer</code>, a module of its own: it takes any study's tables, and
-          shows their rows, a profile of every column, and one participant across every table.
-        </p>
-        <div id="viewer"></div>
-      </section>
-
       <section class="use">
         <h2>Use it from another page</h2>
         <p>
@@ -158,28 +149,8 @@
     </main>
 
     <script src="./study.builder.js"></script>
-    <script src="./study.viewer.js"></script>
     <script>
       window.__studyBuilder = StudyBuilder.mount('#builder', {
-        // Every study that is built or opened is handed to study.viewer below.
-        onBuilt(study) {
-          document.getElementById('look').hidden = false;
-          const shown = StudyViewer.fromBuilt(study);
-          if (window.__studyViewer) window.__studyViewer.setStudy(shown);
-          else {
-            window.__studyViewer = StudyViewer.mount('#viewer', {
-              study: shown,
-              save(name, text, type) {
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(new Blob([text], { type }));
-                link.download = name;
-                document.body.append(link);
-                link.click();
-                link.remove();
-              }
-            });
-          }
-        },
         onStudy(study) {
           const { raw, standard } = study.files();
           document.getElementById('handed').textContent =

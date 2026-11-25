@@ -50,6 +50,8 @@ const count = (number, noun) =>
  * @param {?string} [options.theme] `light` or `dark`; the reader's own setting unless told.
  * @param {(name: string, text: string, type: string) => void} [options.save] Saves a file; with none there is no download.
  * @param {(table: Object, column: Object) => void} [options.onColumn] Called when the reader presses a column's `todo` button, for a page that maps columns.
+ * @param {(table: Object, role: Object, value: string) => void} [options.onRole] Called when the reader sets one of a table's `roles`, for a page that maps columns: the role, and the column or value chosen (empty for none).
+ * @param {Array<{id: string, label: string, render: (container: Element) => void}>} [options.views] Views of the page's own, shown before the three: a study overview, say.
  * @param {{label: string, open: (id: string) => void}} [options.participantAction] A button on a participant's page, for a page that has more to show of one.
  * @param {(state: Object) => void} [options.onChange] Told the view, the table and the participant when any changes.
  * @returns {{setStudy: Function, open: Function, show: Function, state: Function, destroy: Function}} The handle.
@@ -58,11 +60,13 @@ export function mountViewer(
   target,
   {
     study: given = { tables: [] },
-    view: openingView = 'tables',
+    view: openingView = undefined,
     table: openingTable = null,
     theme = null,
     save = null,
     onColumn = null,
+    onRole = null,
+    views: extraGiven = [],
     participantAction = null,
     onChange = null
   } = {}
@@ -86,13 +90,25 @@ export function mountViewer(
   };
 
   let study = viewerStudy(given);
-  let view = VIEWS.some((one) => one.id === openingView) ? openingView : 'tables';
+  // The page's own views come first, and the viewer opens on the first of them.
+  const extra = (Array.isArray(extraGiven) ? extraGiven : []).filter(
+    (one) =>
+      one && one.id && typeof one.render === 'function' && !VIEWS.some((own) => own.id === one.id)
+  );
+  const allViews = [...extra, ...VIEWS];
+  const isExtra = (id) => extra.some((one) => one.id === id);
+  let view = allViews.some((one) => one.id === openingView)
+    ? openingView
+    : extra.length && openingView === undefined
+      ? extra[0].id
+      : 'tables';
   let tableId = openingTable;
   const filters = new Map(); // table id → its filters
   const sorts = new Map(); // table id → { column, down }
   let shown = PAGE;
   let find = '';
   let adding = false; // whether the form that adds a filter is open
+  const rolesOpen = new Set(); // the tables whose set mapping rows are unfolded
   let people = null; // the study's participants, found when first asked for
   let person = null;
   let destroyed = false;
@@ -152,12 +168,15 @@ export function mountViewer(
           tableId = one.id;
           shown = PAGE;
           adding = false;
-          if (view === 'participant') view = 'tables';
+          if (view === 'participant' || isExtra(view)) view = 'tables';
           draw();
           told();
         });
         pick.dataset.table = one.id;
-        pick.setAttribute('aria-current', String(one === open && view !== 'participant'));
+        pick.setAttribute(
+          'aria-current',
+          String(one === open && view !== 'participant' && !isExtra(view))
+        );
         if (one.about || one.made) pick.title = [one.about, one.made].filter(Boolean).join(' ');
         pick.append(
           el('span', 'sv-pick-name', one.label),
@@ -248,7 +267,7 @@ export function mountViewer(
   function viewTabs() {
     const tabs = el('div', 'sv-views');
     tabs.setAttribute('role', 'tablist');
-    for (const one of VIEWS) {
+    for (const one of allViews) {
       const tab = button('sv-view', one.label, () => {
         view = one.id;
         adding = false;
@@ -403,6 +422,62 @@ export function mountViewer(
     return wrap;
   }
 
+  /** What a page reads from a table: each role with a choice of what it is set to. */
+  function rolesPanel(one) {
+    const open = one.roles.filter((role) => !role.value);
+    const panel = el('section', 'sv-roles');
+    panel.dataset.roles = one.id;
+    const row = (role) => {
+      const line = el('label', 'sv-role');
+      line.dataset.role = role.id;
+      const words = el('span', 'sv-role-words');
+      words.append(el('span', 'sv-role-label', role.label));
+      if (role.needed) words.append(el('small', null, role.needed));
+      const pick = el('select', 'sv-input');
+      pick.name = `role-${one.id}-${role.id}`;
+      const none = el('option', null, role.kind === 'value' ? 'not in this data' : 'no column');
+      none.value = '';
+      pick.append(none);
+      for (const option of role.options) {
+        const made = el('option', null, option);
+        made.value = option;
+        pick.append(made);
+      }
+      pick.value = role.options.includes(role.value) ? role.value : '';
+      pick.disabled = typeof onRole !== 'function';
+      pick.onchange = () => onRole(one, role, pick.value);
+      line.append(words, pick);
+      if (role.source && role.value) line.append(el('span', 'sv-tag', role.source));
+      return line;
+    };
+    const head = el('div', 'sv-roles-head');
+    head.append(
+      el('span', 'sv-label', 'Mapping'),
+      el(
+        'span',
+        open.length ? 'sv-note' : 'sv-meta',
+        open.length
+          ? `${count(open.length, 'row')} to set, of ${one.roles.length}`
+          : `All ${one.roles.length} set`
+      )
+    );
+    panel.append(head);
+    for (const role of open) panel.append(row(role));
+    const rest = one.roles.filter((role) => role.value);
+    if (rest.length) {
+      const fold = el('details', 'sv-roles-rest');
+      fold.open = rolesOpen.has(one.id);
+      fold.addEventListener('toggle', () => {
+        if (fold.open) rolesOpen.add(one.id);
+        else rolesOpen.delete(one.id);
+      });
+      fold.append(el('summary', null, `${rest.length} already set`));
+      for (const role of rest) fold.append(row(role));
+      panel.append(fold);
+    }
+    return panel;
+  }
+
   function columnsView(one) {
     const wrap = el('div', 'sv-body');
     const matching = filterRows(rowsOf(one), filtersOf(one));
@@ -417,7 +492,14 @@ export function mountViewer(
         )
       );
     }
-    const used = profile.columns.some((column) => column.used || column.todo);
+    // What the page reads from this table, and what each is set to.
+    const usedBy = new Map(
+      one.roles
+        .filter((role) => role.kind === 'column' && role.value)
+        .map((role) => [role.value, role.label])
+    );
+    if (one.roles.length) wrap.append(rolesPanel(one));
+    const used = usedBy.size > 0 || profile.columns.some((column) => column.used || column.todo);
     const labelled = profile.columns.some((column) => column.label);
     const box = el('div', 'sv-columns');
     box.setAttribute('role', 'table');
@@ -476,8 +558,9 @@ export function mountViewer(
           });
           map.dataset.todo = column.name;
           cell(map);
-        } else if (column.used) cell(el('span', 'sv-used', column.used));
-        else cell('');
+        } else if (column.used || usedBy.has(column.name)) {
+          cell(el('span', 'sv-used', column.used || usedBy.get(column.name)));
+        } else cell('');
       }
       cell(column.type || column.kind);
       cell(`${Math.round(column.filled * 100)}%`);
@@ -634,15 +717,28 @@ export function mountViewer(
       return;
     }
     const main = el('div', 'sv-main');
-    if (view !== 'participant') main.append(heading(one));
-    main.append(viewTabs());
-    main.append(
-      view === 'columns'
-        ? columnsView(one)
-        : view === 'participant'
-          ? participantView()
-          : tablesView(one)
-    );
+    const own = extra.find((each) => each.id === view);
+    if (own) {
+      // A view of the page's own: its tab, and whatever it draws.
+      const body = el('div', 'sv-body sv-own');
+      body.dataset.own = own.id;
+      main.append(viewTabs(), body);
+      try {
+        own.render(body);
+      } catch (error) {
+        body.append(el('p', 'sv-empty', `This view did not draw. ${error && error.message}`));
+      }
+    } else {
+      main.append(viewTabs());
+      if (view !== 'participant') main.append(heading(one));
+      main.append(
+        view === 'columns'
+          ? columnsView(one)
+          : view === 'participant'
+            ? participantView()
+            : tablesView(one)
+      );
+    }
     shell.append(rail(), main);
     root.append(shell);
     if (focused) {
@@ -660,17 +756,22 @@ export function mountViewer(
 
   return {
     /** Show another study; the filters and the open table of the last are let go. */
-    setStudy(next) {
+    setStudy(next, { keep = false } = {}) {
       study = viewerStudy(next);
-      filters.clear();
-      sorts.clear();
       people = null;
-      person = null;
-      tableId = null;
-      shown = PAGE;
-      find = '';
+      // The same study drawn again, as after a mapping change, keeps the
+      // reader where they are; another study starts afresh.
+      if (!keep) {
+        filters.clear();
+        sorts.clear();
+        person = null;
+        tableId = null;
+        shown = PAGE;
+        find = '';
+        if (extra.length) view = extra[0].id;
+      }
       draw();
-      told();
+      if (!keep) told();
     },
     /** Open a table by its id. */
     open(id) {

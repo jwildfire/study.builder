@@ -27,7 +27,7 @@ if (problems.length) {
   process.exit(1);
 }
 // The list of files R is given is always the records': written before bundling.
-writeFileSync(path.join(root, 'src/files.js'), filesModule());
+writeFileSync(path.join(root, 'src/engine/files.js'), filesModule());
 
 const shared = {
   entryPoints: [path.join(root, 'src/index.js')],

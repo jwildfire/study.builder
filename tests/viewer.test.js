@@ -221,6 +221,72 @@ describe('the viewer on a page', () => {
     });
   });
 
+  it('shows a page’s own view first, and sets a table’s mapping from the Columns view', () => {
+    const onRole = vi.fn();
+    const roles = [
+      {
+        id: 'ARM',
+        label: 'Treatment arm',
+        value: '',
+        options: ['SUBJID', 'ARM', 'AGE'],
+        needed: 'Needed by 3 charts'
+      },
+      {
+        id: 'USUBJID',
+        label: 'Participant',
+        value: 'SUBJID',
+        options: ['SUBJID', 'ARM', 'AGE'],
+        source: 'guessed'
+      }
+    ];
+    mounted({
+      study: { name: 'Mine', tables: [{ id: 'dm.csv', text: DM, roles }] },
+      onRole,
+      views: [{ id: 'overview', label: 'Overview', render: (box) => box.append('the overview') }]
+    });
+    expect([...document.querySelectorAll('.sv-view')].map((tab) => tab.textContent)).toEqual([
+      'Overview',
+      'Tables',
+      'Columns',
+      'One participant'
+    ]);
+    expect(handle.state().view).toBe('overview');
+    expect(document.querySelector('[data-own="overview"]').textContent).toBe('the overview');
+    expect(document.querySelector('.sv-title')).toBeNull();
+    press('[data-view="columns"]');
+    expect(document.querySelector('.sv-roles-head .sv-note').textContent).toBe(
+      '1 row to set, of 2'
+    );
+    expect(document.querySelector('[data-column="SUBJID"] .sv-used').textContent).toBe(
+      'Participant'
+    );
+    const pick = document.querySelector('[data-role="ARM"] select');
+    expect([...pick.options].map((option) => option.value)).toEqual(['', 'SUBJID', 'ARM', 'AGE']);
+    pick.value = 'ARM';
+    pick.onchange();
+    expect(onRole.mock.calls[0].slice(1)).toEqual([expect.objectContaining({ id: 'ARM' }), 'ARM']);
+    // The page sets it and hands the study back; the reader stays on Columns.
+    handle.setStudy(
+      {
+        name: 'Mine',
+        tables: [
+          {
+            id: 'dm.csv',
+            text: DM,
+            roles: roles.map((role) => ({ ...role, value: role.value || 'ARM' }))
+          }
+        ]
+      },
+      { keep: true }
+    );
+    expect(handle.state().view).toBe('columns');
+    expect(document.querySelector('.sv-roles-head .sv-meta').textContent).toBe('All 2 set');
+    // A press on a table in the rail leaves the page's view for the table.
+    press('[data-view="overview"]');
+    press('[data-table="dm.csv"]');
+    expect(handle.state().view).toBe('tables');
+  });
+
   it('says so when no table names a participant, and when a study has no tables', () => {
     mounted({
       study: { tables: [{ id: 'sites', records: [{ SITE: 'A' }] }] },

@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { StudyBuilderError, createBuilder, rOptions, studyOf } from '../src/build.js';
-import { createConnection, foldersOf } from '../src/r.js';
-import { mount } from '../src/widget.js';
-import { readSettings } from '../src/core.js';
+import { StudyBuilderError, createBuilder, rOptions, studyOf } from '../src/engine/build.js';
+import { createConnection, foldersOf } from '../src/engine/r.js';
+import { mount } from '../src/loader/widget.js';
+import { readSettings } from '../src/engine/core.js';
 import {
   CONFIG_FORMAT,
   PRESETS_FORMAT,
@@ -17,7 +17,7 @@ import {
   readDocument,
   readPresets,
   savedOf
-} from '../src/saved.js';
+} from '../src/engine/saved.js';
 
 // The build function and the widget, with a stand-in for R: the connection
 // answers with a small study in the shape r/builder.R returns. Real R is held
@@ -442,12 +442,13 @@ describe('the connection to R', () => {
   });
 });
 
-describe('the builder on a page', () => {
+describe('the loader on a page', () => {
   let handle = null;
   afterEach(() => {
     if (handle) handle.destroy();
     handle = null;
     document.body.innerHTML = '';
+    vi.unstubAllGlobals();
   });
 
   function mounted(options = {}, answer) {
@@ -457,273 +458,131 @@ describe('the builder on a page', () => {
     handle = mount('#b', {
       createBuilder: (given) => createBuilder({ ...given, createConnection: r.connect }),
       save: (name, bytes, type) => saved.push({ name, bytes, type }),
+      presets: false,
+      shelf: false,
       ...options
     });
     return { r, saved };
   }
-  const card = (id) => document.querySelector(`[data-domain="${id}"]`);
-  const box = (id) => card(id).querySelector('input');
+  const q = (selector) => document.querySelector(selector);
+  const press = (action) => q(`[data-action="${action}"]`).click();
+  const settle = async () => {
+    for (let turn = 0; turn < 6; turn += 1) await new Promise((resolve) => setTimeout(resolve, 0));
+  };
+  const SETTINGS_ONLY = {
+    id: 'big',
+    name: 'Big settings',
+    about: 'Too large to host.',
+    settings: { ...readSettingsOf({ participants: 400, sites: 40 }) },
+    study: null
+  };
 
-  it('opens on the trial, then the layers, then the raw domains folded into one line, with nothing asked of R', () => {
+  function readSettingsOf(settings) {
+    return configOf(settings).settings;
+  }
+
+  it('with nothing to list, opens on the form: the trial, the layers as a pipeline, the raw domains as chips, and what building gives; nothing is asked of R', () => {
     const { r } = mounted();
-    expect(document.querySelector('[name="participants"]').value).toBe('150');
+    expect(handle.state().screen).toBe('describe');
+    expect(q('[data-action="back"]')).toBeNull();
     expect([...document.querySelectorAll('.sb h3')].map((h) => h.textContent)).toEqual([
-      'Start from',
       'The trial',
-      'Layers',
-      'What a study built here is, and is not'
+      'Layers: each is built from the one before it',
+      'Raw domains: 11 of 19',
+      'What you will get'
     ]);
-    const fold = document.querySelector('.sb-domains');
-    expect(fold.open).toBe(false);
-    expect(fold.querySelector('summary').textContent).toContain(
-      'Raw domains 11 of 19 in the study.'
+    expect(q('[name="participants"]').value).toBe('150');
+    expect(q('[data-phase="P2"]').getAttribute('aria-pressed')).toBe('true');
+    expect([...document.querySelectorAll('.sb-layer')].map((layer) => layer.dataset.layer)).toEqual(
+      ['raw', 'raw.rbqm', 'adam', 'analysis', 'reporting']
     );
-    // The fold comes after the layers, and holds a tick for every domain.
-    expect(
-      document.querySelector('.sb-layer-choices').compareDocumentPosition(fold) &
-        Node.DOCUMENT_POSITION_FOLLOWING
-    ).toBeTruthy();
-    expect(document.querySelectorAll('[data-domain]')).toHaveLength(19);
-    expect(box('SUBJ').checked && box('SUBJ').disabled).toBe(true);
-    expect(card('SUBJ').textContent).toContain('always');
-    expect(card('SUBJ').title).toBe('One row per participant, screened or enrolled.');
-    expect(box('AE').checked).toBe(true);
-    expect(box('DATACHG').checked).toBe(false);
-    expect(card('DATACHG').textContent).toContain('large');
-    expect(document.querySelector('.sb-status').textContent).toContain('downloads about 55 MB');
+    expect(q('[data-layer="raw"]').disabled).toBe(true);
+    expect(q('.sb-warn').textContent).toContain('First build in this browser');
     expect(r.connect).not.toHaveBeenCalled();
   });
 
-  it('keeps the domains unfolded across a redraw once the reader has opened them', () => {
+  it('a phase fills in a typical size; a layer another is built from stays in; a domain another needs stays in', () => {
     mounted();
-    const fold = document.querySelector('.sb-domains');
-    fold.open = true;
-    fold.dispatchEvent(new Event('toggle'));
-    box('PK').click();
-    expect(document.querySelector('.sb-domains').open).toBe(true);
-    expect(document.querySelector('.sb-domains summary').textContent).toContain('12 of 19');
+    q('[data-phase="P1"]').click();
+    expect(q('[name="participants"]').value).toBe('40');
+    // Reporting is built from Analysis, which is built from Raw.RBQM and ADaM.
+    expect(q('[data-layer="analysis"]').disabled).toBe(true);
+    q('[data-layer="reporting"]').click();
+    expect(q('[data-layer="reporting"]').getAttribute('aria-pressed')).toBe('false');
+    expect(q('[data-layer="analysis"]').disabled).toBe(false);
+    expect(handle.settings().layers).toEqual(['raw.rbqm', 'adam', 'analysis']);
+    expect(q('[data-domain="SUBJ"]').disabled).toBe(true);
+    q('[data-domain="AE"]').click();
+    expect(handle.settings().domains).not.toContain('AE');
+    expect(q('.sb h3:nth-of-type(3)').textContent).toBe('Raw domains: 10 of 19');
   });
 
-  it('keeps a domain another needs in the study, and says which needs it', () => {
-    mounted();
-    expect(card('VISIT').textContent).toContain('needed by Vital signs');
-    expect(box('VISIT').disabled).toBe(true);
-    box('VS').click();
-    expect(box('VISIT').disabled).toBe(false);
-    box('VISIT').click();
-    expect(handle.settings().domains).not.toContain('VISIT');
-    box('OverallResponse').click();
-    expect(box('VISIT').checked && box('VISIT').disabled).toBe(true);
-  });
-
-  it('fills in a typical size when the phase changes', () => {
-    mounted();
-    const phase = document.querySelector('[name="phase"]');
-    phase.value = 'P1';
-    phase.dispatchEvent(new Event('change'));
-    expect(document.querySelector('[name="participants"]').value).toBe('40');
-    expect(handle.settings().sites).toBe(4);
-  });
-
-  it('says what is wrong with the form and does not start R', async () => {
-    const { r } = mounted();
-    const sites = document.querySelector('[name="sites"]');
-    sites.value = '900';
-    sites.dispatchEvent(new Event('input'));
+  it('says every problem with the settings and asks nothing of R', async () => {
+    const { r } = mounted({ settings: { participants: 5, sites: 9 } });
     expect(await handle.build()).toBeNull();
-    expect(document.querySelector('[role="alert"]').textContent).toContain(
-      'Sites must be a whole number from 2 to 100.'
-    );
+    expect(
+      [...document.querySelectorAll('.sb-problems li')].map((item) => item.textContent)
+    ).toEqual(['Participants must be a whole number from 20 to 500.']);
     expect(r.connect).not.toHaveBeenCalled();
   });
 
-  it('builds on the press, shows each domain’s rows, and tells the page', async () => {
+  it('builds the study, says each step as R takes it, and opens the study: its name, how it was made, its key, its settings, and study.viewer on its overview', async () => {
     const onBuilt = vi.fn();
     const { r } = mounted({ onBuilt });
-    document.querySelector('[data-action="build"]').click();
-    expect(handle.state().phase).toBe('building');
-    expect(document.querySelector('[data-action="build"]').disabled).toBe(true);
-    await vi.waitFor(() => expect(handle.state().phase).toBe('done'));
-    expect(r.made[0].runs[0].name).toBe('builder_run');
-    expect(document.querySelector('[data-built]').textContent).toContain(
-      'BUILT-001 is a simulated Phase 2 Oncology study'
+    const building = handle.build();
+    expect(handle.state()).toMatchObject({ phase: 'building', stage: 'runtime' });
+    expect([...document.querySelectorAll('.sb-steps li')].map((step) => step.dataset.step)).toEqual(
+      ['now', 'next', 'next', 'next']
     );
-    // The study opens on its overview; each layer has a tab that counts its tables.
-    expect(
-      [...document.querySelectorAll('[data-layer-tab]')].map((tab) => tab.textContent)
-    ).toEqual(['Overview', 'Raw2', 'Raw.RBQM1', 'ADaM1']);
-    expect(handle.state().tab).toBe('overview');
-    expect(document.querySelector('.sb-overview')).not.toBeNull();
-    // A layer is a short list of its tables, each one line, beside the open one.
-    document.querySelector('[data-layer-tab="raw"]').click();
-    const pick = (id) => document.querySelector(`.sb-table-pick[data-table="${id}"]`);
-    expect(pick('raw:SUBJ').textContent).toBe('ParticipantsRaw_SUBJ2');
-    expect(pick('raw:AE').textContent).toBe('Adverse eventsRaw_AE1');
-    expect(pick('raw:LB')).toBeNull();
-    // The first table of a layer is open until another is chosen.
-    expect(pick('raw:SUBJ').getAttribute('aria-current')).toBe('true');
-    expect(document.querySelector('.sb-viewer').dataset.viewer).toBe('raw:SUBJ');
-    document.querySelector('[data-layer-tab="adam"]').click();
-    expect(pick('adam:ADAE').textContent).toBe('ADAEADaM_ADAE1');
-    expect(document.querySelector('.sb-viewer').textContent).toContain(
-      'Built from Raw_AE and ADaM_ADSL by the ADaM_ADAE workflow.'
+    expect(q('[data-action="build"]').disabled).toBe(true);
+    r.made[0].options.onStage('packages');
+    expect(q('.sb-steps li[data-step="now"]').textContent).toBe('Install R’s packages');
+    const study = await building;
+    expect(onBuilt).toHaveBeenCalledWith(study);
+    expect(handle.state().screen).toBe('study');
+    expect(q('.sb-title h2').textContent).toBe('BUILT-001');
+    expect(q('.sb-title .sb-pill').textContent).toBe('Built in 1.3 s');
+    expect(q('[data-key]').dataset.key).toBe(study.manifest.key);
+    expect([...document.querySelectorAll('.sb-fact')].map((fact) => fact.textContent)).toEqual([
+      'Phase 2',
+      'Oncology',
+      '150 participants',
+      '20 sites',
+      '9 months',
+      'No seed'
+    ]);
+    // The viewer: the study's layers in its rail, and the overview first.
+    expect([...document.querySelectorAll('.sv-view')].map((tab) => tab.textContent)).toEqual([
+      'Overview',
+      'Tables',
+      'Columns',
+      'One participant'
+    ]);
+    expect([...document.querySelectorAll('.sv-group')].map((group) => group.textContent)).toEqual(
+      ANSWER.layers.map((layer) => `${layer.label}${layer.tables.length}`)
     );
-    // The study's key is said, whole, where a page can read it.
-    expect(document.querySelector('[data-key]').dataset.key).toBe(handle.study().manifest.key);
-    expect(onBuilt).toHaveBeenCalledWith(handle.study());
+    expect(q('[data-own="overview"] .sb-tile-label').textContent).toBe('Participants');
+    expect(q('.sb-caveats').textContent).toContain('Every row is synthetic');
+    q('[data-table="adam:ADAE"]').click();
+    expect(q('.sv-title').textContent).toContain('ADAE');
+    expect(handle.state().viewing).toMatchObject({ view: 'tables', table: 'adam:ADAE' });
   });
 
-  it('shows the open table’s first rows with each column’s type, and downloads it', async () => {
-    const { saved } = mounted();
-    await handle.build();
-    document.querySelector('[data-layer-tab="raw"]').click();
-    const panel = () => document.querySelector('.sb-viewer');
-    expect(panel().textContent).toContain('Raw_SUBJ · 2 rows · 3 columns');
-    expect(panel().textContent).toContain('One row per participant, screened or enrolled.');
-    expect([...panel().querySelectorAll('th')].map((th) => th.textContent)).toEqual([
-      'studyidcharacter',
-      'subjidcharacter',
-      'agerepinteger'
-    ]);
-    expect(panel().querySelectorAll('tbody tr')).toHaveLength(2);
-    expect(panel().textContent).toContain('All 2 rows');
-    expect(panel().querySelector('[data-action="more"]')).toBeNull();
-    panel().querySelector('[data-download]').click();
-    expect(saved).toEqual([{ name: 'Raw_SUBJ.csv', bytes: RAW[0].text, type: 'text/csv' }]);
-    // Choosing another table of the layer opens it in the same place.
-    document.querySelector('.sb-table-pick[data-table="raw:AE"]').click();
-    expect(panel().dataset.viewer).toBe('raw:AE');
-    // And the layer remembers it across a visit to another tab.
-    document.querySelector('[data-layer-tab="overview"]').click();
-    document.querySelector('[data-layer-tab="raw"]').click();
-    expect(panel().dataset.viewer).toBe('raw:AE');
-  });
-
-  it('summarises the open table’s columns: how full, how many values, and their range', async () => {
-    mounted();
-    await handle.build();
-    document.querySelector('[data-layer-tab="raw"]').click();
-    document.querySelector('[data-part="columns"]').click();
-    const rows = [...document.querySelectorAll('.sb-viewer tbody tr')].map((row) =>
-      [...row.children].map((cell) => cell.textContent)
-    );
-    // Each column: its label, its type, whether it is the key or what it joins
-    // to, and what it holds.
-    expect(rows).toEqual([
-      ['studyid', 'Study id', 'character', '', '100%', '1', 'BUILT-001'],
-      ['subjid', 'Participant id', 'character', 'Key', '100%', '2', 'S1, S2'],
-      ['agerep', 'Age, as reported', 'integer', '', '100%', '2', '40 to 51']
-    ]);
-    document.querySelector('.sb-table-pick[data-table="raw:AE"]').click();
-    const joined = [...document.querySelectorAll('.sb-viewer tbody tr')].map((row) =>
-      [...row.children].map((cell) => cell.textContent)
-    );
-    expect(joined[0].slice(0, 4)).toEqual([
-      'subjid',
-      'Participant id',
-      'character',
-      '→ SUBJ.subjid'
-    ]);
-    expect(handle.state().part).toBe('columns');
-  });
-
-  it('says what built a table off raw, and where each of its columns came from', async () => {
-    mounted();
-    await handle.build();
-    document.querySelector('[data-layer-tab="adam"]').click();
-    // A table with no mapping has no such part; this one has.
-    document.querySelector('[data-part="mapping"]').click();
-    const rows = [...document.querySelectorAll('.sb-viewer tbody tr')];
-    expect(rows.map((row) => [...row.children].map((cell) => cell.textContent))).toEqual([
-      ['USUBJID', 'character', 'Raw_AE.subjid', 'Copied'],
-      ['AESEV', 'character', 'Raw_AE.aetoxgr', 'Derived: the toxicity grade in words']
-    ]);
-    document.querySelector('[data-layer-tab="raw"]').click();
-    expect(document.querySelector('[data-part="mapping"]')).toBeNull();
-    expect(handle.state().part).toBe('preview');
-  });
-
-  it('opens a built study on its overview: the trial, its counts and what each layer holds', async () => {
-    mounted();
-    await handle.build();
-    const overview = document.querySelector('.sb-overview');
-    expect([...overview.querySelectorAll('.sb-tile')].map((tile) => tile.textContent)).toEqual([
-      '2Participants0 enrolled',
-      '0Sites0 countries',
-      '1Adverse events0 serious'
-    ]);
-    expect(overview.querySelector('.sb-facts').textContent).toContain('StudyBUILT-001');
-    const layers = [...overview.querySelectorAll('table')].at(-1);
-    expect([...layers.querySelectorAll('tbody tr')].map((row) => row.textContent)).toEqual([
-      'Raw23',
-      'Raw.RBQM11',
-      'ADaM11'
-    ]);
-  });
-
-  it('hands the study to the page, and downloads every file as one zip', async () => {
+  it('hands the study to the page, downloads it whole, and goes back to its settings to change them', async () => {
     const onStudy = vi.fn();
     const { saved } = mounted({ onStudy, useLabel: 'Load into the demo' });
-    expect(document.querySelector('[data-action="use"]')).toBeNull();
+    expect(q('[data-action="use"]')).toBeNull();
     await handle.build();
-    const use = document.querySelector('[data-action="use"]');
-    expect(use.textContent).toBe('Load into the demo');
-    use.click();
+    expect(q('[data-action="use"]').textContent).toBe('Load into the demo');
+    press('use');
     expect(onStudy).toHaveBeenCalledWith(handle.study());
-    document.querySelector('[data-action="zip"]').click();
-    expect(saved[0].name).toBe('BUILT-001.zip');
-    expect(saved[0].type).toBe('application/zip');
-    const text = new TextDecoder().decode(saved[0].bytes);
-    for (const name of [
-      'manifest.json',
-      'raw/Raw_SUBJ.csv',
-      'raw/Raw_AE.csv',
-      'raw.rbqm/Mapped_AE.csv',
-      'adam/adae.csv'
-    ]) {
-      expect(text).toContain(name);
-    }
-    expect(text).toContain('"format": "study.builder/manifest/1"');
-  });
-
-  it('makes its connection the page’s own way, with what R is to be given, on the first build', async () => {
-    document.body.innerHTML = '<div id="b"></div>';
-    const r = fakeR();
-    handle = mount('#b', {
-      base: './sb/',
-      repository: './r-wasm',
-      createConnection: r.connect
-    });
-    expect(r.connect).not.toHaveBeenCalled();
-    await handle.build();
-    const [options] = r.connect.mock.calls[0];
-    expect(options.repos).toEqual(['./r-wasm', 'https://repo.r-wasm.org']);
-    expect(options.files[0].url).toBe('./sb/r/builder.R');
-    expect(typeof options.onStage).toBe('function');
-    expect(handle.study().id).toBe('BUILT-001');
-    // An R the page made is the page's to close.
-    handle.destroy();
-    handle = null;
-    expect(r.made[0].close).not.toHaveBeenCalled();
-  });
-
-  it('has no hand-over button on a page that takes no study', async () => {
-    mounted();
-    await handle.build();
-    expect(document.querySelector('[data-action="use"]')).toBeNull();
-    expect(document.querySelector('[data-action="zip"]')).not.toBeNull();
-  });
-
-  it('says so when the settings have changed since the study was built', async () => {
-    mounted();
-    await handle.build();
-    expect(document.querySelector('[data-stale]')).toBeNull();
-    box('PK').click();
-    expect(document.querySelector('[data-stale]').textContent).toContain(
-      'The settings have changed since this study was built.'
-    );
-    box('PK').click();
-    expect(document.querySelector('[data-stale]')).toBeNull();
+    press('zip');
+    expect(saved[0]).toMatchObject({ name: 'BUILT-001.zip', type: 'application/zip' });
+    press('change');
+    expect(handle.state().screen).toBe('describe');
+    expect(q('[data-action="to-study"]').textContent).toBe('Back to BUILT-001');
+    press('to-study');
+    expect(handle.state().screen).toBe('study');
   });
 
   it('says what R said when the build stops, and keeps the last study', async () => {
@@ -732,114 +591,27 @@ describe('the builder on a page', () => {
     await handle.build();
     answer = { status: 'error', message: 'no visits' };
     expect(await handle.build()).toBeNull();
-    expect(handle.state().phase).toBe('failed');
-    expect(document.querySelector('[role="alert"]').textContent).toBe(
-      'The study was not built. R said: no visits'
-    );
+    expect(handle.state()).toMatchObject({ phase: 'failed', screen: 'describe' });
+    expect(q('p.sb-problems').textContent).toBe('The study was not built. R said: no visits');
     expect(handle.study().id).toBe('BUILT-001');
   });
 
-  it('opens on the settings a page gives it', () => {
+  it('opens on the settings and the theme a page gives it', () => {
     mounted({
       settings: { participants: 60, phase: 'P1', domains: ['AE'], layers: ['adam'] },
       theme: 'dark'
     });
-    expect(document.querySelector('[name="participants"]').value).toBe('60');
+    expect(q('[name="participants"]').value).toBe('60');
     expect(handle.settings().domains).toEqual(['AE']);
     expect(handle.settings().layers).toEqual(['adam']);
-    expect(document.querySelector('[data-layer="raw.rbqm"]').checked).toBe(false);
-    expect(document.querySelector('[data-layer="raw"]').disabled).toBe(true);
-    expect(box('LB').checked).toBe(false);
-    expect(document.querySelector('.sb').dataset.theme).toBe('dark');
-  });
-  // ---- starting from a preset, a saved study or a file; and saving ----
-
-  const settle = async () => {
-    for (let turn = 0; turn < 6; turn += 1) await new Promise((resolve) => setTimeout(resolve, 0));
-  };
-  const press = (action) => document.querySelector(`[data-action="${action}"]`).click();
-  const pick = (value) => {
-    const select = document.querySelector('[name="start"]');
-    select.value = value;
-    select.onchange();
-  };
-
-  it('saves a built study in this browser and opens it again at once, with no R', async () => {
-    const shelf = createShelf({ backend: memoryBackend() });
-    const { r } = mounted({ shelf, presets: false });
-    await handle.build();
-    press('save-study');
-    await settle();
-    expect(handle.state().shelved).toEqual(['study:BUILT-001']);
-    expect(handle.state().said).toContain('saved in this browser as BUILT-001');
-    const key = handle.study().manifest.key;
-    handle.destroy();
-    // Another visit: the same shelf, a new widget, and R never asked.
-    const again = mounted({ shelf, presets: false });
-    await settle();
-    expect([...document.querySelectorAll('optgroup')].map((group) => group.label)).toEqual([
-      'Your saved studies: open at once'
-    ]);
-    pick('shelf:study:BUILT-001');
-    press('open');
-    await settle();
-    expect(again.r.connect).not.toHaveBeenCalled();
-    expect(handle.study().opened).toBe(true);
-    expect(handle.study().manifest.key).toBe(key);
-    expect(handle.state().said).toBe('Opened BUILT-001 from this browser. Nothing was built.');
-    expect(document.querySelector('[data-stale]')).toBeNull();
-    expect(document.querySelector('[data-built]')).not.toBeNull();
-    // Removed, it is gone from the list.
-    pick('shelf:study:BUILT-001');
-    press('forget');
-    await settle();
-    expect(handle.state().shelved).toEqual([]);
-    expect(r.made).toHaveLength(1);
+    expect(q('[data-layer="raw.rbqm"]').getAttribute('aria-pressed')).toBe('false');
+    expect(q('[data-domain="LB"]').getAttribute('aria-pressed')).toBe('false');
+    expect(q('.sb').dataset.theme).toBe('dark');
   });
 
-  it('saves the settings in this browser and as a file, and a saved setting fills the form without building', async () => {
-    const shelf = createShelf({ backend: memoryBackend() });
-    const { r, saved } = mounted({
-      shelf,
-      presets: false,
-      settings: { name: 'SMALL-1', participants: 40, sites: 4, seed: 11 }
-    });
-    press('save-settings');
-    press('download-settings');
-    await settle();
-    expect(saved[0].name).toBe('SMALL-1.settings.json');
-    const file = JSON.parse(saved[0].bytes);
-    expect(file.format).toBe(CONFIG_FORMAT);
-    expect(file.settings).toMatchObject({ name: 'SMALL-1', participants: 40, sites: 4, seed: 11 });
-    handle.destroy();
-    mounted({ shelf, presets: false });
-    await settle();
-    pick('shelf:config:SMALL-1');
-    press('open');
-    await settle();
-    expect(document.querySelector('[name="participants"]').value).toBe('40');
-    expect(handle.study()).toBeNull();
-    expect(handle.state().said).toContain('Press Build to make the study.');
-    expect(r.connect).not.toHaveBeenCalled();
-  });
+  // ---- the library: ready-made and saved studies, and settings ----
 
-  it('downloads a study file, which opens to the same study', async () => {
-    const { saved } = mounted({ shelf: false, presets: false });
-    await handle.build();
-    expect(document.querySelector('[data-action="save-study"]')).toBeNull();
-    press('download-study');
-    expect(saved[0].name).toBe('BUILT-001.study.json');
-    const key = handle.study().manifest.key;
-    handle.destroy();
-    const { r } = mounted({ shelf: false, presets: false });
-    await handle.open(saved[0].bytes);
-    expect(handle.study().manifest.key).toBe(key);
-    expect(r.connect).not.toHaveBeenCalled();
-    // A file that is neither is refused in a sentence.
-    await expect(handle.open('{"format":"other"}')).rejects.toThrow(/not one study.builder saved/);
-  });
-
-  it('offers a page’s presets: one with a study opens at once, one without fills the form', async () => {
+  it('with something to list, opens on the library: a ready-made study opens at once with no R, and settings only fill the form or build', async () => {
     const hosted = savedOf(await openStudy(savedOf(studyOf(ANSWER, readSettings({}).args))));
     const presets = readPresets({
       format: PRESETS_FORMAT,
@@ -850,7 +622,8 @@ describe('the builder on a page', () => {
           about: 'Hosted.',
           settings: {},
           study: 'ready.json',
-          key: hosted.key
+          key: hosted.key,
+          megabytes: 1.1
         },
         { id: 'big', name: 'Big settings', settings: { participants: 400, sites: 40 } },
         { id: 'bad', name: 'Will not build', settings: { participants: 1 } }
@@ -859,31 +632,106 @@ describe('the builder on a page', () => {
     expect(presets.map((preset) => preset.id)).toEqual(['ready', 'big']);
     const fetched = vi.fn(async () => ({ ok: true, json: async () => hosted }));
     vi.stubGlobal('fetch', fetched);
-    const { r } = mounted({ shelf: false, presets });
-    expect([...document.querySelectorAll('optgroup')].map((group) => group.label)).toEqual([
-      'Ready-made studies: open at once',
-      'Ready-made settings: Build makes the study'
+    const { r } = mounted({ presets });
+    expect(handle.state().screen).toBe('library');
+    expect([...document.querySelectorAll('.sb h3')].map((h) => h.textContent)).toEqual([
+      'Ready now: opens at once, with no R',
+      'Settings only: Build makes the study'
     ]);
-    pick('preset:big');
-    press('open');
+    expect(q('[data-study="preset:ready"] .sb-pill').textContent).toBe('Ready-made');
+    expect(q('[data-study="preset:ready"]').textContent).toContain(
+      '150 participants · 20 sites · 9 months'
+    );
+    q('[data-settings="preset:big"] [data-action="edit"]').click();
     await settle();
-    expect(document.querySelector('[name="participants"]').value).toBe('400');
-    expect(handle.study()).toBeNull();
-    pick('preset:ready');
-    press('open');
+    expect(handle.state().screen).toBe('describe');
+    expect(q('[name="participants"]').value).toBe('400');
+    press('back');
+    q('[data-study="preset:ready"] [data-action="open"]').click();
     await settle();
     expect(fetched).toHaveBeenCalledWith('ready.json');
+    expect(handle.state().screen).toBe('study');
     expect(handle.study().opened).toBe(true);
-    expect(document.querySelector('[name="participants"]').value).toBe('150');
+    expect(q('.sb-title .sb-pill').textContent).toBe('Opened, not built');
+    expect(handle.state().said).toBe('Opened Ready study, a ready-made study. Nothing was built.');
     expect(r.connect).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
+    // Build on a settings-only row builds it.
+    press('back');
+    q('[data-settings="preset:big"] [data-action="build-these"]').click();
+    await settle();
+    expect(r.made).toHaveLength(1);
+    expect(r.made[0].runs[0].request.args.participants).toBe(400);
+  });
+
+  it('saves a built study in this browser, lists it in the library, opens it again with no R, and removes it', async () => {
+    const shelf = createShelf({ backend: memoryBackend() });
+    const { r } = mounted({ shelf });
+    await handle.build();
+    press('save-study');
+    await settle();
+    expect(handle.state().shelved).toEqual(['study:BUILT-001']);
+    expect(handle.state().said).toContain('saved in this browser as BUILT-001');
+    const key = handle.study().manifest.key;
+    handle.destroy();
+    // Another visit: the same shelf, a new loader, and R never asked.
+    const again = mounted({ shelf });
+    await settle();
+    expect(handle.state().screen).toBe('library');
+    expect(q('[data-study="shelf:study:BUILT-001"] .sb-pill').textContent).toBe('Saved by you');
+    q('[data-study="shelf:study:BUILT-001"] [data-action="open"]').click();
+    await settle();
+    expect(again.r.connect).not.toHaveBeenCalled();
+    expect(handle.study().opened).toBe(true);
+    expect(handle.study().manifest.key).toBe(key);
+    expect(handle.state().said).toBe('Opened BUILT-001, saved in this browser. Nothing was built.');
+    press('back');
+    q('[data-study="shelf:study:BUILT-001"] [data-action="remove"]').click();
+    await settle();
+    expect(handle.state().shelved).toEqual([]);
+    expect(r.made).toHaveLength(1);
+  });
+
+  it('saves the settings in this browser and as a file, and lists them under Settings only', async () => {
+    const shelf = createShelf({ backend: memoryBackend() });
+    const { saved } = mounted({
+      shelf,
+      settings: { name: 'SMALL-1', participants: 40, sites: 4, seed: 11 }
+    });
+    press('save-settings');
+    press('download-settings');
+    await settle();
+    expect(saved[0].name).toBe('SMALL-1.settings.json');
+    const file = JSON.parse(saved[0].bytes);
+    expect(file.format).toBe(CONFIG_FORMAT);
+    expect(file.settings).toMatchObject({ name: 'SMALL-1', participants: 40, sites: 4, seed: 11 });
+    handle.show('library');
+    expect(q('[data-settings="shelf:config:SMALL-1"]').textContent).toContain(
+      '40 participants · 4 sites · 9 months'
+    );
+    expect(SETTINGS_ONLY.settings.participants).toBe(400);
+  });
+
+  it('downloads a study file, which opens to the same study; a file that is neither kind is refused in a sentence', async () => {
+    const { saved } = mounted();
+    await handle.build();
+    expect(q('[data-action="save-study"]')).toBeNull();
+    press('download-study');
+    expect(saved[0].name).toBe('BUILT-001.study.json');
+    const key = handle.study().manifest.key;
+    handle.destroy();
+    const { r } = mounted();
+    await handle.open(saved[0].bytes);
+    expect(handle.study().manifest.key).toBe(key);
+    expect(handle.state().screen).toBe('study');
+    expect(r.connect).not.toHaveBeenCalled();
+    await expect(handle.open('{"format":"other"}')).rejects.toThrow(/not one study.builder saved/);
   });
 });
 
 describe('saving and opening, with no page', () => {
   const built = async () => {
     const study = studyOf(ANSWER, readSettings({ seed: 3 }).args);
-    study.manifest = await (await import('../src/manifest.js')).manifestOf(study);
+    study.manifest = await (await import('../src/engine/manifest.js')).manifestOf(study);
     return study;
   };
 

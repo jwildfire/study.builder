@@ -11,9 +11,9 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { DOMAINS } from '../src/core.js';
+import { DOMAINS } from '../src/engine/core.js';
 import { startR } from './r-node.mjs';
-import { firstRows } from '../src/csv.js';
+import { firstRows } from '../src/shared/csv.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const failures = [];
@@ -258,7 +258,7 @@ check(
 );
 
 // A saved study opens to the study it was saved from, with no R.
-const { openStudy, savedOf } = await import('../src/saved.js');
+const { openStudy, savedOf } = await import('../src/engine/saved.js');
 const reopened = await openStudy(JSON.parse(JSON.stringify(savedOf(first))));
 check(
   'a saved study opens to the same key, metadata and files',

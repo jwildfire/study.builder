@@ -17,14 +17,14 @@ import {
   withLayerNeeds,
   withNeeds,
   withPhase
-} from '../src/core.js';
-import { PACKAGES } from '../src/build.js';
-import { firstRows } from '../src/csv.js';
-import { columnsOf, overviewOf } from '../src/overview.js';
-import { studyOf } from '../src/build.js';
-import { crc32, zipOf } from '../src/zip.js';
+} from '../src/engine/core.js';
+import { PACKAGES } from '../src/engine/build.js';
+import { firstRows } from '../src/shared/csv.js';
+import { columnsOf, overviewOf } from '../src/engine/overview.js';
+import { studyOf } from '../src/engine/build.js';
+import { crc32, zipOf } from '../src/engine/zip.js';
 import { COPIES, copyProblems, filesModule, workflowFiles } from '../scripts/files.mjs';
-import { WORKFLOW_FILES } from '../src/files.js';
+import { WORKFLOW_FILES } from '../src/engine/files.js';
 import { parse as parseYaml } from 'yaml';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -277,7 +277,7 @@ describe('the ADaM workflows', () => {
     }
   });
 
-  it('are listed in src/files.js, so R is given every one', () => {
+  it('are listed in src/engine/files.js, so R is given every one', () => {
     expect([...WORKFLOW_FILES]).toEqual(workflowFiles());
   });
 });
@@ -298,9 +298,9 @@ describe('study.builder’s workflows, of every layer', () => {
 });
 
 describe('the copies', () => {
-  it('match their records, and src/files.js lists what the records list', () => {
+  it('match their records, and src/engine/files.js lists what the records list', () => {
     expect(copyProblems()).toEqual([]);
-    expect(readFileSync(path.join(root, 'src/files.js'), 'utf8')).toBe(filesModule());
+    expect(readFileSync(path.join(root, 'src/engine/files.js'), 'utf8')).toBe(filesModule());
     expect(COPIES.map((copy) => copy.directory)).toEqual([
       'vendor/gsm.datasim',
       'vendor/gsm.mapping-vitals',

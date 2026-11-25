@@ -5,8 +5,8 @@
 //   StudyBuilder.buildStudy(settings, options) a study with no page at all
 //   StudyBuilder.createBuilder(options)        the same, keeping R for more
 
-import { mount as mountAt } from './widget.js';
-import { buildStudy as build, createBuilder as create } from './build.js';
+import { mount as mountAt } from './loader/widget.js';
+import { buildStudy as build, createBuilder as create } from './engine/build.js';
 
 /* global __STUDY_BUILDER_VERSION__ */
 
@@ -48,15 +48,15 @@ export {
   withLayerNeeds,
   withNeeds,
   withPhase
-} from './core.js';
-export { DOWNLOADS, PACKAGES, StudyBuilderError, rOptions, studyOf } from './build.js';
-export { WEBR_VERSION, createConnection } from './r.js';
-export { firstRows } from './csv.js';
-export { columnsOf, overviewOf } from './overview.js';
-export { zipOf } from './zip.js';
-export { COPIED_FROM } from './files.js';
-export { KEYS, RAW_LABELS, RESULT_LABELS, metadataOf } from './metadata.js';
-export { MANIFEST_FORMAT, manifestOf } from './manifest.js';
+} from './engine/core.js';
+export { DOWNLOADS, PACKAGES, StudyBuilderError, rOptions, studyOf } from './engine/build.js';
+export { WEBR_VERSION, createConnection } from './engine/r.js';
+export { firstRows } from './shared/csv.js';
+export { columnsOf, overviewOf } from './engine/overview.js';
+export { zipOf } from './engine/zip.js';
+export { COPIED_FROM } from './engine/files.js';
+export { KEYS, RAW_LABELS, RESULT_LABELS, metadataOf } from './engine/metadata.js';
+export { MANIFEST_FORMAT, manifestOf } from './engine/manifest.js';
 export {
   CONFIG_FORMAT,
   PRESETS_FORMAT,
@@ -71,4 +71,4 @@ export {
   readPresets,
   savedOf,
   settingsOfArgs
-} from './saved.js';
+} from './engine/saved.js';

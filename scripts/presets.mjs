@@ -17,8 +17,8 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { gunzipSync, gzipSync } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
-import { PRESETS_FORMAT, openStudy, readPresets, savedOf } from '../src/saved.js';
-import { readSettings } from '../src/core.js';
+import { PRESETS_FORMAT, openStudy, readPresets, savedOf } from '../src/engine/saved.js';
+import { readSettings } from '../src/engine/core.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const folder = path.join(root, 'presets');

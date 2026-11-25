@@ -2,7 +2,7 @@
 // worked out here from the tables' text: counts and plain summaries, nothing
 // that needs R. A chart or a page can call them without the widget.
 
-import { firstRows } from './csv.js';
+import { firstRows } from '../shared/csv.js';
 
 /** How many of a table's rows a column summary reads. */
 export const SUMMARY_ROWS = 5000;

@@ -11,7 +11,7 @@
 //
 // It reads nothing but what it is given, and needs no R.
 
-import { firstRows } from '../csv.js';
+import { firstRows } from '../shared/csv.js';
 
 const NUMBER = /^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?$/;
@@ -102,7 +102,7 @@ export function participantColumnOf(table) {
 /**
  * A study as the viewer reads one.
  * @param {Object} given `name`; `kind` (a word for where it came from); `about`; `facts`, label and value pairs; and `tables`.
- * @param {Object[]} given.tables Each: `id`; `label`; `group` (the heading it is listed under: a layer, or none); `text` (CSV) or `records` (objects); `rows` (how many, when known); `columns` (names, or `{name, type, label, key, joins, role, used, todo}`); `about`; `made` (a sentence on what made it); `note` (a sentence under its name); `file` (its file name).
+ * @param {Object[]} given.tables Each: `id`; `label`; `group` (the heading it is listed under: a layer, or none); `text` (CSV) or `records` (objects); `rows` (how many, when known); `columns` (names, or `{name, type, label, key, joins, role, used, todo}`); `about`; `made` (a sentence on what made it); `note` (a sentence under its name); `file` (its file name); `roles` (what a page reads from the table: `{id, label, kind: 'column'|'value', value, options, needed, source}`).
  * @returns {Object} The study, with every table's columns named and its participant column found.
  */
 export function viewerStudy(given = {}) {
@@ -122,6 +122,19 @@ export function viewerStudy(given = {}) {
         about: text(table.about),
         made: text(table.made),
         note: text(table.note),
+        // What a page reads from the table, each with the column or value it is
+        // set to: for a page that maps columns (the viewer's Columns view).
+        roles: list(table.roles)
+          .filter((role) => role && text(role.id))
+          .map((role) => ({
+            id: text(role.id),
+            label: text(role.label) || text(role.id),
+            kind: role.kind === 'value' ? 'value' : 'column',
+            value: text(role.value),
+            options: list(role.options).map(text),
+            needed: text(role.needed),
+            source: text(role.source)
+          })),
         ...(typeof table.text === 'string' ? { text: table.text } : { records: table.records }),
         columns: namesOf(table).map((name) => ({ ...(said.get(name) || {}), name }))
       };

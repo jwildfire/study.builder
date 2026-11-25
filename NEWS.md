@@ -1,6 +1,12 @@
-# study.builder v0.2.0 (Upcoming)
+# study.builder v0.3.0 (Upcoming)
 
-A study now comes in layers, each built off raw by workflows.
+Release candidate: v0.3.0-rc.1. A study comes in layers, opens without waiting once it is saved or ready-made, and is looked through with study.viewer. v0.2.0 was never released: everything under it is here.
+
+- **Three modules.** The engine (make and keep a study), the viewer (look through any study) and the loader (the screens) are separate folders with boundaries a test holds. `ARCHITECTURE.md` has the picture.
+- **A library first.** The loader opens on the studies you can have at once, ready-made or saved, with the form behind New study. With nothing to list it opens on the form.
+- **Describe a study.** Phase, area and outliers are pressed, not chosen from a menu; the layers are drawn as the pipeline they are; the raw domains are chips; and a summary says what building will give, then each step as R takes it.
+- **The study that is open.** Its name, how it was made, its key and its settings in a line, with Save, Study file, Download all and the page's own button; and study.viewer under it, opening on the overview.
+- **Mapping in the viewer.** A table may carry roles, what a page reads from it; the viewer's Columns view shows them and tells the page when one is set.
 
 ## What's new
 

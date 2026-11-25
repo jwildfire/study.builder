@@ -70,6 +70,18 @@ export const VIEWER_STYLES = `
 .sv-block-head{display:flex;justify-content:space-between;align-items:baseline;gap:.6rem}
 .sv-block-head .sv-link{font-weight:600}
 .sv-block-more{margin:0}
+.sv-roles{display:flex;flex-direction:column;gap:.4rem;padding:.7rem .8rem;background:var(--sv-card);border:1px solid var(--sv-rule);border-radius:10px}
+.sv-roles-head{display:flex;align-items:center;gap:.6rem}
+.sv-roles-head .sv-note,.sv-roles-head .sv-meta{margin:0}
+.sv-role{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem .8rem}
+.sv-role-words{flex:1 1 14rem;min-width:0;display:flex;flex-direction:column}
+.sv-role-label{font-weight:600}
+.sv-role-words small{color:var(--sv-soft);font-size:.78rem}
+.sv-role select{flex:0 1 16rem;min-width:9rem}
+.sv-roles-rest{display:flex;flex-direction:column;gap:.4rem}
+.sv-roles-rest summary{cursor:pointer;color:var(--sv-soft);font-size:.82rem;min-height:2rem;display:flex;align-items:center}
+.sv-roles-rest[open]{gap:.4rem}
+.sv-roles-rest .sv-role{margin-top:.4rem}
 .sv-empty{padding:1rem;border:1px dashed var(--sv-line);border-radius:10px;color:var(--sv-soft)}
 `;
 

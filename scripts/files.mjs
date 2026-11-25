@@ -1,9 +1,9 @@
-// Writes src/files.js: the list of copied files R is given, read from the
+// Writes src/engine/files.js: the list of copied files R is given, read from the
 // records of the copies (vendor/*/SOURCE.json), so the bundle knows what to
 // fetch without a request for a listing. Also holds every copied file to its
 // record's checksum.
 //
-//   node scripts/files.mjs           write src/files.js
+//   node scripts/files.mjs           write src/engine/files.js
 //   node scripts/files.mjs --check   fail if it is out of date, or a copied
 //                                    file does not match its record
 
@@ -59,7 +59,7 @@ export function workflowFiles() {
     );
 }
 
-/** The text of src/files.js. */
+/** The text of src/engine/files.js. */
 export function filesModule() {
   const [simulator, vitals, kri, reporting] = COPIES.map(({ directory, skip }) =>
     record(directory)
@@ -90,7 +90,7 @@ export function filesModule() {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const target = path.join(root, 'src/files.js');
+  const target = path.join(root, 'src/engine/files.js');
   const text = filesModule();
   const problems = copyProblems();
   if (process.argv.includes('--check')) {
@@ -100,13 +100,15 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     } catch {
       // Not written yet: out of date.
     }
-    if (current !== text) problems.push('src/files.js is out of date: run `npm run files`.');
+    if (current !== text) problems.push('src/engine/files.js is out of date: run `npm run files`.');
     for (const problem of problems) console.error(`✗ ${problem}`);
     if (problems.length) process.exit(1);
-    console.log('✓ src/files.js matches the records, and every copied file matches its record.');
+    console.log(
+      '✓ src/engine/files.js matches the records, and every copied file matches its record.'
+    );
   } else {
     writeFileSync(target, text);
-    console.log('✓ Wrote src/files.js');
+    console.log('✓ Wrote src/engine/files.js');
     for (const problem of problems) console.error(`✗ ${problem}`);
     if (problems.length) process.exit(1);
   }

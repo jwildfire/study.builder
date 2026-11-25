@@ -10,10 +10,10 @@ import { createReadStream, existsSync, readFileSync } from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { PACKAGES, PUBLIC_INDEX, rOptions, studyOf } from '../src/build.js';
-import { readSettings } from '../src/core.js';
-import { foldersOf } from '../src/r.js';
-import { manifestOf } from '../src/manifest.js';
+import { PACKAGES, PUBLIC_INDEX, rOptions, studyOf } from '../src/engine/build.js';
+import { readSettings } from '../src/engine/core.js';
+import { foldersOf } from '../src/engine/r.js';
+import { manifestOf } from '../src/engine/manifest.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 

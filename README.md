@@ -112,7 +112,7 @@ A build that cannot be made rejects with a `StudyBuilderError` whose message is 
 
 A study takes seconds to build after R has started, and half a minute the first time. A saved study opens with no R at all.
 
-- **In the widget.** Start from lists a page's presets and what the reader saved in this browser. Save study and Save settings keep the open study or the form's settings in the browser (IndexedDB; nothing is sent anywhere). Study file and Settings file download them, and Open a file reads either back.
+- **In the loader.** It opens on a library: the page's ready-made studies and what the reader saved in this browser, each a press from open, with the form behind New study. Save and Save settings keep the open study or the form's settings in the browser (IndexedDB; nothing is sent anywhere). Study file and Settings file download them, and Open a file reads either back.
 - **With no page.**
 
 ```js
@@ -159,6 +159,10 @@ A second, separate module in this repository: a viewer for any study's tables. I
 - **One participant**: one person's rows in every table that names them, found by a column called `USUBJID`, `SUBJID`, `SubjectID` or the like, or one given `role: 'participant'`.
 
 With no page: `viewerStudy`, `rowsOf`, `filterRows`, `sortRows`, `profileOf`, `participantsOf`, `participantOf`.
+
+## How it is put together
+
+Three modules with boundaries a test holds: the engine makes and keeps a study, the viewer looks through any study, and the loader is the screens. See [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Settings
 
