@@ -4,6 +4,8 @@ Simulate a clinical trial in the browser, look at every domain, and hand the dat
 
 You describe a trial: its phase, therapeutic area, participants, sites, months and the domains you want. [gsm.datasim](https://github.com/Gilead-Public/gsm.datasim) simulates it with R running in your browser. Nothing is installed and nothing is sent anywhere.
 
+Try it: https://jwildfire.github.io/study.builder/
+
 Status: experimental, v0.1.0. Every row is synthetic.
 
 ## What it gives you
@@ -15,7 +17,7 @@ Status: experimental, v0.1.0. Every row is synthetic.
 ## Use it on a page
 
 ```html
-<script src="study.builder.js"></script>
+<script src="https://jwildfire.github.io/study.builder/study.builder.js"></script>
 <div id="builder"></div>
 <script>
   StudyBuilder.mount('#builder', {
