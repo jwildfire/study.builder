@@ -1,6 +1,6 @@
 # study.builder v0.3.0 (Upcoming)
 
-Release candidate: v0.3.0-rc.3. A study comes in layers, opens without waiting once it is saved or ready-made, and is looked through with study.viewer. v0.2.0 was never released: everything under it is here.
+Release candidate: v0.3.0-rc.4. A study comes in layers, opens without waiting once it is saved or ready-made, and is looked through with study.viewer. v0.2.0 was never released: everything under it is here.
 
 - **A study can follow a protocol's schedule of activities.** Open a CDISC USDM study definition, the data form of an ICH M11 protocol, and the form shows its schedule as a grid: a column a visit, a row an activity. Change a visit's day, add or remove a visit, tick an activity on or off, then build. Visits, vital signs and labs are made on that schedule: each visit on its planned day within its window, vitals only where they are taken, and each lab panel with the tests the protocol lists. A study built this way keeps its protocol and shows it as a Schedule view. The CDISC pilot study's protocol comes ready-made. Arms, branching timelines and activities of no domain the simulator makes are read and shown, and simulate nothing yet. M11's own specification leaves the schedule as a table or an image, so it is USDM that is read. `StudyBuilder.readUsdm`, `readProtocol`, `planOf`, `protocolSettings`.
 - **Three modules.** The engine (make and keep a study), the viewer (look through any study) and the loader (the screens) are separate folders with boundaries a test holds. `ARCHITECTURE.md` has the picture.

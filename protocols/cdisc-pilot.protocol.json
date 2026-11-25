@@ -12,8 +12,18 @@
   "phase": "P2",
   "indication": "Alzheimer's disease",
   "participants": 300,
-  "arms": ["Placebo", "Xanomeline Low Dose", "Xanomeline High Dose"],
-  "epochs": ["Screening", "Treatment One", "Treatment Two", "Treatment Three", "Follow Up"],
+  "arms": [
+    "Placebo",
+    "Xanomeline Low Dose",
+    "Xanomeline High Dose"
+  ],
+  "epochs": [
+    "Screening",
+    "Treatment One",
+    "Treatment Two",
+    "Treatment Three",
+    "Follow Up"
+  ],
   "visits": [
     {
       "id": "ScheduledActivityInstance_9",
@@ -167,7 +177,10 @@
       "id": "Activity_4",
       "name": "Demographics",
       "domain": null,
-      "collects": ["Sex", "Race"]
+      "collects": [
+        "Sex",
+        "Race"
+      ]
     },
     {
       "id": "Activity_5",
@@ -221,7 +234,11 @@
       "id": "Activity_13",
       "name": "Vital Signs and Temperature",
       "domain": "VS",
-      "collects": ["Temperature", "Weight", "Height"]
+      "collects": [
+        "Temperature",
+        "Weight",
+        "Height"
+      ]
     },
     {
       "id": "Activity_14",
@@ -295,7 +312,9 @@
       "id": "Activity_24",
       "name": "Hemoglobin A1C",
       "domain": "LB",
-      "collects": ["Hemoglobin A1C Concentration in Blood"]
+      "collects": [
+        "Hemoglobin A1C Concentration in Blood"
+      ]
     },
     {
       "id": "Activity_25",
@@ -337,7 +356,9 @@
       "id": "Activity_31",
       "name": "Adverse events",
       "domain": "AE",
-      "collects": ["Adverse Event Prespecified"]
+      "collects": [
+        "Adverse Event Prespecified"
+      ]
     },
     {
       "id": "Activity_32",
@@ -355,7 +376,11 @@
       "id": "Activity_34",
       "name": "Vital signs while supine",
       "domain": "VS",
-      "collects": ["Systolic Blood Pressure", "Diastolic Blood Pressure", "Heart Rate"]
+      "collects": [
+        "Systolic Blood Pressure",
+        "Diastolic Blood Pressure",
+        "Heart Rate"
+      ]
     },
     {
       "id": "Activity_35",
@@ -367,7 +392,11 @@
       "id": "Activity_36",
       "name": "Vital signs while standing",
       "domain": "VS",
-      "collects": ["Systolic Blood Pressure", "Diastolic Blood Pressure", "Heart Rate"]
+      "collects": [
+        "Systolic Blood Pressure",
+        "Diastolic Blood Pressure",
+        "Heart Rate"
+      ]
     }
   ],
   "schedule": {
@@ -396,7 +425,10 @@
       "Activity_29",
       "Activity_30"
     ],
-    "ScheduledActivityInstance_10": ["Activity_13", "Activity_14"],
+    "ScheduledActivityInstance_10": [
+      "Activity_13",
+      "Activity_14"
+    ],
     "ScheduledActivityInstance_11": [
       "Activity_12",
       "Activity_13",
@@ -453,7 +485,9 @@
       "Activity_29",
       "Activity_30"
     ],
-    "ScheduledActivityInstance_16": ["Activity_30"],
+    "ScheduledActivityInstance_16": [
+      "Activity_30"
+    ],
     "ScheduledActivityInstance_17": [
       "Activity_13",
       "Activity_16",
@@ -465,7 +499,9 @@
       "Activity_25",
       "Activity_30"
     ],
-    "ScheduledActivityInstance_18": ["Activity_30"],
+    "ScheduledActivityInstance_18": [
+      "Activity_30"
+    ],
     "ScheduledActivityInstance_19": [
       "Activity_13",
       "Activity_16",
@@ -478,7 +514,9 @@
       "Activity_29",
       "Activity_30"
     ],
-    "ScheduledActivityInstance_20": ["Activity_30"],
+    "ScheduledActivityInstance_20": [
+      "Activity_30"
+    ],
     "ScheduledActivityInstance_21": [
       "Activity_13",
       "Activity_16",
@@ -489,7 +527,9 @@
       "Activity_25",
       "Activity_30"
     ],
-    "ScheduledActivityInstance_22": ["Activity_30"],
+    "ScheduledActivityInstance_22": [
+      "Activity_30"
+    ],
     "ScheduledActivityInstance_23": [
       "Activity_13",
       "Activity_16",
