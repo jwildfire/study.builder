@@ -8,7 +8,7 @@
 
 import { DOMAINS, LAYERS, STANDARD, readSettings, studySaid } from './core.js';
 import { createConnection } from './r.js';
-import { GSM_FILES, SIMULATOR_FILES, VITALS_FILE, WORKFLOW_FILES } from './files.js';
+import { FILES_STAMP, GSM_FILES, SIMULATOR_FILES, VITALS_FILE, WORKFLOW_FILES } from './files.js';
 import { metadataOf } from './metadata.js';
 import { readProtocol } from './protocol.js';
 import { manifestOf } from './manifest.js';
@@ -78,7 +78,8 @@ export function rOptions(base, { repository = null } = {}) {
     ...WORKFLOW_FILES
   ].map((file) => ({
     path: `${ROOT}/${file}`,
-    url: `${from}${file}`
+    // The stamp keeps a page and the files it fetches of one release (files.js).
+    url: `${from}${file}?v=${FILES_STAMP}`
   }));
   return {
     packages: [...PACKAGES],
@@ -276,7 +277,10 @@ export function studyOf(value, args) {
   // there is the standard domain's (subject, ae, bds).
   const adam = layers.find((layer) => layer.id === 'adam');
   const standard = (adam ? adam.tables : []).map((table) => {
-    const known = STANDARD.find((file) => file.id === table.domain) || {};
+    const known =
+      STANDARD.find((file) => file.name === table.name) ||
+      STANDARD.find((file) => file.id === table.domain) ||
+      {};
     return {
       ...table,
       kind: 'standard',
@@ -287,6 +291,26 @@ export function studyOf(value, args) {
     };
   });
   const texts = (tables) => tables.map(({ name, text }) => ({ name, text }));
+  // A page that reads standard files takes one file for a domain. Two ADaM
+  // tables of one domain (labs and vital signs are both `bds`) that have the
+  // same columns are handed over as one file: one header, then each table's
+  // rows. No row is made or changed.
+  const stacked = (tables) => {
+    const files = [];
+    for (const table of tables) {
+      const text = String(table.text || '');
+      const end = text.indexOf('\n');
+      const header = end < 0 ? text : text.slice(0, end);
+      const before = files.find((file) => file.id === table.id && file.header === header);
+      if (before && end >= 0) {
+        before.names.push(table.name.replace(/\.csv$/, ''));
+        before.text = `${before.text.replace(/\n*$/, '\n')}${text.slice(end + 1)}`;
+      } else {
+        files.push({ id: table.id, header, names: [table.name.replace(/\.csv$/, '')], text });
+      }
+    }
+    return files.map((file) => ({ name: `${file.names.join('-')}.csv`, text: file.text }));
+  };
   const study = {
     id: value.study_id,
     snapshotDate: value.snapshot_date,
@@ -337,11 +361,12 @@ export function studyOf(value, args) {
     /**
      * The study's files, as a page loads files: each a name and its text.
      * `raw` and `standard` are the raw and the ADaM layer; `layers` has every layer by its id.
+     * In `standard`, ADaM tables of one domain with the same columns are one file (adlb-advs.csv).
      */
     files() {
       return {
         raw: texts(raw.tables),
-        standard: texts(standard),
+        standard: stacked(standard),
         layers: Object.fromEntries(layers.map((layer) => [layer.id, texts(layer.tables)]))
       };
     }

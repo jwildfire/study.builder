@@ -35,13 +35,14 @@ builder_core <- c("STUDY", "SITE", "SUBJ", "ENROLL")
 
 # The domains a study may be asked to hold besides, by gsm's name for each.
 # VS is made by gsm.datasim's own generator from a spec handed in (`vitals`).
+# EG (ECGs) is made by gsm.datasim's study results, with the arms and lab results.
 builder_optional <- c(
-  "VISIT", "AE", "LB", "VS", "PD", "STUDCOMP", "SDRGCOMP", "IE", "PK",
+  "VISIT", "AE", "LB", "VS", "EG", "PD", "STUDCOMP", "SDRGCOMP", "IE", "PK",
   "Randomization", "OverallResponse", "Death", "QUERY", "DATAENT", "DATACHG"
 )
 
 # A domain that needs another: gsm.datasim makes each from the other's rows.
-builder_needs <- list(VS = "VISIT", OverallResponse = "VISIT", Death = "STUDCOMP")
+builder_needs <- list(VS = "VISIT", EG = "VISIT", OverallResponse = "VISIT", Death = "STUDCOMP")
 
 # What a study may be asked to hold. The page holds the same limits.
 builder_limits <- list(
@@ -53,6 +54,7 @@ builder_limits <- list(
 
 # What was changed in the raw tables, one sentence each.
 builder_notes <- c(
+  "Arms, lab results and ECGs are gsm.datasim's study results: a lab's toxicity grade is not worked out from its result, and adverse events do not follow the arm.",
   "Columns gsm.datasim names as the source system does are given gsm's names, as gsm.mapping's specs say.",
   "Site ids are written SITE1234 where gsm.datasim writes 0X1234, which R would read back from a file as a number.",
   "The study table's phase and therapeutic area are what was asked for. gsm.datasim does not shape the data by either."
@@ -491,7 +493,7 @@ builder_run <- function(
     stop("The study needs a name.", call. = FALSE)
   }
   wanted <- if (is.null(domains)) {
-    c("VISIT", "AE", "LB", "VS", "PD", "STUDCOMP", "SDRGCOMP")
+    c("VISIT", "AE", "LB", "VS", "EG", "PD", "STUDCOMP", "SDRGCOMP")
   } else {
     setdiff(as.character(unlist(domains)), builder_core)
   }
@@ -513,10 +515,17 @@ builder_run <- function(
   # visit's name, day and window, whether vital signs are taken, and the lab
   # panels drawn. That plan is gsm.datasim's study design.
   design <- NULL
+  arms <- NULL
   if (!is.null(protocol)) {
     if (!("VISIT" %in% wanted)) stop("A protocol's schedule needs the visits domain.", call. = FALSE)
-    design <- list(visits = yaml::yaml.load(as.character(protocol))$plan)
+    read <- yaml::yaml.load(as.character(protocol))
+    design <- list(visits = read$plan)
+    arms <- as.character(unlist(read$arms))
   }
+  # Arms, lab results and ECGs are gsm.datasim's to make: its `results`. The
+  # arms are the protocol's when there is one, and gsm.datasim's own otherwise.
+  results <- list(ecg = "EG" %in% wanted)
+  if (length(arms)) results$arms <- arms
   started <- Sys.time()
   study <- suppressMessages(create_longitudinal_study(
     study_id = gsub("[^A-Za-z0-9]", "-", toupper(trimws(study_name))),
@@ -524,12 +533,13 @@ builder_run <- function(
     sites = sites,
     snapshots = months,
     interval = "1 month",
-    domains = setdiff(wanted, "VS"),
+    domains = setdiff(wanted, c("VS", "EG")),
     run_analytics = FALSE,
     run_reporting = FALSE,
     outlier_intensity = intensity,
     # A protocol's schedule is gsm.datasim's to follow: its `design`.
     design = design,
+    results = results,
     verbose = FALSE
   ))
   dates <- names(study$raw_data)
@@ -538,6 +548,8 @@ builder_run <- function(
     snapshot$Raw_VS <- .builder_vitals(snapshot, vitals_spec)
     # The vital signs were made after the study, so they are put on its design here.
     snapshot <- apply_study_design(snapshot, design)
+    # Putting the labs on the design again leaves their results to be worked out again.
+    snapshot <- apply_study_results(snapshot, results)
   }
 
   made <- paste0("Raw_", c(builder_core, intersect(builder_optional, wanted)))
@@ -556,7 +568,7 @@ builder_run <- function(
     paste0(
       "Visits, vital signs and labs follow the protocol's schedule: ", length(design$visits),
       " planned visits, ", nrow(snapshot$Raw_VISIT),
-      " made, by gsm.datasim's study design. Arms and activities of no domain are not simulated."
+      " made, by gsm.datasim's study design. Activities of no domain are not simulated."
     )
   }
 

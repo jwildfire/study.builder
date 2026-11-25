@@ -31,8 +31,8 @@ const rowsOf = (study, id) => (study.domains.find((domain) => domain.id === id) 
 // 1. The default study.
 const first = await build({ seed: 7 });
 check(
-  'the default study has the four core domains and the seven default ones',
-  first.domains.length === 11,
+  'the default study has the four core domains and the eight default ones',
+  first.domains.length === 12,
   first.domains.map((domain) => domain.id).join(' ')
 );
 check(
@@ -62,8 +62,12 @@ check(
   )
 );
 check(
-  'three standard files: participants, adverse events, vitals',
-  first.standard.map((file) => file.id).join() === 'subject,ae,bds'
+  'five standard tables: participants, adverse events, ECGs, labs and vitals; labs and vitals are handed over as one file',
+  first.standard.map((file) => file.id).join() === 'subject,ae,eg,bds,bds' &&
+    first
+      .files()
+      .standard.map((file) => file.name)
+      .join() === 'adsl.csv,adae.csv,adeg.csv,adlb-advs.csv'
 );
 check(
   'every standard column has a line saying where it came from',
@@ -73,7 +77,7 @@ check(
       file.columns.map((column) => column.name).join()
   )
 );
-const vitals = first.standard.find((file) => file.id === 'bds');
+const vitals = first.standard.find((file) => file.name === 'advs.csv');
 check(
   'the vitals file has eight vital signs',
   new Set(
@@ -104,8 +108,8 @@ check(
     first.table('raw.rbqm', 'VS').made.from.includes('Mapped_SUBJ')
 );
 check(
-  'ADaM is ADSL, ADAE and ADVS, each built by its workflow from raw and ADSL',
-  first.layers[2].tables.map((table) => table.id).join() === 'ADSL,ADAE,ADVS' &&
+  'ADaM is ADSL, ADAE, ADEG, ADLB and ADVS, each built by its workflow from raw and ADSL',
+  first.layers[2].tables.map((table) => table.id).join() === 'ADSL,ADAE,ADEG,ADLB,ADVS' &&
     first.table('adam', 'ADAE').made.from.join() === 'Raw_AE,ADaM_ADSL'
 );
 const startDays = firstRows(first.table('adam', 'ADAE').text, 500).rows.map((row) => row[8]);

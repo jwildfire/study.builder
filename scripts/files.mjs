@@ -73,6 +73,19 @@ export function filesModule() {
       return [directory, { repository, tag, commit }];
     })
   );
+  // One stamp for everything R fetches: the page asks for each file under it,
+  // so a browser that kept an older page never mixes it with newer files.
+  const stamp = createHash('sha256');
+  for (const file of [
+    'r/builder.R',
+    ...simulator,
+    vitals[0],
+    ...kri,
+    ...reporting,
+    ...workflowFiles()
+  ]) {
+    stamp.update(file).update(readFileSync(path.join(root, file)));
+  }
   return (
     '// Written by scripts/files.mjs from the records of the copies (vendor/*/SOURCE.json).\n' +
     '// Do not edit: run `npm run files`.\n\n' +
@@ -84,6 +97,8 @@ export function filesModule() {
     `export const GSM_FILES = ${JSON.stringify([...kri, ...reporting], null, 2)};\n\n` +
     '/** study.builder’s own workflows, which build the layers off raw. */\n' +
     `export const WORKFLOW_FILES = ${JSON.stringify(workflowFiles(), null, 2)};\n\n` +
+    '/** A stamp of every file R fetches: it changes when any of them does. */\n' +
+    `export const FILES_STAMP = ${JSON.stringify(stamp.digest('hex').slice(0, 12))};\n\n` +
     '/** What each copy was copied from. */\n' +
     `export const COPIED_FROM = ${JSON.stringify(versions, null, 2)};\n`
   );

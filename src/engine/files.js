@@ -30,6 +30,7 @@ export const SIMULATOR_FILES = [
   "vendor/gsm.datasim/R/column_type_generator.R",
   "vendor/gsm.datasim/R/create_longitudinal_study.R",
   "vendor/gsm.datasim/R/study_design.R",
+  "vendor/gsm.datasim/R/study_results.R",
   "vendor/gsm.datasim/R/create_snapshot_reports.R",
   "vendor/gsm.datasim/R/domain_registry.R",
   "vendor/gsm.datasim/R/endpoints_domains_helper.R",
@@ -73,16 +74,21 @@ export const GSM_FILES = [
 /** study.builder’s own workflows, which build the layers off raw. */
 export const WORKFLOW_FILES = [
   "workflows/adam/ADAE.yaml",
+  "workflows/adam/ADEG.yaml",
+  "workflows/adam/ADLB.yaml",
   "workflows/adam/ADSL.yaml",
   "workflows/adam/ADVS.yaml",
   "workflows/analysis/AESummary.yaml"
 ];
 
+/** A stamp of every file R fetches: it changes when any of them does. */
+export const FILES_STAMP = "5b372fe9633f";
+
 /** What each copy was copied from. */
 export const COPIED_FROM = {
   "vendor/gsm.datasim": {
     "repository": "https://github.com/jwildfire/gsm.datasim",
-    "commit": "08ed93f050c3a77916f059fc6caff44b4bb323dd"
+    "commit": "35607af8cf8ba3a32312509912a938e37ca4949b"
   },
   "vendor/gsm.mapping-vitals": {
     "repository": "https://github.com/Gilead-Public/gsm.mapping",

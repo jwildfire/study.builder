@@ -2,6 +2,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { StudyBuilderError, createBuilder, rOptions, studyOf } from '../src/engine/build.js';
 import { createConnection, foldersOf } from '../src/engine/r.js';
+import { FILES_STAMP } from '../src/engine/files.js';
 import { mount } from '../src/loader/widget.js';
 import { readSettings } from '../src/engine/core.js';
 import {
@@ -127,16 +128,18 @@ describe('what R is given', () => {
     const options = rOptions('https://example.org/sb');
     expect(options.files[0]).toEqual({
       path: '/study.builder/r/builder.R',
-      url: 'https://example.org/sb/r/builder.R'
+      url: `https://example.org/sb/r/builder.R?v=${FILES_STAMP}`
     });
     expect(options.files.filter((file) => /gsm\.datasim\/R\/.+\.R$/.test(file.path))).toHaveLength(
-      42
+      43
     );
     expect(options.files.map((file) => file.path)).toContain(
       '/study.builder/vendor/gsm.mapping-vitals/workflow/1_mappings/VS.yaml'
     );
-    expect(options.files.slice(-4).map((file) => file.path)).toEqual([
+    expect(options.files.slice(-6).map((file) => file.path)).toEqual([
       '/study.builder/workflows/adam/ADAE.yaml',
+      '/study.builder/workflows/adam/ADEG.yaml',
+      '/study.builder/workflows/adam/ADLB.yaml',
       '/study.builder/workflows/adam/ADSL.yaml',
       '/study.builder/workflows/adam/ADVS.yaml',
       '/study.builder/workflows/analysis/AESummary.yaml'
@@ -488,7 +491,7 @@ describe('the loader on a page', () => {
     expect([...document.querySelectorAll('.sb h3')].map((h) => h.textContent)).toEqual([
       'The trial',
       'Layers: each is built from the one before it',
-      'Raw domains: 11 of 19',
+      'Raw domains: 12 of 20',
       'What you will get'
     ]);
     expect(q('[name="participants"]').value).toBe('150');
@@ -514,7 +517,7 @@ describe('the loader on a page', () => {
     expect(q('[data-domain="SUBJ"]').disabled).toBe(true);
     q('[data-domain="AE"]').click();
     expect(handle.settings().domains).not.toContain('AE');
-    expect(q('.sb h3:nth-of-type(3)').textContent).toBe('Raw domains: 10 of 19');
+    expect(q('.sb h3:nth-of-type(3)').textContent).toBe('Raw domains: 11 of 20');
   });
 
   it('says every problem with the settings and asks nothing of R', async () => {
@@ -638,10 +641,11 @@ describe('the loader on a page', () => {
     vi.stubGlobal('fetch', fetched);
     const { r } = mounted({ presets });
     expect(handle.state().screen).toBe('library');
-    expect([...document.querySelectorAll('.sb h3')].map((h) => h.textContent)).toEqual([
-      'Ready now: opens at once, with no R',
-      'Settings only: Build makes the study'
-    ]);
+    expect(
+      [...document.querySelectorAll('.sb-studies-table thead th')].map((h) => h.textContent)
+    ).toEqual(['Study', 'Size', 'From', 'Data', '']);
+    expect(q('[data-study="preset:ready"] .sb-data').textContent).toBe('Data ready');
+    expect(q('[data-settings="preset:big"] .sb-data').textContent).toBe('Settings only');
     expect(q('[data-study="preset:ready"] .sb-pill').textContent).toBe('Ready-made');
     expect(q('[data-study="preset:ready"]').textContent).toContain(
       '150 participants · 20 sites · 9 months'

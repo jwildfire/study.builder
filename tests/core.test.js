@@ -52,7 +52,7 @@ describe('settings', () => {
       outlier_intensity: 1,
       phase: 'P2',
       therapeutic_area: 'Oncology',
-      domains: ['VISIT', 'AE', 'LB', 'VS', 'PD', 'STUDCOMP', 'SDRGCOMP'],
+      domains: ['VISIT', 'AE', 'LB', 'VS', 'EG', 'PD', 'STUDCOMP', 'SDRGCOMP'],
       layers: ['raw.rbqm', 'adam', 'analysis', 'reporting']
     });
     expect(domains.slice(0, 4)).toEqual(['STUDY', 'SITE', 'SUBJ', 'ENROLL']);
@@ -207,9 +207,9 @@ describe('the page and R agree', () => {
 
   it('on the standard files: each is an ADaM workflow’s table, made from the domain that feeds it', () => {
     for (const file of STANDARD) {
-      const workflow = adamWorkflows.find((entry) => entry.meta.Domain === file.id);
-      expect(workflow, file.id).toBeTruthy();
-      expect(workflow.meta.File).toBe(file.name);
+      const workflow = adamWorkflows.find((entry) => entry.meta.File === file.name);
+      expect(workflow, file.name).toBeTruthy();
+      expect(workflow.meta.Domain).toBe(file.id);
       expect(Object.keys(workflow.spec)).toContain(`Raw_${file.from}`);
       expect(DOMAINS.find((domain) => domain.id === file.from).feeds).toBe(file.id);
     }
@@ -226,6 +226,8 @@ describe('the ADaM workflows', () => {
   it('are workr workflows: a type, an id, a spec of what they read, and steps', () => {
     expect(adamWorkflows.map((workflow) => workflow.meta.ID).sort()).toEqual([
       'ADAE',
+      'ADEG',
+      'ADLB',
       'ADSL',
       'ADVS'
     ]);
@@ -286,7 +288,14 @@ describe('study.builder’s workflows, of every layer', () => {
   it('give every column they write a label, and name the columns that are the table’s key', () => {
     expect(
       ownWorkflows.map((workflow) => `${workflow.meta.Type}_${workflow.meta.ID}`).sort()
-    ).toEqual(['ADaM_ADAE', 'ADaM_ADSL', 'ADaM_ADVS', 'Analysis_AESummary']);
+    ).toEqual([
+      'ADaM_ADAE',
+      'ADaM_ADEG',
+      'ADaM_ADLB',
+      'ADaM_ADSL',
+      'ADaM_ADVS',
+      'Analysis_AESummary'
+    ]);
     for (const workflow of ownWorkflows) {
       for (const [column, line] of Object.entries(workflow.columns)) {
         expect(line.label, `${workflow.meta.ID}.${column}`).toBeTruthy();

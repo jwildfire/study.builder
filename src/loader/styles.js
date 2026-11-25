@@ -40,6 +40,16 @@ export const STYLES = `
 .sb-card-name{font-size:1.02rem;line-height:1.3}
 .sb-card-foot{margin-top:auto;padding-top:.5rem}
 .sb-card-foot .sb-primary{flex:1}
+.sb-studies{overflow-x:auto;max-width:100%}
+.sb-studies-table th,.sb-studies-table td{padding:.7rem .8rem;text-align:left;vertical-align:middle;border-top:1px solid var(--sb-rule)}
+.sb-studies-table thead th{border-top:0;font:600 .68rem/1.2 var(--sb-mono,ui-monospace,monospace);letter-spacing:.08em;text-transform:uppercase;color:var(--sb-soft)}
+.sb-study-name{min-width:14rem;font-weight:500}
+.sb-study-name strong{display:block;font-size:.95rem;font-weight:600}
+.sb-study-name span,.sb-study-data span.sb-soft{display:block;font-size:.8rem}
+.sb-study-data{min-width:11rem}
+.sb-data{display:inline-block;padding:.2rem .55rem;border-radius:999px;font-size:.72rem;font-weight:600;white-space:nowrap;border:1px solid var(--sb-line)}
+.sb-data[data-data="ready"]{background:var(--sb-accent);color:var(--sb-on-accent);border-color:var(--sb-accent)}
+.sb-study-act .sb-row{flex-wrap:nowrap;justify-content:flex-end}
 .sb-list{background:var(--sb-card);border:1px solid var(--sb-rule);border-radius:12px}
 .sb-item{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem .9rem;padding:.7rem 1rem;border-top:1px solid var(--sb-rule)}
 .sb-item:first-child{border-top:0}

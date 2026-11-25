@@ -409,7 +409,7 @@ export function mount(
         'sb-soft',
         [
           `${protocol.title || protocol.name}. Read from ${from}${protocol.source.edited ? ', and changed here' : ''}.`,
-          protocol.arms.length ? `Arms: ${protocol.arms.join(', ')} (not simulated).` : '',
+          protocol.arms.length ? `Arms: ${protocol.arms.join(', ')}.` : '',
           'Visits, vital signs and labs are made on this schedule.'
         ]
           .filter(Boolean)
@@ -532,7 +532,11 @@ export function mount(
     const words = el('div');
     words.append(
       el('h2', null, 'Studies'),
-      el('p', 'sb-lede', 'Simulated clinical trials. Open one that is ready, or describe your own.')
+      el(
+        'p',
+        'sb-lede',
+        'Simulated clinical trials. Open one whose data is ready, build one from its settings, or describe your own.'
+      )
     );
     const actions = el('div', 'sb-row');
     actions.append(
@@ -574,7 +578,8 @@ export function mount(
           kind: 'ready',
           name: preset.name,
           size: sizeSaid(preset.settings),
-          note: preset.megabytes ? `${preset.megabytes} MB · ${preset.about}` : preset.about,
+          note: preset.about,
+          megabytes: preset.megabytes,
           open: async () => {
             take(preset.settings);
             say(`Fetching ${preset.name}…`);
@@ -585,41 +590,6 @@ export function mount(
           }
         }))
     ];
-    page.append(el('h3', null, 'Ready now: opens at once, with no R'));
-    const cards = el('div', 'sb-cards');
-    for (const one of ready) {
-      const card = el('div', 'sb-card');
-      card.dataset.study = one.id;
-      card.append(pill(one.kind), el('strong', 'sb-card-name', one.name));
-      card.append(el('span', 'sb-soft', one.size));
-      if (one.note) card.append(el('span', 'sb-soft', one.note));
-      const row = el('div', 'sb-row sb-card-foot');
-      const open = button('sb-primary', 'Open', () => attempt(one.open), 'open');
-      open.setAttribute('aria-label', `Open ${one.name}`);
-      row.append(open);
-      if (one.remove) {
-        const remove = button('', 'Remove', () => attempt(one.remove), 'remove');
-        remove.setAttribute('aria-label', `Remove ${one.name} from this browser`);
-        row.append(remove);
-      }
-      card.append(row);
-      cards.append(card);
-    }
-    const fresh = el('div', 'sb-card sb-card-new');
-    fresh.append(
-      el('strong', 'sb-card-name', 'Describe a new study'),
-      el(
-        'span',
-        'sb-soft',
-        'Phase, size, domains and layers. About half a minute the first time, then a few seconds each.'
-      )
-    );
-    const freshRow = el('div', 'sb-row sb-card-foot');
-    freshRow.append(button('', 'New study', () => go('describe'), 'new-card'));
-    fresh.append(freshRow);
-    cards.append(fresh);
-    page.append(cards);
-
     const plain = [
       ...shelved
         .filter((entry) => entry.kind === 'config')
@@ -627,7 +597,8 @@ export function mount(
           id: `shelf:${entry.id}`,
           kind: 'saved',
           name: entry.name,
-          about: entry.size.replace(/, /g, ' · '),
+          size: entry.size.replace(/, /g, ' · '),
+          note: `Saved ${String(entry.saved).slice(0, 10)}, in this browser only`,
           settings: async () => (await shelf.open(entry.id)).settings,
           remove: forget(entry)
         })),
@@ -637,19 +608,62 @@ export function mount(
           id: `preset:${preset.id}`,
           kind: 'ready',
           name: preset.name,
-          about: [sizeSaid(preset.settings), preset.about].filter(Boolean).join('. '),
+          size: sizeSaid(preset.settings),
+          note: preset.about,
           settings: async () => preset.settings
         }))
     ];
-    if (plain.length) {
-      page.append(el('h3', null, 'Settings only: Build makes the study'));
-      const list = el('div', 'sb-list');
-      for (const one of plain) {
-        const item = el('div', 'sb-item');
-        item.dataset.settings = one.id;
-        const text = el('div', 'sb-item-words');
-        text.append(el('strong', null, one.name), el('span', 'sb-soft', one.about));
-        item.append(pill(one.kind), text);
+    // One table of every study a reader can have. The Data column says which
+    // open at once (the data is hosted or saved) and which are settings that
+    // Build makes a study from.
+    const rows = [
+      ...ready.map((one) => ({ ...one, data: true })),
+      ...plain.map((one) => ({ ...one, data: false }))
+    ];
+    const wrap = el('div', 'sb-studies');
+    const table = el('table', 'sb-table sb-studies-table');
+    const headRow = el('tr');
+    for (const title of ['Study', 'Size', 'From', 'Data', '']) {
+      const cell = el('th', null, title);
+      cell.scope = 'col';
+      headRow.append(cell);
+    }
+    const thead = el('thead');
+    thead.append(headRow);
+    const tbody = el('tbody');
+    for (const one of rows) {
+      const row = el('tr', 'sb-study');
+      if (one.data) row.dataset.study = one.id;
+      else row.dataset.settings = one.id;
+      row.dataset.data = one.data ? 'ready' : 'settings';
+      const name = el('th', 'sb-study-name');
+      name.scope = 'row';
+      name.append(el('strong', null, one.name));
+      const note = one.data ? one.note : one.note || '';
+      if (note) name.append(el('span', 'sb-soft', note));
+      const size = el('td', 'sb-soft', one.size || '');
+      const from = el('td');
+      from.append(pill(one.kind));
+      const data = el('td', 'sb-study-data');
+      const has = el('span', 'sb-data', one.data ? 'Data ready' : 'Settings only');
+      has.dataset.data = one.data ? 'ready' : 'settings';
+      data.append(
+        has,
+        el(
+          'span',
+          'sb-soft',
+          one.data
+            ? `Opens at once${one.megabytes ? `, ${one.megabytes} MB` : ''}`
+            : 'Build makes the data: about half a minute'
+        )
+      );
+      const act = el('td', 'sb-study-act');
+      const buttons = el('div', 'sb-row');
+      if (one.data) {
+        const open = button('sb-primary', 'Open', () => attempt(one.open), 'open');
+        open.setAttribute('aria-label', `Open ${one.name}`);
+        buttons.append(open);
+      } else {
         const use = (then) => () =>
           attempt(async () => {
             take(await one.settings());
@@ -657,7 +671,6 @@ export function mount(
             say('');
             then();
           });
-        if (one.remove) item.append(button('', 'Remove', () => attempt(one.remove), 'remove'));
         const edit = button(
           '',
           'Edit',
@@ -666,17 +679,26 @@ export function mount(
         );
         edit.setAttribute('aria-label', `Edit the settings of ${one.name}`);
         const run = button(
-          '',
+          'sb-primary',
           'Build',
           use(() => build()),
           'build-these'
         );
         run.setAttribute('aria-label', `Build ${one.name}`);
-        item.append(edit, run);
-        list.append(item);
+        buttons.append(run, edit);
       }
-      page.append(list);
+      if (one.remove) {
+        const remove = button('', 'Remove', () => attempt(one.remove), 'remove');
+        remove.setAttribute('aria-label', `Remove ${one.name} from this browser`);
+        buttons.append(remove);
+      }
+      act.append(buttons);
+      row.append(name, size, from, data, act);
+      tbody.append(row);
     }
+    table.append(thead, tbody);
+    wrap.append(table);
+    page.append(wrap);
     page.append(
       el(
         'p',

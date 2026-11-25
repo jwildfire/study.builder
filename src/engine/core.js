@@ -67,9 +67,11 @@ export const DOMAINS = Object.freeze(
     {
       id: 'LB',
       label: 'Labs',
-      grain: 'One row per participant, visit and lab test: a toxicity grade, no result',
+      grain:
+        'One row per participant, visit and lab test: a result, its normal range and a toxicity grade',
       on: true,
-      large: true
+      large: true,
+      feeds: 'bds'
     },
     {
       id: 'VS',
@@ -78,6 +80,14 @@ export const DOMAINS = Object.freeze(
       on: true,
       needs: 'VISIT',
       feeds: 'bds'
+    },
+    {
+      id: 'EG',
+      label: 'ECGs',
+      grain: 'One row per participant, visit and ECG measure: QTcF, QTcB and heart rate',
+      on: true,
+      needs: 'VISIT',
+      feeds: 'eg'
     },
     { id: 'PD', label: 'Protocol deviations', grain: 'One row per deviation', on: true },
     {
@@ -192,7 +202,9 @@ export const DEFAULT_LAYERS = Object.freeze(
 export const STANDARD = Object.freeze([
   Object.freeze({ id: 'subject', name: 'adsl.csv', label: 'Subject-level', from: 'SUBJ' }),
   Object.freeze({ id: 'ae', name: 'adae.csv', label: 'Adverse events', from: 'AE' }),
-  Object.freeze({ id: 'bds', name: 'advs.csv', label: 'Labs and vitals', from: 'VS' })
+  Object.freeze({ id: 'bds', name: 'adlb.csv', label: 'Labs', from: 'LB' }),
+  Object.freeze({ id: 'bds', name: 'advs.csv', label: 'Vital signs', from: 'VS' }),
+  Object.freeze({ id: 'eg', name: 'adeg.csv', label: 'ECGs', from: 'EG' })
 ]);
 
 /** The optional domains made unless the caller says otherwise. */
@@ -222,7 +234,7 @@ export const CAVEATS = Object.freeze([
   'Only the study’s last monthly snapshot is returned.',
   'Every table that is not raw is built off raw by a workflow, and says which. The ADaM tables are a light form: enough for charts, not a submission.',
   'The site metrics are gsm’s own, run as gsm runs them. A simulated study’s flags say nothing about any real site.',
-  'gsm.datasim makes no lab results (only toxicity grades), no treatment arms and no ECGs. Adverse event terms are its placeholders.'
+  'Arms, lab results and ECGs are simulated: a few participants on an active arm have a rise in liver tests, creatinine or QTc. A lab’s toxicity grade is not worked out from its result, and adverse events do not follow the arm. Adverse event terms are placeholders.'
 ]);
 
 /**

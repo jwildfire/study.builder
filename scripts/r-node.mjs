@@ -46,7 +46,7 @@ export async function startR() {
   const options = rOptions('./');
   for (const file of options.files) {
     for (const folder of foldersOf(file.path)) await webR.FS.mkdir(folder).catch(() => {});
-    await webR.FS.writeFile(file.path, readFileSync(path.join(root, file.url)));
+    await webR.FS.writeFile(file.path, readFileSync(path.join(root, file.url.split('?')[0])));
   }
   for (const source of options.source) {
     await webR.evalRVoid(`source(${JSON.stringify(source)}, local = FALSE)`);
