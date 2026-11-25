@@ -19,7 +19,9 @@ const record = (directory) =>
 /** The copies R is given files of, each with the files R does not read. */
 export const COPIES = [
   { directory: 'vendor/gsm.datasim', skip: ['LICENSE.md'] },
-  { directory: 'vendor/gsm.mapping-vitals', skip: [] }
+  { directory: 'vendor/gsm.mapping-vitals', skip: [] },
+  { directory: 'vendor/gsm.kri', skip: [] },
+  { directory: 'vendor/gsm.reporting', skip: [] }
 ];
 
 /** Every way a copied file differs from its record; an empty list means none does. */
@@ -59,7 +61,7 @@ export function workflowFiles() {
 
 /** The text of src/files.js. */
 export function filesModule() {
-  const [simulator, vitals] = COPIES.map(({ directory, skip }) =>
+  const [simulator, vitals, kri, reporting] = COPIES.map(({ directory, skip }) =>
     record(directory)
       .files.map((entry) => entry.file)
       .filter((file) => !skip.includes(file))
@@ -78,6 +80,8 @@ export function filesModule() {
     `export const SIMULATOR_FILES = ${JSON.stringify(simulator, null, 2)};\n\n` +
     '/** gsm.mapping’s vital signs mapping workflow. */\n' +
     `export const VITALS_FILE = ${JSON.stringify(vitals[0])};\n\n` +
+    '/** gsm.kri’s metric workflows and the one R file of it they need, and gsm.reporting’s workflows. */\n' +
+    `export const GSM_FILES = ${JSON.stringify([...kri, ...reporting], null, 2)};\n\n` +
     '/** study.builder’s own workflows, which build the layers off raw. */\n' +
     `export const WORKFLOW_FILES = ${JSON.stringify(workflowFiles(), null, 2)};\n\n` +
     '/** What each copy was copied from. */\n' +

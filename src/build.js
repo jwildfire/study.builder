@@ -8,7 +8,8 @@
 
 import { DOMAINS, LAYERS, STANDARD, readSettings, studySaid } from './core.js';
 import { createConnection } from './r.js';
-import { SIMULATOR_FILES, VITALS_FILE, WORKFLOW_FILES } from './files.js';
+import { GSM_FILES, SIMULATOR_FILES, VITALS_FILE, WORKFLOW_FILES } from './files.js';
+import { metadataOf } from './metadata.js';
 import { manifestOf } from './manifest.js';
 
 /** The packages R installs: the ones gsm.datasim's code calls, and three of gsm's own. */
@@ -25,7 +26,8 @@ export const PACKAGES = Object.freeze([
   'yaml',
   'workr',
   'gsm.core',
-  'gsm.mapping'
+  'gsm.mapping',
+  'gsm.reporting'
 ]);
 
 /** Where the packages gsm's own are not come from. */
@@ -43,6 +45,8 @@ const ROOT = '/study.builder';
 const SIMULATOR = `${ROOT}/vendor/gsm.datasim`;
 const VITALS = `${ROOT}/${VITALS_FILE}`;
 const WORKFLOWS = `${ROOT}/workflows`;
+const KRI = `${ROOT}/vendor/gsm.kri`;
+const REPORTING = `${ROOT}/vendor/gsm.reporting`;
 
 /** An error whose message is a sentence a page can show, with every problem found. */
 export class StudyBuilderError extends Error {
@@ -65,7 +69,13 @@ const withSlash = (base) => (base.endsWith('/') ? base : `${base}/`);
  */
 export function rOptions(base, { repository = null } = {}) {
   const from = withSlash(base);
-  const files = ['r/builder.R', ...SIMULATOR_FILES, VITALS_FILE, ...WORKFLOW_FILES].map((file) => ({
+  const files = [
+    'r/builder.R',
+    ...SIMULATOR_FILES,
+    VITALS_FILE,
+    ...GSM_FILES,
+    ...WORKFLOW_FILES
+  ].map((file) => ({
     path: `${ROOT}/${file}`,
     url: `${from}${file}`
   }));
@@ -128,6 +138,8 @@ export function createBuilder({
           simulator: SIMULATOR,
           ...(read.args.domains.includes('VS') ? { vitals: VITALS } : {}),
           ...(read.args.layers.includes('adam') ? { workflows: WORKFLOWS } : {}),
+          ...(read.args.layers.includes('analysis') ? { kri: KRI } : {}),
+          ...(read.args.layers.includes('reporting') ? { reporting: REPORTING } : {}),
           ...read.args,
           // Raw is always named: an empty list does not cross to R.
           layers: ['raw', ...read.args.layers]
@@ -184,11 +196,20 @@ function tableOf(entry, layer) {
   if (entry.mapping !== undefined) {
     table.mapping = list(entry.mapping).map((line) => ({
       column: line.column,
+      label: line.label || '',
       from: line.from || '',
       how: line.how
     }));
   }
+  // What the table is, in a sentence, where its workflow says.
+  if (entry.about) table.about = entry.about;
+  // The columns gsm.datasim named otherwise, each with the name it had.
+  if (entry.renamed !== undefined) {
+    table.renamed = list(entry.renamed).map((line) => ({ column: line.column, was: line.was }));
+  }
   if (entry.domain) table.domain = entry.domain;
+  // The columns that name one row, where the table's workflow says.
+  if (entry.keys !== undefined) table.keys = list(entry.keys);
   return table;
 }
 
@@ -197,6 +218,8 @@ function tableOf(entry, layer) {
  *
  *   study.layers                 raw first, then each layer built off it
  *   study.table(layer, id)       one table, or null: study.table('adam', 'ADAE')
+ *   study.metadata               what the study is, and a spec for every table
+ *   study.spec(layer, id)        one table's spec: keys, labels, types, joins
  *   study.files()                the files a page loads, by layer
  *
  * `study.domains` (the raw tables) and `study.standard` (the ADaM tables, each
@@ -237,6 +260,12 @@ export function studyOf(value, args) {
     const known = DOMAINS.find((domain) => domain.id === table.id);
     if (known) table.label = known.label;
   }
+  // A reporting table is named by its id (Results, Bounds, Groups, Metrics);
+  // what gsm says of it is kept as what it is.
+  for (const table of (layers.find((layer) => layer.id === 'reporting') || { tables: [] }).tables) {
+    if (!table.about) table.about = table.label;
+    table.label = table.id;
+  }
   // An ADaM table is named by its id, which is what an analyst calls it.
   for (const table of (layers.find((layer) => layer.id === 'adam') || { tables: [] }).tables) {
     table.description = table.label;
@@ -270,6 +299,20 @@ export function studyOf(value, args) {
     domains: raw.tables,
     standard,
     manifest: null,
+    metadata: null,
+    /**
+     * One table's spec: what it is, its keys, and each column's label, type and joins.
+     * @param {string} layer A layer's id.
+     * @param {string} id The table's id in that layer.
+     * @returns {?Object} The spec, or null when the study does not hold the table.
+     */
+    spec(layer, id) {
+      return (
+        (study.metadata &&
+          study.metadata.tables.find((spec) => spec.layer === layer && spec.id === id)) ||
+        null
+      );
+    },
     /**
      * One table of the study.
      * @param {string} layer A layer's id: `raw`, `raw.rbqm` or `adam`.
@@ -293,6 +336,7 @@ export function studyOf(value, args) {
     }
   };
   study.said = studySaid(study);
+  study.metadata = metadataOf(study);
   return study;
 }
 

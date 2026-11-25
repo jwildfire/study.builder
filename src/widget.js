@@ -20,6 +20,7 @@ import {
   OUTLIERS,
   PHASES,
   readSettings,
+  withLayerNeeds,
   withNeeds,
   withPhase
 } from './core.js';
@@ -342,14 +343,19 @@ export function mount(
 
   /** The optional layers, each with a tick: which are built off raw. */
   function layerChoices() {
+    const included = new Set(withLayerNeeds([...layersChosen]));
     const row = el('div', 'sb-layer-choices');
     for (const layer of LAYERS) {
+      // A layer another is made from is built whether or not it is ticked.
+      const neededBy = LAYERS.filter(
+        (other) => layersChosen.has(other.id) && (other.needs || []).includes(layer.id)
+      ).map((other) => other.label);
       const choice = el('label', 'sb-layer-choice');
       const box = el('input');
       box.type = 'checkbox';
       box.dataset.layer = layer.id;
-      box.checked = !layer.optional || layersChosen.has(layer.id);
-      box.disabled = !layer.optional || phase === 'building';
+      box.checked = !layer.optional || included.has(layer.id);
+      box.disabled = !layer.optional || neededBy.length > 0 || phase === 'building';
       box.onchange = () => {
         if (box.checked) layersChosen.add(layer.id);
         else layersChosen.delete(layer.id);
@@ -357,6 +363,9 @@ export function mount(
       };
       const words = el('span');
       words.append(el('strong', null, layer.label), ` ${layer.about}`);
+      if (neededBy.length) {
+        words.append(el('span', 'sb-domain-note', ` needed by ${neededBy.join(', ')}`));
+      }
       choice.append(box, words);
       row.append(choice);
     }
@@ -462,7 +471,9 @@ export function mount(
     download.dataset.download = shown.name;
     download.onclick = () => save(shown.name, shown.text, 'text/csv');
     head.append(title, download);
-    panel.append(head, el('p', 'sb-viewer-meta', madeSaid(shown)));
+    panel.append(head);
+    if (shown.about) panel.append(el('p', 'sb-viewer-meta', shown.about));
+    panel.append(el('p', 'sb-viewer-meta', madeSaid(shown)));
 
     const hasMapping = Boolean(shown.mapping && shown.mapping.length);
     const parts = [
@@ -512,12 +523,31 @@ export function mount(
           )
         );
       }
+      // The spec says what each column is; the summary says what it holds.
+      const spec = study.spec(shown.layer, shown.id);
+      const about = new Map((spec ? spec.columns : []).map((column) => [column.name, column]));
+      const keyOf = (name) => {
+        const column = about.get(name);
+        if (!column) return '';
+        if (column.key) return 'Key';
+        return column.joins ? `→ ${column.joins.id}.${column.joins.column}` : '';
+      };
       panel.append(
         table(
-          ['Column', 'Type', 'Filled', 'Different values', 'Range or commonest values'],
+          [
+            'Column',
+            'Label',
+            'Type',
+            'Key or join',
+            'Filled',
+            'Values',
+            'Range or commonest values'
+          ],
           said.columns.map((column) => [
             column.name,
+            (about.get(column.name) || {}).label || '',
             column.type,
+            keyOf(column.name),
             `${Math.round(column.filled * 100)}%`,
             column.distinct.toLocaleString('en-US'),
             column.says
@@ -726,6 +756,7 @@ export function mount(
           `${study.id}.zip`,
           zipOf([
             { name: 'manifest.json', text: `${JSON.stringify(study.manifest, null, 2)}\n` },
+            { name: 'metadata.json', text: `${JSON.stringify(study.metadata, null, 2)}\n` },
             ...Object.entries(layers).flatMap(([layer, files]) =>
               files.map((file) => ({ ...file, name: `${layer}/${file.name}` }))
             )

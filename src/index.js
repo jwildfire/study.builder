@@ -45,6 +45,7 @@ export {
   PHASES,
   STANDARD,
   readSettings,
+  withLayerNeeds,
   withNeeds,
   withPhase
 } from './core.js';
@@ -54,3 +55,5 @@ export { firstRows } from './csv.js';
 export { columnsOf, overviewOf } from './overview.js';
 export { zipOf } from './zip.js';
 export { COPIED_FROM } from './files.js';
+export { KEYS, RAW_LABELS, RESULT_LABELS, metadataOf } from './metadata.js';
+export { MANIFEST_FORMAT, manifestOf } from './manifest.js';

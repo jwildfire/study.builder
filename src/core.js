@@ -140,8 +140,46 @@ export const LAYERS = Object.freeze([
     about:
       'Analysis-ready tables for charts of participants, by study.builder’s workflows. Each column says where it came from.',
     optional: true
+  }),
+  Object.freeze({
+    id: 'analysis',
+    label: 'Analysis',
+    about:
+      'Statistics worked out from a data layer: gsm’s site metrics from Raw.RBQM, and an adverse event summary from ADaM.',
+    optional: true,
+    needs: Object.freeze(['raw.rbqm', 'adam'])
+  }),
+  Object.freeze({
+    id: 'reporting',
+    label: 'Reporting',
+    about:
+      'Results in the shape a chart reads: gsm’s Results, Bounds, Groups and Metrics, over every site metric that ran.',
+    optional: true,
+    needs: Object.freeze(['analysis'])
   })
 ]);
+
+/**
+ * The layers a choice comes to: each chosen layer, and each layer one of them
+ * is made from, in the order they are shown.
+ * @param {string[]} chosen Layer ids.
+ * @returns {string[]} The ids of every layer that will be built off raw.
+ */
+export function withLayerNeeds(chosen) {
+  const wanted = new Set(Array.isArray(chosen) ? chosen : []);
+  for (let added = true; added;) {
+    added = false;
+    for (const layer of LAYERS) {
+      for (const needed of (wanted.has(layer.id) && layer.needs) || []) {
+        if (!wanted.has(needed)) {
+          wanted.add(needed);
+          added = true;
+        }
+      }
+    }
+  }
+  return LAYERS.filter((layer) => layer.optional && wanted.has(layer.id)).map((layer) => layer.id);
+}
 
 /** The layers built off raw unless the caller says otherwise. */
 export const DEFAULT_LAYERS = Object.freeze(
@@ -180,6 +218,7 @@ export const CAVEATS = Object.freeze([
   'Phase and therapeutic area are labels. gsm.datasim does not shape the data by either, so a phase only fills in a typical size.',
   'Only the study’s last monthly snapshot is returned.',
   'Every table that is not raw is built off raw by a workflow, and says which. The ADaM tables are a light form: enough for charts, not a submission.',
+  'The site metrics are gsm’s own, run as gsm runs them. A simulated study’s flags say nothing about any real site.',
   'gsm.datasim makes no lab results (only toxicity grades), no treatment arms and no ECGs. Adverse event terms are its placeholders.'
 ]);
 
@@ -275,8 +314,9 @@ export function readSettings(settings = {}) {
   if (unknownLayers.length) {
     problems.push(`Not a layer study.builder makes: ${unknownLayers.join(', ')}.`);
   }
-  // In the order the layers are shown, whatever order they were asked for in.
-  const layers = layerIds.filter((id) => askedLayers.includes(id));
+  // In the order the layers are shown, whatever order they were asked for
+  // in, with each layer one of them is made from.
+  const layers = withLayerNeeds(askedLayers.filter((id) => layerIds.includes(id)));
   if (problems.length) return { problems, args: null, domains };
   return {
     problems,

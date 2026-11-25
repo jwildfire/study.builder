@@ -17,17 +17,31 @@ Status: experimental, v0.2.0 in development (v0.1.0 is the latest release). Ever
 
 ## Layers
 
-| Layer    | Id         | What it is                                                                      | Built by                                        |
-| -------- | ---------- | ------------------------------------------------------------------------------- | ----------------------------------------------- |
-| Raw      | `raw`      | One table per domain, as a study database gives them                            | gsm.datasim                                     |
-| Raw.RBQM | `raw.rbqm` | Raw under gsm's names: the tables gsm calls Mapped, which its site metrics read | gsm.mapping's own workflows                     |
-| ADaM     | `adam`     | Analysis-ready tables for charts of participants: ADSL, ADAE, ADVS              | study.builder's workflows, in `workflows/adam/` |
+| Layer     | Id          | What it is                                                                                                              | Built by                                        |
+| --------- | ----------- | ----------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| Raw       | `raw`       | One table per domain, as a study database gives them                                                                    | gsm.datasim                                     |
+| Raw.RBQM  | `raw.rbqm`  | Raw under gsm's names: the tables gsm calls Mapped, which its site metrics read                                         | gsm.mapping's own workflows                     |
+| ADaM      | `adam`      | Analysis-ready tables for charts of participants: ADSL, ADAE, ADVS                                                      | study.builder's workflows, in `workflows/adam/` |
+| Analysis  | `analysis`  | Statistics worked out from a data layer: gsm's eight site metrics from Raw.RBQM, and an adverse event summary from ADaM | gsm.kri's workflows, and `workflows/analysis/`  |
+| Reporting | `reporting` | Results in the shape a chart reads: gsm's Results, Bounds, Groups and Metrics                                           | gsm.reporting's workflows                       |
+
+A layer made from another brings it: reporting brings analysis, and analysis brings Raw.RBQM and ADaM.
 
 - Every step off raw is a [workr](https://github.com/Gilead-Public/workr) workflow: a YAML file with a spec (the tables and columns it reads) and steps. No table is derived by hand-written code.
 - A workflow runs only when every table it reads is there, so a study with no adverse events has no ADAE and nothing fails.
 - Each ADaM workflow has a `columns` block that says where every column it writes came from. That is the mapping the widget shows, and where custom column transformers will be edited.
 - The ADaM tables are a light form: enough for charts, not a submission. There is no SDTM layer yet.
-- Analysis and reporting layers, which work out statistics from any data layer, are planned and not in this version.
+- Analysis and Reporting belong to no one domain. The analysis layer already reads two data layers: gsm's site metrics read Raw.RBQM, and the adverse event summary reads ADaM.
+
+## Metadata
+
+Every study carries a spec for every table, in `study.metadata`, and `study.spec(layer, id)` returns one.
+
+- A spec has the table's label, what it is, what made it, its key, and for each column its label, its type and what it joins to.
+- Types are R's. A table built by one of study.builder's workflows takes its labels and its key from the workflow file.
+- gsm's raw and mapped tables carry no labels of their own. Theirs are study.builder's reading of gsm's column names (`StudyBuilder.RAW_LABELS`), not gsm's dictionary; a column it does not list has no label.
+- A raw column that gsm.datasim named otherwise says what it was called (`was`).
+- `npm run test:r` holds every key to the data: one row for each of its values.
 
 ## Use it on a page
 
@@ -72,6 +86,8 @@ const study = await StudyBuilder.buildStudy({
 
 study.layers; // raw first, then each layer built off it, each with its tables
 study.table('adam', 'ADAE'); // one table: rows, columns, text (CSV), made, mapping
+study.spec('adam', 'ADAE'); // its key, and each column's label, type and joins
+study.metadata; // what the study is, and a spec for every table
 study.manifest; // a checksum per table, the package versions, the settings, one key
 StudyBuilder.overviewOf(study); // the trial, its counts, its countries, what each layer holds
 StudyBuilder.columnsOf(study.table('raw', 'AE')); // each column: how full, how many values, its range
@@ -178,7 +194,7 @@ The unit tests use a stand-in for R. `npm run test:r` builds studies with real R
 
 ## Not done yet
 
-- An SDTM layer between raw and ADaM, and analysis and reporting layers that work on any data layer.
+- An SDTM layer between raw and ADaM, and more analysis and reporting workflows than the two sets here.
 - Custom column transformers: letting a user edit how a column is made. The workflows' `columns` blocks and the mapping view are where they will live.
 - Opening a ready-made study without starting R.
 - An R wrapper (an htmlwidget).

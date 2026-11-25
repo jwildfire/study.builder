@@ -14,6 +14,7 @@ import {
   PHASES,
   STANDARD,
   readSettings,
+  withLayerNeeds,
   withNeeds,
   withPhase
 } from '../src/core.js';
@@ -28,6 +29,9 @@ import { parse as parseYaml } from 'yaml';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const builderR = readFileSync(path.join(root, 'r/builder.R'), 'utf8');
+const ownWorkflows = workflowFiles().map((file) =>
+  parseYaml(readFileSync(path.join(root, file), 'utf8'))
+);
 const adamWorkflows = workflowFiles()
   .filter((file) => file.startsWith('workflows/adam/'))
   .map((file) => parseYaml(readFileSync(path.join(root, file), 'utf8')));
@@ -49,7 +53,7 @@ describe('settings', () => {
       phase: 'P2',
       therapeutic_area: 'Oncology',
       domains: ['VISIT', 'AE', 'LB', 'VS', 'PD', 'STUDCOMP', 'SDRGCOMP'],
-      layers: ['raw.rbqm', 'adam']
+      layers: ['raw.rbqm', 'adam', 'analysis', 'reporting']
     });
     expect(domains.slice(0, 4)).toEqual(['STUDY', 'SITE', 'SUBJ', 'ENROLL']);
   });
@@ -86,6 +90,14 @@ describe('settings', () => {
 
   it('take the layers wanted besides raw, in the order they are shown, and refuse one they do not know', () => {
     expect(readSettings({ layers: ['adam', 'raw'] }).args.layers).toEqual(['adam']);
+    // A layer made from another brings it.
+    expect(readSettings({ layers: ['reporting'] }).args.layers).toEqual([
+      'raw.rbqm',
+      'adam',
+      'analysis',
+      'reporting'
+    ]);
+    expect(withLayerNeeds(['analysis'])).toEqual(['raw.rbqm', 'adam', 'analysis']);
     expect(readSettings({ layers: ['adam', 'raw.rbqm'] }).args.layers).toEqual([
       'raw.rbqm',
       'adam'
@@ -183,8 +195,14 @@ describe('the page and R agree', () => {
     expect(made).toEqual(
       LAYERS.filter((layer) => layer.optional).map((layer) => [layer.id, layer.label])
     );
-    expect(builderR).toContain('layers = c("raw.rbqm", "adam")');
-    expect([...DEFAULT_LAYERS]).toEqual(['raw.rbqm', 'adam']);
+    expect(builderR).toContain('layers = c("raw.rbqm", "adam", "analysis", "reporting")');
+    expect([...DEFAULT_LAYERS]).toEqual(['raw.rbqm', 'adam', 'analysis', 'reporting']);
+    // And on which layer is made from which.
+    for (const layer of LAYERS.filter((entry) => entry.needs)) {
+      expect(builderR, layer.id).toContain(
+        `${layer.id} = ${layer.needs.length > 1 ? `c(${layer.needs.map((id) => `"${id}"`).join(', ')})` : `"${layer.needs[0]}"`}`
+      );
+    }
   });
 
   it('on the standard files: each is an ADaM workflow’s table, made from the domain that feeds it', () => {
@@ -264,13 +282,30 @@ describe('the ADaM workflows', () => {
   });
 });
 
+describe('study.builder’s workflows, of every layer', () => {
+  it('give every column they write a label, and name the columns that are the table’s key', () => {
+    expect(
+      ownWorkflows.map((workflow) => `${workflow.meta.Type}_${workflow.meta.ID}`).sort()
+    ).toEqual(['ADaM_ADAE', 'ADaM_ADSL', 'ADaM_ADVS', 'Analysis_AESummary']);
+    for (const workflow of ownWorkflows) {
+      for (const [column, line] of Object.entries(workflow.columns)) {
+        expect(line.label, `${workflow.meta.ID}.${column}`).toBeTruthy();
+      }
+      expect(workflow.meta.Keys.length, workflow.meta.ID).toBeGreaterThan(0);
+      for (const key of workflow.meta.Keys) expect(Object.keys(workflow.columns)).toContain(key);
+    }
+  });
+});
+
 describe('the copies', () => {
   it('match their records, and src/files.js lists what the records list', () => {
     expect(copyProblems()).toEqual([]);
     expect(readFileSync(path.join(root, 'src/files.js'), 'utf8')).toBe(filesModule());
     expect(COPIES.map((copy) => copy.directory)).toEqual([
       'vendor/gsm.datasim',
-      'vendor/gsm.mapping-vitals'
+      'vendor/gsm.mapping-vitals',
+      'vendor/gsm.kri',
+      'vendor/gsm.reporting'
     ]);
   });
 });

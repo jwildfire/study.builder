@@ -52,11 +52,29 @@ export const SIMULATOR_FILES = [
 /** gsm.mapping’s vital signs mapping workflow. */
 export const VITALS_FILE = "vendor/gsm.mapping-vitals/workflow/1_mappings/VS.yaml";
 
+/** gsm.kri’s metric workflows and the one R file of it they need, and gsm.reporting’s workflows. */
+export const GSM_FILES = [
+  "vendor/gsm.kri/workflow/2_metrics/kri0001.yaml",
+  "vendor/gsm.kri/workflow/2_metrics/kri0002.yaml",
+  "vendor/gsm.kri/workflow/2_metrics/kri0003.yaml",
+  "vendor/gsm.kri/workflow/2_metrics/kri0004.yaml",
+  "vendor/gsm.kri/workflow/2_metrics/kri0005.yaml",
+  "vendor/gsm.kri/workflow/2_metrics/kri0006.yaml",
+  "vendor/gsm.kri/workflow/2_metrics/kri0007.yaml",
+  "vendor/gsm.kri/workflow/2_metrics/kri0012.yaml",
+  "vendor/gsm.kri/R/util-Report.R",
+  "vendor/gsm.reporting/workflow/3_reporting/Results.yaml",
+  "vendor/gsm.reporting/workflow/3_reporting/Bounds.yaml",
+  "vendor/gsm.reporting/workflow/3_reporting/Groups.yaml",
+  "vendor/gsm.reporting/workflow/3_reporting/Metrics.yaml"
+];
+
 /** study.builder’s own workflows, which build the layers off raw. */
 export const WORKFLOW_FILES = [
   "workflows/adam/ADAE.yaml",
   "workflows/adam/ADSL.yaml",
-  "workflows/adam/ADVS.yaml"
+  "workflows/adam/ADVS.yaml",
+  "workflows/analysis/AESummary.yaml"
 ];
 
 /** What each copy was copied from. */
@@ -70,5 +88,15 @@ export const COPIED_FROM = {
     "repository": "https://github.com/Gilead-Public/gsm.mapping",
     "tag": "v1.3.0",
     "commit": "085a7e94e3ac58e951343c1070e68bb163c32a92"
+  },
+  "vendor/gsm.kri": {
+    "repository": "https://github.com/Gilead-Public/gsm.kri",
+    "tag": "v1.7.0",
+    "commit": "470b1d8e79ffc9860f3d061204c7f05da7695c4e"
+  },
+  "vendor/gsm.reporting": {
+    "repository": "https://github.com/Gilead-Public/gsm.reporting",
+    "tag": "v1.1.7",
+    "commit": "b3fa1339f900c5093a1e6553bdf4892d608fe389"
   }
 };

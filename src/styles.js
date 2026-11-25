@@ -110,6 +110,8 @@ export const STYLES = `
 .sb-table th{position:sticky;top:0;background:var(--sb-card);font:600 .68rem/1.3 var(--sb-mono);color:var(--sb-soft)}
 .sb-table td{font-family:var(--sb-mono)}
 .sb-table[data-kind=wrap] td{white-space:normal;font-family:inherit}
+.sb-table[data-kind=wrap] td:nth-child(2){min-width:11rem}
+.sb-table[data-kind=wrap] td:last-child{min-width:12rem}
 .sb-table[data-kind=wrap] td:first-child,.sb-table[data-kind=wrap] td[data-code]{font-family:var(--sb-mono);white-space:nowrap}
 `;
 

@@ -121,11 +121,19 @@ describe('what R is given', () => {
     expect(options.files.map((file) => file.path)).toContain(
       '/study.builder/vendor/gsm.mapping-vitals/workflow/1_mappings/VS.yaml'
     );
-    expect(options.files.slice(-3).map((file) => file.path)).toEqual([
+    expect(options.files.slice(-4).map((file) => file.path)).toEqual([
       '/study.builder/workflows/adam/ADAE.yaml',
       '/study.builder/workflows/adam/ADSL.yaml',
-      '/study.builder/workflows/adam/ADVS.yaml'
+      '/study.builder/workflows/adam/ADVS.yaml',
+      '/study.builder/workflows/analysis/AESummary.yaml'
     ]);
+    // gsm's metric and reporting workflows, and the one R file the reporting needs.
+    const paths = options.files.map((file) => file.path);
+    expect(paths).toContain('/study.builder/vendor/gsm.kri/workflow/2_metrics/kri0001.yaml');
+    expect(paths).toContain('/study.builder/vendor/gsm.kri/R/util-Report.R');
+    expect(paths).toContain(
+      '/study.builder/vendor/gsm.reporting/workflow/3_reporting/Results.yaml'
+    );
     expect(options.source).toEqual(['/study.builder/r/builder.R']);
     expect(options.repos).toEqual([
       'https://example.org/sb/vendor/r-wasm/repo',
@@ -171,7 +179,9 @@ describe('a study with no page', () => {
           workflows: '/study.builder/workflows',
           therapeutic_area: 'Oncology',
           domains: ['AE'],
-          layers: ['raw', 'raw.rbqm', 'adam']
+          kri: '/study.builder/vendor/gsm.kri',
+          reporting: '/study.builder/vendor/gsm.reporting',
+          layers: ['raw', 'raw.rbqm', 'adam', 'analysis', 'reporting']
         }
       }
     });
@@ -185,6 +195,7 @@ describe('a study with no page', () => {
     expect(study.standard[0]).toMatchObject({ id: 'ae', name: 'adae.csv', from: ['AE', 'ADSL'] });
     expect(study.standard[0].mapping[1]).toEqual({
       column: 'AESEV',
+      label: '',
       from: 'Raw_AE.aetoxgr',
       how: 'Derived: the toxicity grade in words'
     });
@@ -228,6 +239,22 @@ describe('a study with no page', () => {
     });
     expect(study.manifest.packages['gsm.datasim']).toBe('2.1.0');
     expect(study.manifest.simulation.participants).toBe(60);
+    // The metadata: a spec for every table, with its key and what each column joins to.
+    expect(study.metadata.tables).toHaveLength(4);
+    expect(study.spec('raw', 'SUBJ')).toMatchObject({ keys: ['subjid'], rows: 2 });
+    expect(study.spec('raw', 'AE').columns[0]).toEqual({
+      name: 'subjid',
+      type: 'character',
+      label: 'Participant id',
+      key: false,
+      joins: { layer: 'raw', id: 'SUBJ', column: 'subjid' }
+    });
+    expect(study.spec('adam', 'ADAE').columns[1]).toMatchObject({
+      name: 'AESEV',
+      from: 'Raw_AE.aetoxgr',
+      how: 'Derived: the toxicity grade in words'
+    });
+    expect(study.spec('adam', 'ADVS')).toBeNull();
     expect(study.said).toContain(
       '60 participants at 6 sites over 4 months, in 2 domains and 3 layers'
     );
@@ -565,10 +592,22 @@ describe('the builder on a page', () => {
     const rows = [...document.querySelectorAll('.sb-viewer tbody tr')].map((row) =>
       [...row.children].map((cell) => cell.textContent)
     );
+    // Each column: its label, its type, whether it is the key or what it joins
+    // to, and what it holds.
     expect(rows).toEqual([
-      ['studyid', 'character', '100%', '1', 'BUILT-001'],
-      ['subjid', 'character', '100%', '2', 'S1, S2'],
-      ['agerep', 'integer', '100%', '2', '40 to 51']
+      ['studyid', 'Study id', 'character', '', '100%', '1', 'BUILT-001'],
+      ['subjid', 'Participant id', 'character', 'Key', '100%', '2', 'S1, S2'],
+      ['agerep', 'Age, as reported', 'integer', '', '100%', '2', '40 to 51']
+    ]);
+    document.querySelector('.sb-table-pick[data-table="raw:AE"]').click();
+    const joined = [...document.querySelectorAll('.sb-viewer tbody tr')].map((row) =>
+      [...row.children].map((cell) => cell.textContent)
+    );
+    expect(joined[0].slice(0, 4)).toEqual([
+      'subjid',
+      'Participant id',
+      'character',
+      '→ SUBJ.subjid'
     ]);
     expect(handle.state().part).toBe('columns');
   });

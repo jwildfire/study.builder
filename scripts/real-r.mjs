@@ -68,6 +68,10 @@ async function build(settings) {
       ? { vitals: options.files.find((file) => file.path.endsWith('/VS.yaml')).path }
       : {}),
     ...(read.args.layers.includes('adam') ? { workflows: '/study.builder/workflows' } : {}),
+    ...(read.args.layers.includes('analysis') ? { kri: '/study.builder/vendor/gsm.kri' } : {}),
+    ...(read.args.layers.includes('reporting')
+      ? { reporting: '/study.builder/vendor/gsm.reporting' }
+      : {}),
     ...read.args,
     layers: ['raw', ...read.args.layers]
   };
@@ -146,13 +150,13 @@ check(
 
 // The layers built off raw.
 check(
-  'three layers: raw, Raw.RBQM and ADaM',
-  first.layers.map((layer) => layer.id).join() === 'raw,raw.rbqm,adam'
+  'five layers: raw, Raw.RBQM, ADaM, Analysis and Reporting',
+  first.layers.map((layer) => layer.id).join() === 'raw,raw.rbqm,adam,analysis,reporting'
 );
 const rbqm = first.layers[1].tables;
 check(
-  'Raw.RBQM has a mapped table for each raw domain, by gsm.mapping workflows',
-  rbqm.length === 11 &&
+  'Raw.RBQM has a mapped table for each raw domain and one of countries, by gsm.mapping workflows',
+  rbqm.length === 12 &&
     rbqm.every(
       (table) => table.table === `Mapped_${table.id}` && table.made.workflow === table.table
     ),
@@ -176,9 +180,77 @@ check(
 );
 check(
   'every table of every layer is in the manifest with a checksum',
-  first.manifest.tables.length === 25 &&
+  first.manifest.tables.length ===
+    first.layers.reduce((sum, layer) => sum + layer.tables.length, 0) &&
     first.manifest.tables.every((table) => /^[0-9a-f]{64}$/.test(table.sha256)),
   String(first.manifest.tables.length)
+);
+
+// Analysis and reporting.
+const analysis = first.layers[3].tables;
+check(
+  "Analysis has gsm's eight site metrics, each a summary by site and the input it counted from",
+  analysis.filter((table) => /^kri\d+$/.test(table.id)).length === 8 &&
+    analysis.filter((table) => /^kri\d+_input$/.test(table.id)).length === 8,
+  analysis.map((table) => table.id).join(' ')
+);
+check(
+  'a site metric reads Raw.RBQM, and says so',
+  first.table('analysis', 'kri0001').made.from.join() === 'Mapped_AE,Mapped_SUBJ'
+);
+const summary = firstRows(first.table('analysis', 'AESummary').text, 100);
+check(
+  'the adverse event summary reads ADaM, and its events add up to the events in ADAE',
+  first.table('analysis', 'AESummary').made.from.join() === 'ADaM_ADAE,ADaM_ADSL' &&
+    summary.rows.reduce((sum, row) => sum + Number(row[2]), 0) === first.table('adam', 'ADAE').rows
+);
+check(
+  'Reporting has Results, Bounds, Groups and Metrics',
+  first.layers[4].tables
+    .map((table) => table.id)
+    .sort()
+    .join() === 'Bounds,Groups,Metrics,Results'
+);
+const results = firstRows(first.table('reporting', 'Results').text, 5000);
+const metricAt = results.header.indexOf('MetricID');
+check(
+  'Results has a row for each site of each of the eight metrics',
+  new Set(results.rows.map((row) => row[metricAt])).size === 8,
+  [...new Set(results.rows.map((row) => row[metricAt]))].join(' ')
+);
+
+// The metadata: every key it names is a key of the data.
+const broken = [];
+for (const spec of first.metadata.tables.filter((one) => one.keys.length)) {
+  const table = first.table(spec.layer, spec.id);
+  const { header, rows } = firstRows(table.text, Infinity);
+  const at = spec.keys.map((key) => header.indexOf(key));
+  const seen = new Set(rows.map((row) => at.map((index) => row[index]).join('\u0001')));
+  if (at.includes(-1) || seen.size !== rows.length) broken.push(`${spec.layer}:${spec.id}`);
+}
+check(
+  'every key the metadata names has one row for each of its values',
+  broken.length === 0 && first.metadata.tables.filter((one) => one.keys.length).length >= 20,
+  broken.join(' ')
+);
+const joins = first.metadata.tables.flatMap((spec) =>
+  spec.columns.filter((column) => column.joins).map((column) => ({ spec, column }))
+);
+check(
+  'every join the metadata names is to a column the other table has',
+  joins.length > 20 &&
+    joins.every(({ column }) =>
+      first
+        .table(column.joins.layer, column.joins.id)
+        .columns.some((other) => other.name === column.joins.column)
+    ),
+  String(joins.length)
+);
+check(
+  "every ADaM and analysis column of study.builder's own has a label",
+  [...first.layers[2].tables, first.table('analysis', 'AESummary')].every((table) =>
+    first.spec(table.layer, table.id).columns.every((column) => column.label)
+  )
 );
 
 // 2. The same seed builds the same study.
@@ -215,6 +287,20 @@ const rawOnly = await build({ participants: 20, sites: 2, months: 3, domains: ['
 check(
   'a study asked for no layer but raw has only raw',
   rawOnly.layers.length === 1 && rawOnly.standard.length === 0
+);
+const reportingOnly = await build({
+  participants: 60,
+  sites: 6,
+  months: 4,
+  seed: 1,
+  domains: ['AE', 'PD'],
+  layers: ['reporting']
+});
+check(
+  'asking for reporting alone brings the layers it is made from, and only the metrics the domains allow',
+  reportingOnly.layers.map((layer) => layer.id).join() === 'raw,raw.rbqm,adam,analysis,reporting' &&
+    reportingOnly.layers[3].tables.filter((table) => /^kri\d+$/.test(table.id)).length === 5,
+  reportingOnly.layers[3].tables.map((table) => table.id).join(' ')
 );
 
 // 5. R refuses what the page refuses.
