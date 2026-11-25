@@ -3,3 +3,4 @@ _site
 vendor
 package-lock.json
 src/files.js
+dist

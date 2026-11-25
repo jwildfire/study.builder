@@ -110,13 +110,25 @@ Three things are changed in the raw tables after the simulation, and every study
 
 ## Sharing R
 
-Starting R downloads about 55 MB the first time. A page that already runs R in the browser can hand study.builder its own connection, so the reader pays once:
+Starting R downloads about 55 MB the first time. A page that already runs R in the browser can have study.builder use the same one, so the reader pays once. There are two ways.
+
+Hand over the page's own way of making a connection. study.builder calls it on the first build, with what R is to be given, so nothing is fetched until the reader presses Build:
+
+```js
+StudyBuilder.mount('#builder', {
+  createConnection: (options) => myPage.createRConnection(options),
+  base: './study.builder/', // where the page serves study.builder's r/ and vendor/ folders
+  repository: './r-wasm' // where the page already serves gsm's packages, if it does
+});
+```
+
+Or hand over a connection that is already made:
 
 ```js
 StudyBuilder.mount('#builder', { connection: myConnection });
 ```
 
-A connection is anything with `run(name, { args })` that resolves to `{ status: 'ok', value }`, `{ status: 'unavailable', message }` or `{ status: 'error', message }`. Its R must have been given what `StudyBuilder.rOptions(base)` lists: the packages, the files and the R source to evaluate.
+A connection is anything with `run(name, { args })` that resolves to `{ status: 'ok', value }`, `{ status: 'unavailable', message }` or `{ status: 'error', message }`, where `value` is R's answer as plain values. A connection handed over ready-made must have been given what `StudyBuilder.rOptions(base)` lists: the packages, the files and the R source to evaluate. study.builder never closes an R it did not start.
 
 ## How it works
 
@@ -131,19 +143,20 @@ A connection is anything with `run(name, { args })` that resolves to `{ status: 
 ```sh
 npm install
 npm test          # unit tests, with a stand-in for R
+npm run test:r    # builds studies with real R (webR under Node); downloads about 55 MB
 npm run serve     # build _site/ and serve it at http://127.0.0.1:8650/
 npm run format
 ```
 
-`npm run build` writes `_site/`: `study.builder.js` (defines the global `StudyBuilder`), `study.builder.mjs`, the files R fetches, and a page with the builder on its own.
+`npm run build` writes `dist/` (the two bundles) and `_site/`: `study.builder.js` (defines the global `StudyBuilder`), `study.builder.mjs`, the files R fetches, and a page with the builder on its own.
 
-The tests do not start R. Real R was checked by hand in a browser and with webR under Node.
+The unit tests use a stand-in for R. `npm run test:r` builds studies with real R, and CI runs both. `dist/` is committed so a page or a package can take the bundle from a release tag; `npm run build:check` fails when it is not what `src/` builds to.
 
 ## Not done yet
 
 - Custom column transformers: letting a user say how a raw column becomes a standard one. The mapping view is where they will live.
 - An R wrapper (an htmlwidget).
-- Browser tests that start real R.
+- Tests of the widget in a real browser. Real R is tested without one.
 - Lab results, treatment arms and ECGs, which need work in gsm.datasim itself.
 
 ## Licence

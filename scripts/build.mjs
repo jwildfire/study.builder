@@ -1,4 +1,5 @@
-// Builds study.builder into _site/ (gitignored): the bundle a page loads, as a
+// Builds study.builder: the bundle into dist/ (committed), and the whole site
+// into _site/ (gitignored): the bundle a page loads, as a
 // script that defines `StudyBuilder` and as a module, the files R is given
 // beside it, and the page that shows the builder on its own.
 //
@@ -25,8 +26,6 @@ if (problems.length) {
 // The list of files R is given is always the records': written before bundling.
 writeFileSync(path.join(root, 'src/files.js'), filesModule());
 
-rmSync(out, { recursive: true, force: true });
-mkdirSync(out, { recursive: true });
 const shared = {
   entryPoints: [path.join(root, 'src/index.js')],
   bundle: true,
@@ -34,15 +33,42 @@ const shared = {
   sourcemap: false,
   target: 'es2020',
   define: { __STUDY_BUILDER_VERSION__: JSON.stringify(version) },
-  legalComments: 'none'
+  legalComments: 'none',
+  write: false
 };
-await build({
-  ...shared,
-  format: 'iife',
-  globalName: 'StudyBuilder',
-  outfile: path.join(out, 'study.builder.js')
-});
-await build({ ...shared, format: 'esm', outfile: path.join(out, 'study.builder.mjs') });
+const bundles = [
+  ['study.builder.js', { format: 'iife', globalName: 'StudyBuilder' }],
+  ['study.builder.mjs', { format: 'esm' }]
+];
+const built = new Map();
+for (const [name, format] of bundles) {
+  const result = await build({ ...shared, ...format, outfile: name });
+  built.set(name, result.outputFiles[0].text);
+}
+
+// dist/ is committed, so a page or a package can take the bundle from a tag
+// without building. `--check` fails when it is not what src/ builds to.
+const dist = path.join(root, 'dist');
+if (process.argv.includes('--check')) {
+  const drifted = [...built].filter(([name, text]) => {
+    try {
+      return readFileSync(path.join(dist, name), 'utf8') !== text;
+    } catch {
+      return true;
+    }
+  });
+  for (const [name] of drifted)
+    console.error(`✗ dist/${name} is not what src/ builds to: run \`npm run build\`.`);
+  if (drifted.length) process.exit(1);
+  console.log('✓ dist/ is what src/ builds to.');
+  process.exit(0);
+}
+mkdirSync(dist, { recursive: true });
+for (const [name, text] of built) writeFileSync(path.join(dist, name), text);
+
+rmSync(out, { recursive: true, force: true });
+mkdirSync(out, { recursive: true });
+for (const [name, text] of built) writeFileSync(path.join(out, name), text);
 
 cpSync(path.join(root, 'r'), path.join(out, 'r'), { recursive: true });
 cpSync(path.join(root, 'vendor'), path.join(out, 'vendor'), { recursive: true });

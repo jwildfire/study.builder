@@ -23,4 +23,18 @@ jobs:
       - run: npm run format:check
       - run: npm run files:check
       - run: npm test
+      - run: npm run build:check
       - run: npm run build
+
+  real-r:
+    name: Build studies with real R
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run test:r

@@ -58,9 +58,10 @@ const withSlash = (base) => (base.endsWith('/') ? base : `${base}/`);
  * install them from, and study.builder's R and gsm.datasim's own source, each
  * with the address it is fetched from and the path R keeps it at.
  * @param {string} base The address study.builder's files are served under: its `r/` and `vendor/` folders.
+ * @param {{repository?: string}} [where] `repository` is where gsm's own packages are installed from, for a page that already serves them; `vendor/r-wasm/repo` under the base unless told.
  * @returns {{packages: string[], repos: string[], files: Array<{path: string, url: string}>, source: string[]}} The options.
  */
-export function rOptions(base) {
+export function rOptions(base, { repository = null } = {}) {
   const from = withSlash(base);
   const files = ['r/builder.R', ...SIMULATOR_FILES, VITALS_FILE].map((file) => ({
     path: `${ROOT}/${file}`,
@@ -68,7 +69,7 @@ export function rOptions(base) {
   }));
   return {
     packages: [...PACKAGES],
-    repos: [`${from}vendor/r-wasm/repo`, PUBLIC_INDEX],
+    repos: [repository || `${from}vendor/r-wasm/repo`, PUBLIC_INDEX],
     files,
     source: [`${ROOT}/r/builder.R`]
   };
@@ -80,7 +81,8 @@ export function rOptions(base) {
  * @param {Object} [options]
  * @param {string} [options.base] The address study.builder's `r/` and `vendor/` folders are served under.
  * @param {{run: Function}} [options.connection] A connection to R the page already has, in place of one of study.builder's own. Its R must have been given what `rOptions(base)` lists.
- * @param {Function} [options.createConnection] Something else to make the connection with; used by the tests.
+ * @param {(options: Object) => {run: Function}} [options.createConnection] Something else to make the connection with: a page that shares one R between its parts hands its own factory, which is called on the first build with what `rOptions` lists and an `onStage`.
+ * @param {string} [options.repository] Where gsm's own packages are installed from, for a page that already serves them.
  * @param {(stage: string) => void} [options.onStage] Told each step as it begins: `runtime`, `packages`, `files`, `source`, then `simulate`.
  * @returns {{build: (settings?: Object) => Promise<Object>, close: () => Promise<void>, started: () => boolean}} The builder.
  */
@@ -88,6 +90,7 @@ export function createBuilder({
   base = './',
   connection: given = null,
   createConnection: connect = createConnection,
+  repository = null,
   onStage = null
 } = {}) {
   let connection = given;
@@ -113,7 +116,7 @@ export function createBuilder({
     async build(settings = {}) {
       const read = readSettings(settings);
       if (!read.args) throw new StudyBuilderError(read.problems.join(' '), read.problems);
-      if (!connection) connection = connect({ ...rOptions(base), onStage: stage });
+      if (!connection) connection = connect({ ...rOptions(base, { repository }), onStage: stage });
       const wasStarted = started;
       started = true;
       // An R that is already up has nothing to say of starting.
@@ -139,9 +142,9 @@ export function createBuilder({
       return studyOf(answer.value, read.args);
     },
 
-    /** Let go of R, when it is study.builder's own. */
+    /** Let go of R, when it is study.builder's own: not a page's connection, nor one a page's own factory made. */
     async close() {
-      if (given || !connection) return;
+      if (given || connect !== createConnection || !connection) return;
       const mine = connection;
       connection = null;
       started = false;

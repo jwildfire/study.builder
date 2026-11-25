@@ -8,10 +8,12 @@
   "module": "src/index.js",
   "scripts": {
     "build": "node scripts/build.mjs",
+    "build:check": "node scripts/build.mjs --check",
     "serve": "node scripts/build.mjs && node scripts/serve.mjs",
     "files": "node scripts/files.mjs",
     "files:check": "node scripts/files.mjs --check",
     "test": "vitest run",
+    "test:r": "node scripts/real-r.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
@@ -19,6 +21,7 @@
     "esbuild": "^0.28.1",
     "jsdom": "^29.1.1",
     "prettier": "^3.9.4",
-    "vitest": "^4.1.9"
+    "vitest": "^4.1.9",
+    "webr": "0.6.0"
   }
 }

@@ -90,6 +90,13 @@ describe('what R is given', () => {
     ]);
   });
 
+  it('installs gsm’s packages from where a page already serves them, when told', () => {
+    expect(rOptions('./sb/', { repository: './r-wasm' }).repos).toEqual([
+      './r-wasm',
+      'https://repo.r-wasm.org'
+    ]);
+  });
+
   it('lists a path’s folders shallowest first', () => {
     expect(foldersOf('/a/b/c.R')).toEqual(['/a', '/a/b']);
   });
@@ -448,6 +455,27 @@ describe('the builder on a page', () => {
     for (const name of ['raw/Raw_SUBJ.csv', 'raw/Raw_AE.csv', 'standard/adae.csv']) {
       expect(text).toContain(name);
     }
+  });
+
+  it('makes its connection the page’s own way, with what R is to be given, on the first build', async () => {
+    document.body.innerHTML = '<div id="b"></div>';
+    const r = fakeR();
+    handle = mount('#b', {
+      base: './sb/',
+      repository: './r-wasm',
+      createConnection: r.connect
+    });
+    expect(r.connect).not.toHaveBeenCalled();
+    await handle.build();
+    const [options] = r.connect.mock.calls[0];
+    expect(options.repos).toEqual(['./r-wasm', 'https://repo.r-wasm.org']);
+    expect(options.files[0].url).toBe('./sb/r/builder.R');
+    expect(typeof options.onStage).toBe('function');
+    expect(handle.study().id).toBe('BUILT-001');
+    // An R the page made is the page's to close.
+    handle.destroy();
+    handle = null;
+    expect(r.made[0].close).not.toHaveBeenCalled();
   });
 
   it('has no hand-over button on a page that takes no study', async () => {

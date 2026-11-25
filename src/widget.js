@@ -56,6 +56,8 @@ export function downloadsSaid(downloads = DOWNLOADS) {
  * @param {Object} [options.settings] What the form opens on, as `readSettings` takes settings.
  * @param {string} [options.base] The address study.builder's `r/` and `vendor/` folders are served under; the folder of the script that defined `StudyBuilder` unless told.
  * @param {{run: Function}} [options.connection] A connection to R the page already has.
+ * @param {(options: Object) => {run: Function}} [options.createConnection] The page's own way of making a connection to R, so one R is shared; called on the first build with what R is to be given.
+ * @param {string} [options.repository] Where gsm's own packages are installed from, for a page that already serves them.
  * @param {(study: Object) => void} [options.onBuilt] Called with each study as it is built.
  * @param {(study: Object) => void} [options.onStudy] Called when the reader presses the button that hands the study to the page. With none, there is no such button.
  * @param {string} [options.useLabel] That button's words.
@@ -70,6 +72,8 @@ export function mount(
     settings: opening = {},
     base = './',
     connection = null,
+    createConnection: connect = null,
+    repository = null,
     onBuilt = null,
     onStudy = null,
     useLabel = 'Use this study',
@@ -110,6 +114,8 @@ export function mount(
   const builder = make({
     base,
     connection,
+    ...(typeof connect === 'function' ? { createConnection: connect } : {}),
+    ...(repository ? { repository } : {}),
     onStage: (name) => {
       if (phase !== 'building') return;
       stage = STAGE_WORDS[name] || stage;
