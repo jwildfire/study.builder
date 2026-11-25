@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>study.builder</title>
+    <meta
+      name="description"
+      content="Simulate a clinical trial in the browser with gsm.datasim, look at every domain, and hand the data to any page."
+    />
+    <style>
+      :root {
+        --bg: #fafaf8;
+        --ink: #1f2328;
+        --soft: #5b6470;
+        --rule: #e4e6e3;
+        --accent: #6c3270;
+        --code: #f1f0ec;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #15191c;
+          --ink: #e8e6e1;
+          --soft: #9aa5ab;
+          --rule: #2f373c;
+          --accent: #d9a3dd;
+          --code: #1c2226;
+        }
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font:
+          16px/1.5 -apple-system,
+          system-ui,
+          sans-serif;
+      }
+      main {
+        max-width: 72rem;
+        margin: 0 auto;
+        padding: 1.6rem 1rem 4rem;
+      }
+      header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 0.4rem 0.8rem;
+        margin: 0 0 1.4rem;
+        padding: 0 0 0.9rem;
+        border-bottom: 1px solid var(--rule);
+      }
+      header h1 {
+        margin: 0;
+        font-size: 1.15rem;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+      header span,
+      footer {
+        color: var(--soft);
+        font-size: 0.86rem;
+      }
+      header a,
+      footer a,
+      section a {
+        color: var(--accent);
+      }
+      header nav {
+        margin-left: auto;
+        font-size: 0.86rem;
+      }
+      section.use {
+        margin-top: 2.4rem;
+        padding-top: 1.2rem;
+        border-top: 1px solid var(--rule);
+      }
+      section.use h2 {
+        font-size: 1.05rem;
+        margin: 0 0 0.5rem;
+      }
+      section.use p {
+        max-width: 60rem;
+        margin: 0 0 0.7rem;
+      }
+      pre {
+        overflow-x: auto;
+        padding: 0.8rem 1rem;
+        background: var(--code);
+        border: 1px solid var(--rule);
+        border-radius: 8px;
+        font-size: 0.82rem;
+        line-height: 1.45;
+      }
+      #handed {
+        color: var(--soft);
+        font-size: 0.9rem;
+        min-height: 1.4rem;
+      }
+      footer {
+        margin-top: 2.4rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>study.builder</h1>
+        <span>v{{version}} · experimental</span>
+        <nav><a href="https://github.com/jwildfire/study.builder">Source on GitHub</a></nav>
+      </header>
+
+      <div id="builder"></div>
+      <noscript>study.builder needs JavaScript: it runs R in this browser.</noscript>
+      <p id="handed" role="status"></p>
+
+      <section class="use">
+        <h2>Use it from another page</h2>
+        <p>
+          One script defines <code>StudyBuilder</code>. Draw the builder in an element and take the
+          study when the reader hands it over, or build a study with no page at all.
+        </p>
+        <pre><code>&lt;script src="https://jwildfire.github.io/study.builder/study.builder.js"&gt;&lt;/script&gt;
+&lt;div id="builder"&gt;&lt;/div&gt;
+&lt;script&gt;
+  // The builder on your page. `study.files()` is { raw, standard }: each a list of { name, text }.
+  StudyBuilder.mount('#builder', {
+    onStudy(study) {
+      const { raw, standard } = study.files();
+      myApp.loadRaw(raw);
+      myApp.loadFiles(standard);
+    }
+  });
+
+  // Or no page at all: settings in, data out.
+  const study = await StudyBuilder.buildStudy({
+    participants: 200,
+    sites: 15,
+    months: 6,
+    domains: ['AE', 'LB', 'VS']
+  });
+  study.domains.find((domain) =&gt; domain.id === 'AE').text; // the CSV text
+&lt;/script&gt;</code></pre>
+      </section>
+
+      <footer>
+        Everything runs in this browser. Nothing is sent anywhere. Data is simulated by
+        <a href="https://github.com/Gilead-Public/gsm.datasim">gsm.datasim</a>.
+      </footer>
+    </main>
+
+    <script src="./study.builder.js"></script>
+    <script>
+      window.__studyBuilder = StudyBuilder.mount('#builder', {
+        onStudy(study) {
+          const { raw, standard } = study.files();
+          document.getElementById('handed').textContent =
+            'Handed to the page: ' +
+            raw.length +
+            ' raw files and ' +
+            standard.length +
+            ' standard files of ' +
+            study.id +
+            '. A page that hosts the builder loads them here.';
+        }
+      });
+    </script>
+  </body>
+</html>
