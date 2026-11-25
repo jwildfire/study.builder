@@ -57,3 +57,18 @@ export { zipOf } from './zip.js';
 export { COPIED_FROM } from './files.js';
 export { KEYS, RAW_LABELS, RESULT_LABELS, metadataOf } from './metadata.js';
 export { MANIFEST_FORMAT, manifestOf } from './manifest.js';
+export {
+  CONFIG_FORMAT,
+  PRESETS_FORMAT,
+  STUDY_FORMAT,
+  configOf,
+  createShelf,
+  fetchPresets,
+  memoryBackend,
+  openPreset,
+  openStudy,
+  readDocument,
+  readPresets,
+  savedOf,
+  settingsOfArgs
+} from './saved.js';

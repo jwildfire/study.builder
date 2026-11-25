@@ -22,6 +22,7 @@ jobs:
       - run: npm ci
       - run: npm run format:check
       - run: npm run files:check
+      - run: npm run presets:check
       - run: npm test
       - run: npm run build:check
       - run: npm run build

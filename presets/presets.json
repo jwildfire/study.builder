@@ -1,0 +1,65 @@
+{
+  "presets": [
+    {
+      "id": "phase1-small",
+      "name": "Phase 1, small: 40 participants at 4 sites",
+      "about": "A small early study over 6 months. Quick to open and to look through.",
+      "hosted": true,
+      "settings": {
+        "name": "READY-P1",
+        "phase": "P1",
+        "area": "Oncology",
+        "participants": 40,
+        "sites": 4,
+        "months": 6,
+        "seed": 101
+      }
+    },
+    {
+      "id": "phase2-oncology",
+      "name": "Phase 2 oncology: 150 participants at 20 sites",
+      "about": "The builder's default study, over 9 months, with every layer.",
+      "hosted": true,
+      "settings": {
+        "name": "READY-P2",
+        "phase": "P2",
+        "area": "Oncology",
+        "participants": 150,
+        "sites": 20,
+        "months": 9,
+        "seed": 202
+      }
+    },
+    {
+      "id": "phase2-many-outliers",
+      "name": "Phase 2 virology, many outliers: 200 participants at 25 sites",
+      "about": "Settings only. More sites stand out, for trying site metrics and flags.",
+      "hosted": false,
+      "settings": {
+        "name": "OUTLIERS-P2",
+        "phase": "P2",
+        "area": "Virology",
+        "participants": 200,
+        "sites": 25,
+        "months": 9,
+        "outliers": "many",
+        "seed": 303
+      }
+    },
+    {
+      "id": "phase3-large",
+      "name": "Phase 3, large: 500 participants at 60 sites",
+      "about": "Settings only: the largest study the builder makes, over 12 months. Too large to host, so Build makes it.",
+      "hosted": false,
+      "settings": {
+        "name": "LARGE-P3",
+        "phase": "P3",
+        "area": "Inflammation",
+        "participants": 500,
+        "sites": 60,
+        "months": 12,
+        "seed": 404
+      }
+    }
+  ]
+}

@@ -59,6 +59,12 @@ export const STYLES = `
 .sb-button[data-kind=primary]{color:var(--sb-on-accent);background:var(--sb-accent);border-color:var(--sb-accent)}
 .sb-button[data-kind=primary]:hover{color:var(--sb-on-accent);opacity:.88}
 .sb-button[data-kind=small]{padding:.3rem .55rem;font-size:.64rem;margin-left:auto}
+.sb-starts{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem}
+.sb-starts select{flex:1 1 16rem;max-width:28rem}
+.sb-start{margin:0 0 1rem}
+.sb-start p{margin:.4rem 0 0}
+.sb-start-said{font-size:.9rem}
+.sb-start-said[data-kind=problem]{color:var(--sb-bad)}
 .sb-actions{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;margin:1rem 0}
 .sb-status{color:var(--sb-soft);font-size:.9rem}
 .sb-spin{display:inline-block;width:.8rem;height:.8rem;margin-right:.4rem;vertical-align:-.1rem;border:2px solid var(--sb-line);border-top-color:var(--sb-accent);border-radius:50%;animation:sb-turn .8s linear infinite}

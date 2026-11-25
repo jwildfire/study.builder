@@ -10,7 +10,7 @@
 //   _site/index.html             the builder on a page of its own
 
 import { build } from 'esbuild';
-import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { copyProblems, filesModule } from './files.mjs';
@@ -74,6 +74,13 @@ for (const [name, text] of built) writeFileSync(path.join(out, name), text);
 cpSync(path.join(root, 'r'), path.join(out, 'r'), { recursive: true });
 cpSync(path.join(root, 'vendor'), path.join(out, 'vendor'), { recursive: true });
 cpSync(path.join(root, 'workflows'), path.join(out, 'workflows'), { recursive: true });
+// The presets a page offers: the list, and each hosted study.
+mkdirSync(path.join(out, 'presets'), { recursive: true });
+for (const name of readdirSync(path.join(root, 'presets'))) {
+  if (name === 'index.json' || name.endsWith('.study.json.gz')) {
+    cpSync(path.join(root, 'presets', name), path.join(out, 'presets', name));
+  }
+}
 const page = readFileSync(path.join(root, 'site/index.html'), 'utf8').replaceAll(
   '{{version}}',
   version

@@ -29,6 +29,15 @@ import { firstRows } from './csv.js';
 import { columnsOf, overviewOf } from './overview.js';
 import { injectStyles } from './styles.js';
 import { zipOf } from './zip.js';
+import {
+  configOf,
+  createShelf,
+  fetchPresets,
+  openPreset,
+  openStudy,
+  readDocument,
+  savedOf
+} from './saved.js';
 
 /** The tab that is not a layer. */
 const OVERVIEW = 'overview';
@@ -72,6 +81,8 @@ export function downloadsSaid(downloads = DOWNLOADS) {
  * @param {?string} [options.theme] `light` or `dark`; the reader's own setting unless told.
  * @param {Function} [options.createBuilder] Something else to make the builder with; used by the tests.
  * @param {(name: string, bytes: Uint8Array|string, type: string) => void} [options.save] Something else to save a file with; used by the tests.
+ * @param {string|Object[]|false} [options.presets] Ready-made studies and settings to start from: the address of a list (`presets/index.json` under the base unless told), the presets themselves, or `false` for none.
+ * @param {Object|false} [options.shelf] Where the reader's own saved studies and settings are kept (saved.js's `createShelf`); this browser unless told, and `false` for nowhere.
  * @returns {{build: () => Promise<?Object>, study: () => ?Object, settings: () => Object, destroy: () => void}} The handle.
  */
 export function mount(
@@ -87,7 +98,9 @@ export function mount(
     useLabel = 'Use this study',
     theme = null,
     createBuilder: make = createBuilder,
-    save = saveFile
+    save = saveFile,
+    presets: presetsGiven = undefined,
+    shelf: shelfGiven = undefined
   } = {}
 ) {
   const root = typeof target === 'string' ? document.querySelector(target) : target;
@@ -127,6 +140,14 @@ export function mount(
   let builtWith = '';
   let builds = 0;
   let destroyed = false;
+  // Where a study or its settings can be started from: a page's presets, and
+  // what the reader saved in this browser.
+  let presets = Array.isArray(presetsGiven) ? presetsGiven : [];
+  const shelf = shelfGiven === false ? null : shelfGiven || createShelf();
+  let shelved = [];
+  let picked = ''; // the start that is chosen: `preset:<id>` or `shelf:<id>`
+  let said = ''; // what the last open or save did, in a sentence
+  let saidKind = 'note';
 
   const builder = make({
     base,
@@ -183,6 +204,223 @@ export function mount(
     draw();
     if (typeof onBuilt === 'function') onBuilt(study);
     return study;
+  }
+
+  // ---- starting from a preset, a saved study or a file; and saving ----
+
+  const messageOf = (error) => (error && error.message ? error.message : String(error));
+  const say = (sentence, kind = 'note') => {
+    said = sentence;
+    saidKind = kind;
+  };
+
+  /** Put settings in the form, as if the reader had typed them. */
+  function fill(settings) {
+    form = { ...DEFAULTS, ...settings };
+    chosen = new Set(
+      (form.domains || []).filter((id) =>
+        DOMAINS.some((domain) => domain.id === id && !domain.core)
+      )
+    );
+    layersChosen = new Set(
+      (form.layers || []).filter((id) => LAYERS.some((layer) => layer.id === id && layer.optional))
+    );
+    problems = [];
+  }
+
+  /** Show a study that was opened, not built: no R was asked for. */
+  function show(opened, sentence) {
+    builds += 1; // a build still running is no longer the one to show
+    study = opened;
+    builtWith = key();
+    phase = 'done';
+    failure = '';
+    shownLayer = OVERVIEW;
+    previewRows = PREVIEW_STEP;
+    say(sentence);
+    draw();
+    if (typeof onBuilt === 'function') onBuilt(study);
+  }
+
+  async function refreshShelf() {
+    if (!shelf || !shelf.available) return;
+    try {
+      shelved = await shelf.list();
+    } catch {
+      shelved = [];
+    }
+    if (!destroyed) draw();
+  }
+
+  /** Open a document: a study is shown at once, and settings fill the form. */
+  async function openDocument(given, from) {
+    const { kind, document } = readDocument(given);
+    fill(document.settings);
+    if (kind === 'study') {
+      show(await openStudy(document), `Opened ${document.name} ${from}. Nothing was built.`);
+    } else {
+      say(
+        `The settings of ${document.name} are in the form ${from}. Press Build to make the study.`
+      );
+      draw();
+    }
+  }
+
+  /** Open what is chosen in the list of starts. */
+  async function openPicked() {
+    const [where, ...rest] = picked.split(':');
+    const id = rest.join(':');
+    try {
+      if (where === 'preset') {
+        const preset = presets.find((one) => one.id === id);
+        if (!preset) return;
+        fill(preset.settings);
+        if (preset.study) {
+          say(`Fetching ${preset.name}…`);
+          draw();
+        }
+        const opened = await openPreset(preset);
+        if (destroyed) return;
+        if (opened.study)
+          show(opened.study, `Opened ${preset.name}, a ready-made study. Nothing was built.`);
+        else {
+          say(`The settings of ${preset.name} are in the form. Press Build to make the study.`);
+          draw();
+        }
+      } else if (where === 'shelf') {
+        const document = await shelf.open(id);
+        if (!document) throw new Error('It is no longer saved in this browser.');
+        await openDocument(document, 'from this browser');
+      }
+    } catch (error) {
+      say(messageOf(error), 'problem');
+      draw();
+    }
+  }
+
+  async function keep(document, what) {
+    try {
+      const entry = await shelf.save(document);
+      picked = `shelf:${entry.id}`;
+      say(
+        `${what} is saved in this browser as ${entry.name}. It is in the list at the top, and is sent nowhere.`
+      );
+    } catch (error) {
+      say(messageOf(error), 'problem');
+    }
+    await refreshShelf();
+    draw();
+  }
+
+  /** The row a study or its settings is started from, above the form. */
+  function starts() {
+    const row = el('div', 'sb-starts');
+    const options = [];
+    const hosted = presets.filter((preset) => preset.study);
+    const plain = presets.filter((preset) => !preset.study);
+    const mine = (kind) => shelved.filter((entry) => entry.kind === kind);
+    const groups = [
+      ['Ready-made studies: open at once', hosted.map((one) => [`preset:${one.id}`, one.name])],
+      [
+        'Ready-made settings: Build makes the study',
+        plain.map((one) => [`preset:${one.id}`, one.name])
+      ],
+      [
+        'Your saved studies: open at once',
+        mine('study').map((one) => [`shelf:${one.id}`, one.name])
+      ],
+      ['Your saved settings', mine('config').map((one) => [`shelf:${one.id}`, one.name])]
+    ].filter(([, entries]) => entries.length);
+    const pick = el('select', 'sb-input');
+    pick.name = 'start';
+    pick.setAttribute('aria-label', 'Start from a ready-made or saved study');
+    const none = el(
+      'option',
+      null,
+      groups.length ? 'Choose a study or settings…' : 'Nothing saved yet'
+    );
+    none.value = '';
+    pick.append(none);
+    for (const [label, entries] of groups) {
+      const group = el('optgroup');
+      group.label = label;
+      for (const [value, name] of entries) {
+        const option = el('option', null, name);
+        option.value = value;
+        options.push(value);
+        group.append(option);
+      }
+      pick.append(group);
+    }
+    if (!options.includes(picked)) picked = '';
+    pick.value = picked;
+    pick.disabled = phase === 'building' || !groups.length;
+    pick.onchange = () => {
+      picked = pick.value;
+      draw();
+    };
+    const button = (action, label, onClick, disabled = false) => {
+      const made = el('button', 'sb-button', label);
+      made.type = 'button';
+      made.dataset.kind = 'small';
+      made.dataset.action = action;
+      made.disabled = disabled || phase === 'building';
+      made.onclick = onClick;
+      return made;
+    };
+    row.append(
+      pick,
+      button('open', 'Open', () => openPicked(), !picked)
+    );
+    if (picked.startsWith('shelf:')) {
+      row.append(
+        button('forget', 'Remove', async () => {
+          const id = picked.slice('shelf:'.length);
+          const entry = shelved.find((one) => one.id === id);
+          await shelf.remove(id);
+          picked = '';
+          say(`${entry ? entry.name : 'It'} is no longer saved in this browser.`);
+          await refreshShelf();
+          draw();
+        })
+      );
+    }
+    const file = el('input');
+    file.type = 'file';
+    file.accept = '.json,application/json';
+    file.hidden = true;
+    file.dataset.action = 'file';
+    file.onchange = async () => {
+      const [chosenFile] = file.files || [];
+      if (!chosenFile) return;
+      try {
+        await openDocument(await chosenFile.text(), `from ${chosenFile.name}`);
+      } catch (error) {
+        say(messageOf(error), 'problem');
+        draw();
+      }
+    };
+    row.append(
+      button('open-file', 'Open a file…', () => file.click()),
+      file
+    );
+    // What the chosen start is, in a line.
+    const about =
+      (picked.startsWith('preset:') &&
+        (presets.find((one) => `preset:${one.id}` === picked) || {}).about) ||
+      (picked.startsWith('shelf:') &&
+        (shelved.find((one) => `shelf:${one.id}` === picked) || {}).size) ||
+      '';
+    const wrap = el('div', 'sb-start');
+    wrap.append(row);
+    if (about) wrap.append(el('p', 'sb-hint', about));
+    if (said) {
+      const line = el('p', 'sb-start-said', said);
+      line.dataset.kind = saidKind;
+      line.setAttribute('role', saidKind === 'problem' ? 'alert' : 'status');
+      wrap.append(line);
+    }
+    return wrap;
   }
 
   // ---- drawing ----
@@ -674,6 +912,7 @@ export function mount(
       )
     );
 
+    shell.append(el('h3', null, 'Start from'), starts());
     shell.append(el('h3', null, 'The trial'), trialForm());
     shell.append(el('h3', null, 'Layers'), layerChoices(), domainChoices());
 
@@ -685,6 +924,37 @@ export function mount(
     go.disabled = phase === 'building';
     go.onclick = () => build();
     actions.append(go);
+    // The settings in the form, kept to build again: in this browser, or as a file.
+    const settingsButton = (action, label, onClick) => {
+      const made = el('button', 'sb-button', label);
+      made.type = 'button';
+      made.dataset.kind = 'small';
+      made.dataset.action = action;
+      made.disabled = phase === 'building';
+      made.onclick = () => {
+        try {
+          onClick(configOf(current()));
+        } catch (error) {
+          problems = error.problems || [messageOf(error)];
+          draw();
+        }
+      };
+      return made;
+    };
+    if (shelf && shelf.available) {
+      actions.append(
+        settingsButton('save-settings', 'Save settings', (config) => keep(config, 'These settings'))
+      );
+    }
+    actions.append(
+      settingsButton('download-settings', 'Settings file', (config) =>
+        save(
+          `${config.name}.settings.json`,
+          `${JSON.stringify(config, null, 2)}\n`,
+          'application/json'
+        )
+      )
+    );
     if (phase === 'building') {
       const status = el('span', 'sb-status');
       status.setAttribute('role', 'status');
@@ -765,6 +1035,20 @@ export function mount(
         );
       };
       uses.append(all);
+      // The whole study, kept to open again with no R: in this browser, or as a file.
+      if (shelf && shelf.available) {
+        const keepIt = el('button', 'sb-button', 'Save study');
+        keepIt.type = 'button';
+        keepIt.dataset.action = 'save-study';
+        keepIt.onclick = () => keep(savedOf(study), 'This study');
+        uses.append(keepIt);
+      }
+      const asFile = el('button', 'sb-button', 'Study file (.json)');
+      asFile.type = 'button';
+      asFile.dataset.action = 'download-study';
+      asFile.onclick = () =>
+        save(`${study.id}.study.json`, JSON.stringify(savedOf(study)), 'application/json');
+      uses.append(asFile);
       done.append(uses);
       shell.append(done);
 
@@ -785,6 +1069,18 @@ export function mount(
   }
 
   draw();
+  refreshShelf();
+  if (presetsGiven !== false && !Array.isArray(presetsGiven)) {
+    const from =
+      typeof presetsGiven === 'string'
+        ? presetsGiven
+        : `${base.endsWith('/') ? base : `${base}/`}presets/index.json`;
+    fetchPresets(from).then((found) => {
+      if (destroyed || !found.length) return;
+      presets = found;
+      draw();
+    });
+  }
 
   return {
     /** Build the study the form describes, as pressing Build does. */
@@ -793,6 +1089,8 @@ export function mount(
     study: () => study,
     /** What the form holds now. */
     settings: current,
+    /** Open a study or settings document, as choosing its file does. */
+    open: (document) => openDocument(document, 'as the page asked'),
     /** What is on the page: for the tests, and a host that wants to follow along. */
     state: () => ({
       phase,
@@ -800,7 +1098,10 @@ export function mount(
       problems: [...problems],
       failure,
       tab: shownLayer,
-      part: viewerPart
+      part: viewerPart,
+      said,
+      presets: presets.map((preset) => preset.id),
+      shelved: shelved.map((entry) => entry.id)
     }),
     /** Empty the element and let go of R, when it is study.builder's own. */
     destroy() {

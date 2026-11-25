@@ -13,6 +13,9 @@ A study now comes in layers, each built off raw by workflows.
 - **Choose the layers.** The `layers` setting, and ticks in the widget, leave a layer out.
 - **A study overview.** A built study opens on an overview: what the trial is, its headline counts, sites and participants by country, and what each layer holds. `StudyBuilder.overviewOf(study)` returns the same for another page to draw.
 - **A table viewer.** Each layer is a short list of its tables beside the open one. The viewer shows its first rows with each column's type, a summary of every column (how full, how many different values, its range or commonest values), and where an ADaM table's columns came from. `StudyBuilder.columnsOf(table)` returns the column summary.
+- **Save a study and open it again with no wait.** A built study can be saved in the browser (Save study) or as a file (Study file). Opening either shows the same study at once: the same tables, metadata, manifest and key, with no R started. `StudyBuilder.savedOf(study)` makes the document and `StudyBuilder.openStudy(document)` opens it; the key it was saved with is checked.
+- **Save settings.** The form's settings can be saved in the browser or as a file, and opened to fill the form; Build then makes the study. `StudyBuilder.configOf(settings)`.
+- **Presets, with and without data.** A page offers ready-made starts from `presets/index.json`: some are settings only, and some host the study itself, which opens at once. Two hosted studies and two settings-only presets come with study.builder; `npm run presets` builds the hosted ones with real R and `npm run presets:check` holds them. A page passes `presets` to offer its own, or `false` for none.
 - **The trial and the layers come first.** The raw domains are one folded line with a compact tick list.
 
 ## Changed

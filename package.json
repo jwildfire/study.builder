@@ -14,6 +14,8 @@
     "files:check": "node scripts/files.mjs --check",
     "test": "vitest run",
     "test:r": "node scripts/real-r.mjs",
+    "presets": "node scripts/presets.mjs",
+    "presets:check": "node scripts/presets.mjs --check",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

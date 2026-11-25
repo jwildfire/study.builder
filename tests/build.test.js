@@ -4,6 +4,20 @@ import { StudyBuilderError, createBuilder, rOptions, studyOf } from '../src/buil
 import { createConnection, foldersOf } from '../src/r.js';
 import { mount } from '../src/widget.js';
 import { readSettings } from '../src/core.js';
+import {
+  CONFIG_FORMAT,
+  PRESETS_FORMAT,
+  STUDY_FORMAT,
+  configOf,
+  createShelf,
+  fetchPresets,
+  memoryBackend,
+  openPreset,
+  openStudy,
+  readDocument,
+  readPresets,
+  savedOf
+} from '../src/saved.js';
 
 // The build function and the widget, with a stand-in for R: the connection
 // answers with a small study in the shape r/builder.R returns. Real R is held
@@ -454,6 +468,7 @@ describe('the builder on a page', () => {
     const { r } = mounted();
     expect(document.querySelector('[name="participants"]').value).toBe('150');
     expect([...document.querySelectorAll('.sb h3')].map((h) => h.textContent)).toEqual([
+      'Start from',
       'The trial',
       'Layers',
       'What a study built here is, and is not'
@@ -736,5 +751,228 @@ describe('the builder on a page', () => {
     expect(document.querySelector('[data-layer="raw"]').disabled).toBe(true);
     expect(box('LB').checked).toBe(false);
     expect(document.querySelector('.sb').dataset.theme).toBe('dark');
+  });
+  // ---- starting from a preset, a saved study or a file; and saving ----
+
+  const settle = async () => {
+    for (let turn = 0; turn < 6; turn += 1) await new Promise((resolve) => setTimeout(resolve, 0));
+  };
+  const press = (action) => document.querySelector(`[data-action="${action}"]`).click();
+  const pick = (value) => {
+    const select = document.querySelector('[name="start"]');
+    select.value = value;
+    select.onchange();
+  };
+
+  it('saves a built study in this browser and opens it again at once, with no R', async () => {
+    const shelf = createShelf({ backend: memoryBackend() });
+    const { r } = mounted({ shelf, presets: false });
+    await handle.build();
+    press('save-study');
+    await settle();
+    expect(handle.state().shelved).toEqual(['study:BUILT-001']);
+    expect(handle.state().said).toContain('saved in this browser as BUILT-001');
+    const key = handle.study().manifest.key;
+    handle.destroy();
+    // Another visit: the same shelf, a new widget, and R never asked.
+    const again = mounted({ shelf, presets: false });
+    await settle();
+    expect([...document.querySelectorAll('optgroup')].map((group) => group.label)).toEqual([
+      'Your saved studies: open at once'
+    ]);
+    pick('shelf:study:BUILT-001');
+    press('open');
+    await settle();
+    expect(again.r.connect).not.toHaveBeenCalled();
+    expect(handle.study().opened).toBe(true);
+    expect(handle.study().manifest.key).toBe(key);
+    expect(handle.state().said).toBe('Opened BUILT-001 from this browser. Nothing was built.');
+    expect(document.querySelector('[data-stale]')).toBeNull();
+    expect(document.querySelector('[data-built]')).not.toBeNull();
+    // Removed, it is gone from the list.
+    pick('shelf:study:BUILT-001');
+    press('forget');
+    await settle();
+    expect(handle.state().shelved).toEqual([]);
+    expect(r.made).toHaveLength(1);
+  });
+
+  it('saves the settings in this browser and as a file, and a saved setting fills the form without building', async () => {
+    const shelf = createShelf({ backend: memoryBackend() });
+    const { r, saved } = mounted({
+      shelf,
+      presets: false,
+      settings: { name: 'SMALL-1', participants: 40, sites: 4, seed: 11 }
+    });
+    press('save-settings');
+    press('download-settings');
+    await settle();
+    expect(saved[0].name).toBe('SMALL-1.settings.json');
+    const file = JSON.parse(saved[0].bytes);
+    expect(file.format).toBe(CONFIG_FORMAT);
+    expect(file.settings).toMatchObject({ name: 'SMALL-1', participants: 40, sites: 4, seed: 11 });
+    handle.destroy();
+    mounted({ shelf, presets: false });
+    await settle();
+    pick('shelf:config:SMALL-1');
+    press('open');
+    await settle();
+    expect(document.querySelector('[name="participants"]').value).toBe('40');
+    expect(handle.study()).toBeNull();
+    expect(handle.state().said).toContain('Press Build to make the study.');
+    expect(r.connect).not.toHaveBeenCalled();
+  });
+
+  it('downloads a study file, which opens to the same study', async () => {
+    const { saved } = mounted({ shelf: false, presets: false });
+    await handle.build();
+    expect(document.querySelector('[data-action="save-study"]')).toBeNull();
+    press('download-study');
+    expect(saved[0].name).toBe('BUILT-001.study.json');
+    const key = handle.study().manifest.key;
+    handle.destroy();
+    const { r } = mounted({ shelf: false, presets: false });
+    await handle.open(saved[0].bytes);
+    expect(handle.study().manifest.key).toBe(key);
+    expect(r.connect).not.toHaveBeenCalled();
+    // A file that is neither is refused in a sentence.
+    await expect(handle.open('{"format":"other"}')).rejects.toThrow(/not one study.builder saved/);
+  });
+
+  it('offers a page’s presets: one with a study opens at once, one without fills the form', async () => {
+    const hosted = savedOf(await openStudy(savedOf(studyOf(ANSWER, readSettings({}).args))));
+    const presets = readPresets({
+      format: PRESETS_FORMAT,
+      presets: [
+        {
+          id: 'ready',
+          name: 'Ready study',
+          about: 'Hosted.',
+          settings: {},
+          study: 'ready.json',
+          key: hosted.key
+        },
+        { id: 'big', name: 'Big settings', settings: { participants: 400, sites: 40 } },
+        { id: 'bad', name: 'Will not build', settings: { participants: 1 } }
+      ]
+    });
+    expect(presets.map((preset) => preset.id)).toEqual(['ready', 'big']);
+    const fetched = vi.fn(async () => ({ ok: true, json: async () => hosted }));
+    vi.stubGlobal('fetch', fetched);
+    const { r } = mounted({ shelf: false, presets });
+    expect([...document.querySelectorAll('optgroup')].map((group) => group.label)).toEqual([
+      'Ready-made studies: open at once',
+      'Ready-made settings: Build makes the study'
+    ]);
+    pick('preset:big');
+    press('open');
+    await settle();
+    expect(document.querySelector('[name="participants"]').value).toBe('400');
+    expect(handle.study()).toBeNull();
+    pick('preset:ready');
+    press('open');
+    await settle();
+    expect(fetched).toHaveBeenCalledWith('ready.json');
+    expect(handle.study().opened).toBe(true);
+    expect(document.querySelector('[name="participants"]').value).toBe('150');
+    expect(r.connect).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+});
+
+describe('saving and opening, with no page', () => {
+  const built = async () => {
+    const study = studyOf(ANSWER, readSettings({ seed: 3 }).args);
+    study.manifest = await (await import('../src/manifest.js')).manifestOf(study);
+    return study;
+  };
+
+  it('a saved study opens to the same tables, metadata and key', async () => {
+    const study = await built();
+    const document = JSON.parse(JSON.stringify(savedOf(study, { name: 'Mine' })));
+    expect(document).toMatchObject({ format: STUDY_FORMAT, name: 'Mine', key: study.manifest.key });
+    expect(document.settings.seed).toBe(3);
+    const opened = await openStudy(document);
+    expect(opened.manifest).toEqual(study.manifest);
+    expect(opened.metadata).toEqual(study.metadata);
+    expect(opened.files()).toEqual(study.files());
+    expect(readDocument(JSON.stringify(document)).kind).toBe('study');
+  });
+
+  it('a study file that was changed is refused', async () => {
+    const document = JSON.parse(JSON.stringify(savedOf(await built())));
+    document.study.layers[0].tables[0].text += '"X","S3",9\n';
+    await expect(openStudy(document)).rejects.toThrow(/not as it was saved/);
+    await expect(openStudy({ format: 'nope' })).rejects.toThrow(/not a study file/);
+  });
+
+  it('settings that would not build are not saved, and say why', () => {
+    expect(() => configOf({ participants: 1 })).toThrow(/Participants must be a whole number/);
+    expect(configOf({ name: 'A', seed: '5' }).settings.seed).toBe(5);
+    expect(() => readDocument('not json')).toThrow(/not JSON/);
+  });
+
+  it('a shelf lists what it holds, newest first, and replaces one of the same name', async () => {
+    let clock = 0;
+    const shelf = createShelf({
+      backend: memoryBackend(),
+      now: () => new Date(Date.UTC(2026, 0, 1, 0, 0, (clock += 1)))
+    });
+    await shelf.save(configOf({ name: 'A' }));
+    await shelf.save(savedOf(await built()));
+    await shelf.save(configOf({ name: 'A', participants: 60 }));
+    const listed = await shelf.list();
+    expect(listed.map((entry) => entry.id)).toEqual(['config:A', 'study:BUILT-001']);
+    expect(listed[0].size).toBe('60 participants, 20 sites, 9 months');
+    expect((await shelf.open('config:A')).settings.participants).toBe(60);
+    await shelf.remove('config:A');
+    expect(await shelf.open('config:A')).toBeNull();
+    // With nowhere to keep them, a shelf says so.
+    const none = createShelf();
+    expect(none.available).toBe(false);
+    await expect(none.save(configOf({}))).rejects.toThrow(/nowhere to keep it/);
+  });
+
+  it('a page with no presets has none, and a hosted study that is not the one listed is refused', async () => {
+    expect(await fetchPresets('x', { fetch: async () => ({ ok: false }) })).toEqual([]);
+    expect(
+      await fetchPresets('x', {
+        fetch: async () => {
+          throw new Error('offline');
+        }
+      })
+    ).toEqual([]);
+    const document = savedOf(await built());
+    const preset = {
+      id: 'p',
+      name: 'P',
+      settings: document.settings,
+      study: 'p.json',
+      key: 'sha256:other'
+    };
+    await expect(
+      openPreset(preset, { fetch: async () => ({ ok: true, json: async () => document }) })
+    ).rejects.toThrow(/not the one its list names/);
+  });
+
+  it('a hosted study is unpacked when it is gzipped, and read as it is when it is not', async () => {
+    const { gzipSync } = await import('node:zlib');
+    const document = savedOf(await built());
+    const text = JSON.stringify(document);
+    const answer = (bytes) => ({
+      ok: true,
+      arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.length)
+    });
+    const preset = {
+      id: 'p',
+      name: 'P',
+      settings: document.settings,
+      study: 'p.json.gz',
+      key: document.key
+    };
+    for (const bytes of [gzipSync(Buffer.from(text)), Buffer.from(text)]) {
+      const opened = await openPreset(preset, { fetch: async () => answer(bytes) });
+      expect(opened.study.manifest.key).toBe(document.key);
+    }
   });
 });

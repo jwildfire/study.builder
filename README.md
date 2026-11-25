@@ -108,6 +108,30 @@ const large = await builder.build({ phase: 'P3', participants: 500, sites: 60, m
 
 A build that cannot be made rejects with a `StudyBuilderError` whose message is a sentence you can show, and whose `problems` lists each one.
 
+## Saving, opening and presets
+
+A study takes seconds to build after R has started, and half a minute the first time. A saved study opens with no R at all.
+
+- **In the widget.** Start from lists a page's presets and what the reader saved in this browser. Save study and Save settings keep the open study or the form's settings in the browser (IndexedDB; nothing is sent anywhere). Study file and Settings file download them, and Open a file reads either back.
+- **With no page.**
+
+```js
+const document = StudyBuilder.savedOf(study); // settings, and what R returned
+const again = await StudyBuilder.openStudy(document); // the same study, no R
+again.manifest.key === study.manifest.key; // true: the key is checked on opening
+
+const config = StudyBuilder.configOf({ participants: 80, sites: 8, seed: 5 });
+const built = await StudyBuilder.buildStudy(config.settings);
+```
+
+- **Presets.** `presets/presets.json` lists them, by hand. One marked `hosted` has its study built by `npm run presets` and kept gzipped beside the list; a page opens it at once. The others are settings only. The widget reads `presets/index.json` under its base; pass `presets: 'https://…/index.json'`, a list of your own, or `false`.
+
+| Format                    | What it is                                                                     |
+| ------------------------- | ------------------------------------------------------------------------------ |
+| `study.builder/config/1`  | Settings: building makes the study                                             |
+| `study.builder/study/1`   | Settings, the key, and what R returned for them                                |
+| `study.builder/presets/1` | A list of presets: each one settings, and for some the address of a study file |
+
 ## Settings
 
 | Setting        | Values                                       | Default                                                 |

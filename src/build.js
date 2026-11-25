@@ -301,6 +301,14 @@ export function studyOf(value, args) {
     manifest: null,
     metadata: null,
     /**
+     * What R returned for the study, as it returned it: what a saved study
+     * keeps, so it can be opened again with no R (saved.js).
+     * @returns {Object} R's answer.
+     */
+    source() {
+      return value;
+    },
+    /**
      * One table's spec: what it is, its keys, and each column's label, type and joins.
      * @param {string} layer A layer's id.
      * @param {string} id The table's id in that layer.
