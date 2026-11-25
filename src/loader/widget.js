@@ -49,6 +49,7 @@ import {
 import { mountViewer } from '../viewer/widget.js';
 import { fromBuilt } from '../viewer/built.js';
 import { injectStyles } from './styles.js';
+import { hostTheme, watchHostTheme } from '../shared/theme.js';
 
 /** The steps of a build, in order, each with its words. */
 export const STAGES = Object.freeze([
@@ -86,7 +87,7 @@ export function sizeSaid(settings) {
  * @param {(study: Object) => void} [options.onBuilt] Called with each study as it is built or opened.
  * @param {(study: Object) => void} [options.onStudy] Called when the reader presses the button that hands the study to the page. With none, there is no such button.
  * @param {string} [options.useLabel] That button's words.
- * @param {?string} [options.theme] `light` or `dark`; the reader's own setting unless told.
+ * @param {?string} [options.theme] `light` or `dark`. Unless told, the widget matches the page behind it.
  * @param {string|Object[]|false} [options.presets] Ready-made studies and settings: the address of a list (`presets/index.json` under the base unless told), the presets themselves, or `false` for none.
  * @param {Object|false} [options.shelf] Where the reader's saved studies and settings are kept (`createShelf`); this browser unless told, and `false` for nowhere.
  * @param {Array<{label: string, url: string}>|false} [options.protocols] Ready-made protocols the form offers to try, each a name and the address of a protocol file; the CDISC pilot protocol under the base unless told, and `false` for none.
@@ -1204,6 +1205,20 @@ export function mount(
     return page;
   }
 
+  /** Light or dark: what the page said, else what the page behind looks like. */
+  function themed(shell) {
+    const shown = theme || hostTheme(root);
+    if (shown) shell.dataset.theme = shown;
+    else delete shell.dataset.theme;
+  }
+  // The page can change its theme while the widget is open.
+  const stopTheme = theme
+    ? () => {}
+    : watchHostTheme(root, () => {
+        const shell = root.querySelector(':scope > .sb');
+        if (shell && !destroyed) themed(shell);
+      });
+
   function draw() {
     if (destroyed) return;
     const active = doc.activeElement;
@@ -1212,7 +1227,7 @@ export function mount(
     viewer = null;
     root.textContent = '';
     const shell = el('div', 'sb');
-    if (theme) shell.dataset.theme = theme;
+    themed(shell);
     // With nothing to list, the library is only a way to the form.
     if (screen === 'library' && !listed()) screen = 'describe';
     if (screen === 'study' && !study) screen = 'describe';
@@ -1291,6 +1306,7 @@ export function mount(
     /** Empty the element and let go of R, when it is study.builder's own. */
     destroy() {
       destroyed = true;
+      stopTheme();
       if (viewer) viewer.destroy();
       root.textContent = '';
       builder.close();

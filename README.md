@@ -70,7 +70,7 @@ Options of `mount(target, options)`:
 | `useLabel`   | The hand-over button's words. Default: "Use this study".                                 |
 | `base`       | Where study.builder's `r/` and `vendor/` folders are served. Default: beside the script. |
 | `connection` | A connection to R your page already has, so R is started once (see Sharing R).           |
-| `theme`      | `light` or `dark`. Default: the reader's own setting.                                    |
+| `theme`      | `light` or `dark`. Default: it matches the page behind it, light or dark.                |
 
 It returns a handle: `build()`, `study()`, `settings()`, `state()` and `destroy()`.
 

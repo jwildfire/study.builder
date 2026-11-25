@@ -64,8 +64,8 @@
     {
       "id": "cdisc-pilot-protocol",
       "name": "CDISC pilot protocol: 16 visits on its schedule of activities",
-      "about": "Settings only, read from the pilot study's CDISC USDM file. Visits, vital signs and labs follow the protocol's schedule; Build makes the study.",
-      "hosted": false,
+      "about": "Read from the pilot study's CDISC USDM file. Visits, vital signs and labs follow the protocol's schedule of activities.",
+      "hosted": true,
       "protocol": "protocols/cdisc-pilot.protocol.json",
       "settings": {
         "name": "PILOT-PROTOCOL",
@@ -75,7 +75,7 @@
         "sites": 12,
         "months": 7,
         "seed": 505,
-        "domains": ["VISIT", "AE", "LB", "VS", "PD", "STUDCOMP", "SDRGCOMP"]
+        "domains": ["VISIT", "AE", "LB", "VS", "EG", "PD", "STUDCOMP", "SDRGCOMP"]
       }
     }
   ]

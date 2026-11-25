@@ -22,6 +22,7 @@ import {
   viewerStudy
 } from './core.js';
 import { injectViewerStyles } from './styles.js';
+import { hostTheme, watchHostTheme } from '../shared/theme.js';
 
 /** The three views, in order. */
 export const VIEWS = Object.freeze([
@@ -47,7 +48,7 @@ const count = (number, noun) =>
  * @param {Object} [options.study] The study, as `viewerStudy` takes one.
  * @param {string} [options.view] The view to open on: `tables`, `columns` or `participant`.
  * @param {string} [options.table] The id of the table to open on; the first unless told.
- * @param {?string} [options.theme] `light` or `dark`; the reader's own setting unless told.
+ * @param {?string} [options.theme] `light` or `dark`. Unless told, the widget matches the page behind it.
  * @param {(name: string, text: string, type: string) => void} [options.save] Saves a file; with none there is no download.
  * @param {(table: Object, column: Object) => void} [options.onColumn] Called when the reader presses a column's `todo` button, for a page that maps columns.
  * @param {(table: Object, role: Object, value: string) => void} [options.onRole] Called when the reader sets one of a table's `roles`, for a page that maps columns: the role, and the column or value chosen (empty for none).
@@ -725,13 +726,27 @@ export function mountViewer(
     return wrap;
   }
 
+  /** Light or dark: what the page said, else what the page behind looks like. */
+  function themed(shell) {
+    const shown = theme || hostTheme(root);
+    if (shown) shell.dataset.theme = shown;
+    else delete shell.dataset.theme;
+  }
+  // The page can change its theme while the widget is open.
+  const stopTheme = theme
+    ? () => {}
+    : watchHostTheme(root, () => {
+        const shell = root.querySelector(':scope > .sv');
+        if (shell && !destroyed) themed(shell);
+      });
+
   function draw() {
     if (destroyed) return;
     const active = doc.activeElement;
     const focused = active && root.contains(active) ? active.getAttribute('name') : null;
     root.textContent = '';
     const shell = el('div', 'sv');
-    if (theme) shell.dataset.theme = theme;
+    themed(shell);
     const one = table();
     if (!one) {
       shell.append(el('p', 'sv-empty', 'This study has no tables to look at yet.'));
@@ -826,6 +841,7 @@ export function mountViewer(
     /** Empty the element. */
     destroy() {
       destroyed = true;
+      stopTheme();
       root.textContent = '';
     }
   };

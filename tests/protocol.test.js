@@ -173,7 +173,7 @@ describe('a protocol in the settings', () => {
     const listed = JSON.parse(readFileSync(path.join(root, 'presets/index.json'), 'utf8'));
     const preset = readPresets(listed).find((one) => one.id === 'cdisc-pilot-protocol');
     expect(preset.settings.protocol.visits).toHaveLength(16);
-    expect(preset.study).toBeNull();
+    expect(preset.study).toBe('cdisc-pilot-protocol.study.json.gz');
   });
 });
 
