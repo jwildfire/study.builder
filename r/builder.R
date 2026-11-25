@@ -133,6 +133,22 @@ builder_load <- function(simulator) {
   c(more, list(rows = nrow(table), columns = columns, text = .builder_csv(table)))
 }
 
+# ==== TO MOVE TO gsm.datasim: begin ====
+#
+# study.builder makes no data: every row is gsm.datasim's. Everything between
+# this line and the matching "end" breaks that rule today, and is here only
+# until gsm.datasim does it itself. Nothing that makes or changes a table may
+# be written outside this fence (tests/architecture.test.js holds that), and
+# nothing new is added inside it.
+#
+#   Piece               What it does here                         Leaves when gsm.datasim
+#   .builder_gsm_names  renames columns to gsm's names            emits gsm's names
+#   .builder_site_id    rewrites site ids R reads as numbers      makes ids that survive a CSV
+#   .builder_study      writes phase and area over random ones    takes them as arguments
+#   .builder_vitals     calls the vitals generator by hand        makes vitals when asked for a study
+#   .builder_schedule   remakes visits, vitals and labs on a      takes a design, and its generators
+#                       protocol's schedule                       follow it
+
 # Each raw table under gsm's column names, as the spec of the mapping workflows
 # installed with gsm.mapping says, and the spec handed in for vital signs.
 .builder_gsm_names <- function(tables, more = list()) {
@@ -340,6 +356,27 @@ builder_load <- function(simulator) {
     )
   )
 }
+
+# The study table says the phase and the area the reader chose: gsm.datasim
+# draws both at random and takes neither as an argument.
+.builder_study <- function(study, phase, therapeutic_area) {
+  if (!is.null(phase) && "phase" %in% names(study)) study$phase <- as.character(phase)
+  if (!is.null(therapeutic_area) && "therapeutic_area" %in% names(study)) {
+    study$therapeutic_area <- as.character(therapeutic_area)
+  }
+  study
+}
+
+# Every table's site ids, under a name R reads as text.
+.builder_site_ids <- function(tables) {
+  lapply(tables, function(table) {
+    table <- as.data.frame(table, stringsAsFactors = FALSE)
+    if ("invid" %in% names(table)) table$invid <- .builder_site_id(table$invid)
+    table
+  })
+}
+
+# ==== TO MOVE TO gsm.datasim: end ====
 
 # ---- The layers built off raw ----
 #
@@ -651,17 +688,8 @@ builder_run <- function(
   }
   snapshot <- .builder_gsm_names(snapshot[made], vitals_spec)
   renames <- lapply(snapshot, function(table) attr(table, "renamed"))
-  snapshot <- lapply(snapshot, function(table) {
-    table <- as.data.frame(table, stringsAsFactors = FALSE)
-    if ("invid" %in% names(table)) table$invid <- .builder_site_id(table$invid)
-    table
-  })
-  if (!is.null(phase) && "phase" %in% names(snapshot$Raw_STUDY)) {
-    snapshot$Raw_STUDY$phase <- as.character(phase)
-  }
-  if (!is.null(therapeutic_area) && "therapeutic_area" %in% names(snapshot$Raw_STUDY)) {
-    snapshot$Raw_STUDY$therapeutic_area <- as.character(therapeutic_area)
-  }
+  snapshot <- .builder_site_ids(snapshot)
+  snapshot$Raw_STUDY <- .builder_study(snapshot$Raw_STUDY, phase, therapeutic_area)
 
   # A protocol's schedule takes the place of the simulator's visits.
   schedule_note <- NULL

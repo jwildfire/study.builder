@@ -37,3 +37,49 @@ describe('the modules keep to themselves', () => {
     expect(build).toContain('src/viewer/index.js');
   });
 });
+
+describe('the builder makes no data', () => {
+  // Every row is gsm.datasim's. What study.builder's R still makes or changes
+  // is fenced, to be moved; outside the fence it only asks, runs workflows and
+  // writes tables out as text.
+  const r = readFileSync(path.resolve(src, '../r/builder.R'), 'utf8');
+  const begin = '# ==== TO MOVE TO gsm.datasim: begin ====';
+  const end = '# ==== TO MOVE TO gsm.datasim: end ====';
+
+  it('what makes or changes a table is inside the fence, and nowhere else', () => {
+    expect(r.split(begin)).toHaveLength(2);
+    expect(r.split(end)).toHaveLength(2);
+    const outside = r.slice(0, r.indexOf(begin)) + r.slice(r.indexOf(end));
+    const code = outside
+      .split('\n')
+      .filter((line) => !line.trim().startsWith('#'))
+      .join('\n');
+    for (const making of [
+      'data.frame(',
+      'sample(',
+      'sample.int(',
+      'rbind(',
+      'rnorm(',
+      'runif(',
+      '$phase <-'
+    ]) {
+      expect(
+        code.replaceAll('is.data.frame(', '').replaceAll('as.data.frame(', ''),
+        making
+      ).not.toContain(making);
+    }
+  });
+
+  it('the fence lists the pieces it holds, and holds no others', () => {
+    const inside = r.slice(r.indexOf(begin), r.indexOf(end));
+    const defined = [...inside.matchAll(/^(\.builder_[a-z_]+) <- function/gm)].map((m) => m[1]);
+    expect(defined.sort()).toEqual([
+      '.builder_gsm_names',
+      '.builder_schedule',
+      '.builder_site_id',
+      '.builder_site_ids',
+      '.builder_study',
+      '.builder_vitals'
+    ]);
+  });
+});
