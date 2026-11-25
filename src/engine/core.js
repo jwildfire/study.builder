@@ -143,7 +143,7 @@ export const LAYERS = Object.freeze([
     id: 'raw.rbqm',
     label: 'Raw.RBQM',
     about:
-      'Raw under gsm’s names, by gsm.mapping’s own workflows. gsm calls these tables Mapped; its site metrics read them.',
+      'What gsm.mapping’s own workflows change in raw, for gsm’s site metrics. A table they leave as it was is not repeated here: the metrics read the raw one.',
     optional: true
   }),
   Object.freeze({

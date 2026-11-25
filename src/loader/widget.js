@@ -79,6 +79,10 @@ export function sizeSaid(settings) {
  * @param {string|Element} target The element, or a selector for it, to draw into.
  * @param {Object} [options]
  * @param {Object} [options.settings] What the form opens on, as `readSettings` takes settings.
+ * @param {Object} [options.study] A built study to open on, as `buildStudy` or `openStudy` gives one.
+ * @param {boolean} [options.studyOnly] Draw the open study and nothing else: its facts and its views, with no way to the library or the form. For a page that has its own list of studies. `mountStudy` sets it.
+ * @param {{view: string, table: string}} [options.viewing] Where the study's views open.
+ * @param {(at: Object) => void} [options.onView] Called as the reader moves between the study's views and tables.
  * @param {string} [options.screen] The screen to open on: `library` (unless there is nothing to list) or `describe`.
  * @param {string} [options.base] The address study.builder's `r/`, `vendor/` and `presets/` folders are served under.
  * @param {{run: Function}} [options.connection] A connection to R the page already has.
@@ -100,6 +104,10 @@ export function mount(
   {
     settings: opening = {},
     screen: openingScreen = null,
+    study: openingStudy = null,
+    studyOnly = false,
+    viewing: openingViewing = null,
+    onView = null,
     base = './',
     connection = null,
     createConnection: connect = null,
@@ -167,7 +175,7 @@ export function mount(
   let presets = Array.isArray(presetsGiven) ? presetsGiven : [];
   const shelf = shelfGiven === false ? null : shelfGiven || createShelf();
   let shelved = [];
-  let screen = openingScreen === 'describe' ? 'describe' : 'library';
+  let screen = openingStudy ? 'study' : openingScreen === 'describe' ? 'describe' : 'library';
   // idle → building → idle, or → failed.
   let phase = 'idle';
   let stage = '';
@@ -175,10 +183,10 @@ export function mount(
   let failure = '';
   let said = ''; // what the last open or save did, in a sentence
   let saidKind = 'note';
-  let study = null;
+  let study = openingStudy || null;
   let builds = 0;
   let viewer = null; // study.viewer, while the study screen is on the page
-  let viewing = {}; // where the reader was in the viewer
+  let viewing = { ...(openingViewing || {}) }; // where the reader was in the viewer
   let touched = false; // whether the reader has done anything yet
   let destroyed = false;
 
@@ -1095,60 +1103,63 @@ export function mount(
     const page = el('div', 'sb-screen');
     page.dataset.screen = 'study';
     page.dataset.built = study.id;
-    const head = el('div', 'sb-head');
-    const words = el('div');
-    if (listed()) words.append(button('sb-link', '← Studies', () => go('library'), 'back'));
-    const title = el('div', 'sb-title');
-    const state = el(
-      'span',
-      'sb-pill',
-      study.opened ? 'Opened, not built' : `Built in ${Number(study.seconds).toFixed(1)} s`
-    );
-    state.dataset.kind = study.opened ? 'saved' : 'ready';
-    title.append(el('h2', null, study.id), state);
-    if (study.manifest) {
-      const key = el('span', 'sb-soft sb-key', `key ${study.manifest.key.slice(7, 15)}…`);
-      key.title = 'The same tables always give the same key.';
-      key.dataset.key = study.manifest.key;
-      title.append(key);
+    // A page with its own list of studies shows the study alone: no head.
+    if (!studyOnly) {
+      const head = el('div', 'sb-head');
+      const words = el('div');
+      if (listed()) words.append(button('sb-link', '← Studies', () => go('library'), 'back'));
+      const title = el('div', 'sb-title');
+      const state = el(
+        'span',
+        'sb-pill',
+        study.opened ? 'Opened, not built' : `Built in ${Number(study.seconds).toFixed(1)} s`
+      );
+      state.dataset.kind = study.opened ? 'saved' : 'ready';
+      title.append(el('h2', null, study.id), state);
+      if (study.manifest) {
+        const key = el('span', 'sb-soft sb-key', `key ${study.manifest.key.slice(7, 15)}…`);
+        key.title = 'The same tables always give the same key.';
+        key.dataset.key = study.manifest.key;
+        title.append(key);
+      }
+      words.append(title);
+      const actions = el('div', 'sb-row');
+      if (shelf && shelf.available) {
+        actions.append(button('', 'Save', () => keep(savedOf(study), 'This study'), 'save-study'));
+      }
+      actions.append(
+        button(
+          '',
+          'Study file',
+          () => save(`${study.id}.study.json`, JSON.stringify(savedOf(study)), 'application/json'),
+          'download-study'
+        ),
+        button(
+          '',
+          'Download all (.zip)',
+          () => {
+            const { layers } = study.files();
+            save(
+              `${study.id}.zip`,
+              zipOf([
+                { name: 'manifest.json', text: `${JSON.stringify(study.manifest, null, 2)}\n` },
+                { name: 'metadata.json', text: `${JSON.stringify(study.metadata, null, 2)}\n` },
+                ...Object.entries(layers).flatMap(([layer, files]) =>
+                  files.map((file) => ({ ...file, name: `${layer}/${file.name}` }))
+                )
+              ]),
+              'application/zip'
+            );
+          },
+          'zip'
+        )
+      );
+      if (typeof onStudy === 'function') {
+        actions.append(button('sb-primary', useLabel, () => onStudy(study), 'use'));
+      }
+      head.append(words, actions);
+      page.append(head);
     }
-    words.append(title);
-    const actions = el('div', 'sb-row');
-    if (shelf && shelf.available) {
-      actions.append(button('', 'Save', () => keep(savedOf(study), 'This study'), 'save-study'));
-    }
-    actions.append(
-      button(
-        '',
-        'Study file',
-        () => save(`${study.id}.study.json`, JSON.stringify(savedOf(study)), 'application/json'),
-        'download-study'
-      ),
-      button(
-        '',
-        'Download all (.zip)',
-        () => {
-          const { layers } = study.files();
-          save(
-            `${study.id}.zip`,
-            zipOf([
-              { name: 'manifest.json', text: `${JSON.stringify(study.manifest, null, 2)}\n` },
-              { name: 'metadata.json', text: `${JSON.stringify(study.metadata, null, 2)}\n` },
-              ...Object.entries(layers).flatMap(([layer, files]) =>
-                files.map((file) => ({ ...file, name: `${layer}/${file.name}` }))
-              )
-            ]),
-            'application/zip'
-          );
-        },
-        'zip'
-      )
-    );
-    if (typeof onStudy === 'function') {
-      actions.append(button('sb-primary', useLabel, () => onStudy(study), 'use'));
-    }
-    head.append(words, actions);
-    page.append(head);
 
     const args = study.args;
     const facts = el('div', 'sb-facts-row');
@@ -1163,9 +1174,11 @@ export function mount(
     ]) {
       facts.append(el('span', 'sb-fact', String(fact)));
     }
-    facts.append(button('sb-link', 'Change and rebuild', () => go('describe'), 'change'));
+    if (!studyOnly) {
+      facts.append(button('sb-link', 'Change and rebuild', () => go('describe'), 'change'));
+    }
     page.append(facts);
-    const line = saidLine();
+    const line = studyOnly ? null : saidLine();
     if (line) page.append(line);
 
     const holder = el('div', 'sb-viewer');
@@ -1200,6 +1213,7 @@ export function mount(
       ],
       onChange: (at) => {
         viewing = at;
+        if (typeof onView === 'function') onView(at);
       }
     });
     return page;
@@ -1312,6 +1326,25 @@ export function mount(
       builder.close();
     }
   };
+}
+
+/**
+ * Draw one built study and nothing else: its facts in a line, then its
+ * overview, its schedule when it followed a protocol, and its tables, columns
+ * and participants. For a page that lists studies itself.
+ * @param {string|Element} target The element, or a selector for it, to draw into.
+ * @param {Object} options `study` (a built study), and `theme`, `viewing`, `onView` and `save` as `mount` takes them.
+ * @returns {{study: Function, state: Function, destroy: Function}} The handle.
+ */
+export function mountStudy(target, options = {}) {
+  if (!options.study) throw new Error('study.builder: mountStudy needs a study.');
+  return mount(target, {
+    ...options,
+    studyOnly: true,
+    presets: false,
+    shelf: false,
+    protocols: false
+  });
 }
 
 /**

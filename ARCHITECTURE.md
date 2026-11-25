@@ -1,6 +1,21 @@
 # How study.builder is put together
 
-study.builder is three modules and a small shared one. Each has one job, and a test (`tests/architecture.test.js`) fails when one reads another it may not.
+## What a reader uses: three modules
+
+| Module        | Its job                                  | Parts                                                                           | Where its code is today                                                               |
+| ------------- | ---------------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Portfolio     | List the studies there are, and open one | Ready-made, saved, settings only, open a file                                   | The loader's library screen; `fetchPresets`, `createShelf`, `openStudy` in the engine |
+| Study view    | Show one study                           | Facts, Overview, Schedule, and the viewer's Tables, Columns and One participant | The loader's study screen (`mountStudy`), over `src/viewer/`                          |
+| Study builder | Describe a study and build it            | The trial, the schedule grid, layers and domains, the build                     | The loader's describe screen, over `src/engine/`                                      |
+
+- `StudyBuilder.mount` is the three together: portfolio, then builder, then study view.
+- `StudyBuilder.mountStudy` is the study view alone, for a page with its own list of studies (safety.viz's Data tab).
+- A program builder (several studies built together) and snapshots in the study view are planned, and are not built.
+- The three are screens of one source module today, the loader. Giving each its own folder under `src/` is the next step of this structure, and is not done.
+
+## How the code is laid out
+
+Underneath, the code is three source modules and a small shared one. Each has one job, and a test (`tests/architecture.test.js`) fails when one reads another it may not.
 
 | Module | Folder        | Its job                                                                                                                                        | May read               |
 | ------ | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |

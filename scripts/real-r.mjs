@@ -95,11 +95,14 @@ check(
 );
 const rbqm = first.layers[1].tables;
 check(
-  'Raw.RBQM has a mapped table for each raw domain and one of countries, by gsm.mapping workflows',
-  rbqm.length === 12 &&
+  'Raw.RBQM keeps only the mapped tables that differ from raw: a copy of a raw table is dropped',
+  rbqm.length < 12 &&
+    rbqm.length >= 4 &&
     rbqm.every(
       (table) => table.table === `Mapped_${table.id}` && table.made.workflow === table.table
-    ),
+    ) &&
+    ['SUBJ', 'SITE', 'STUDY', 'COUNTRY'].every((id) => rbqm.some((table) => table.id === id)) &&
+    !rbqm.some((table) => table.id === 'AE' || table.id === 'LB'),
   rbqm.map((table) => table.table).join(' ')
 );
 check(
@@ -135,8 +138,9 @@ check(
   analysis.map((table) => table.id).join(' ')
 );
 check(
-  'a site metric reads Raw.RBQM, and says so',
-  first.table('analysis', 'kri0001').made.from.join() === 'Mapped_AE,Mapped_SUBJ'
+  'a site metric reads raw where the mapped table was a copy of it, and says so',
+  first.table('analysis', 'kri0001').made.from.join() === 'Raw_AE,Mapped_SUBJ',
+  first.table('analysis', 'kri0001').made.from.join()
 );
 const summary = firstRows(first.table('analysis', 'AESummary').text, 100);
 check(

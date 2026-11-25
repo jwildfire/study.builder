@@ -6,12 +6,25 @@ You describe a trial: its phase, therapeutic area, participants, sites, months a
 
 Try it: https://jwildfire.github.io/study.builder/
 
-Status: experimental, v0.2.0 in development (v0.1.0 is the latest release). Every row is synthetic.
+Status: experimental, v0.3.0 in release candidates (v0.1.0 is the latest release). Every row is synthetic.
+
+## Three modules
+
+study.builder is three things a reader uses, each with its parts. A page takes all three together, or one alone.
+
+| Module        | What it is                       | Its parts                                                                                                                                                  | On a page                                                                                                 |
+| ------------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Portfolio     | The list of studies you can have | Ready-made studies with their data; studies saved in this browser; settings only, which Build makes; opening a study or settings file                      | The first screen of `StudyBuilder.mount`. A page with its own list reads `fetchPresets` and `createShelf` |
+| Study view    | One study, looked through        | Its facts in a line; Overview; Schedule, when it followed a protocol; Tables, Columns and One participant across every layer (study.viewer)                | `StudyBuilder.mountStudy(target, { study })`                                                              |
+| Study builder | A study described, and built     | The trial (phase, area, size, seed); a protocol's schedule of activities, edited as a grid; the layers and raw domains; what building gives, and the build | The form of `StudyBuilder.mount`; `buildStudy` and `createBuilder` with no page                           |
+
+- Planned, not built: a **program builder**, which describes and builds several studies together.
+- Planned, not built: **snapshots** in the study view. gsm.datasim already makes a study as monthly snapshots; the app shows only the last.
+- Under all three is one engine (settings, the build in R, layers, metadata, saving and opening) that has no page. [ARCHITECTURE.md](ARCHITECTURE.md) has how the code is laid out.
 
 ## What it gives you
 
 - **A study in layers.** Raw is the root: what gsm.datasim simulates. Every other layer is built off it by workflows, and every table says which workflow made it and what that workflow read.
-- **A widget.** A form for the trial and the layers to build, with the 19 raw domains folded into one line. A built study opens on an overview, with a tab for each layer: a short list of its tables beside a viewer that shows the open table's first rows, a summary of every column, and a download.
 - **A plain function.** Settings in, data out, with no page at all. This is how another package loads simulated data.
 - **A manifest.** A checksum for every table and one key for the whole study. The same tables always give the same key.
 
@@ -20,7 +33,7 @@ Status: experimental, v0.2.0 in development (v0.1.0 is the latest release). Ever
 | Layer     | Id          | What it is                                                                                                              | Built by                                        |
 | --------- | ----------- | ----------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
 | Raw       | `raw`       | One table per domain, as a study database gives them                                                                    | gsm.datasim                                     |
-| Raw.RBQM  | `raw.rbqm`  | Raw under gsm's names: the tables gsm calls Mapped, which its site metrics read                                         | gsm.mapping's own workflows                     |
+| Raw.RBQM  | `raw.rbqm`  | The mapped tables that differ from raw; a copy of a raw table is dropped and the metrics read raw                       | gsm.mapping's own workflows                     |
 | ADaM      | `adam`      | Analysis-ready tables for charts of participants: ADSL, ADAE, ADVS                                                      | study.builder's workflows, in `workflows/adam/` |
 | Analysis  | `analysis`  | Statistics worked out from a data layer: gsm's eight site metrics from Raw.RBQM, and an adverse event summary from ADaM | gsm.kri's workflows, and `workflows/analysis/`  |
 | Reporting | `reporting` | Results in the shape a chart reads: gsm's Results, Bounds, Groups and Metrics                                           | gsm.reporting's workflows                       |
@@ -179,7 +192,7 @@ study.protocol.visits; // the schedule the build followed
 
 ## How it is put together
 
-Three modules with boundaries a test holds: the engine makes and keeps a study, the viewer looks through any study, and the loader is the screens. See [ARCHITECTURE.md](ARCHITECTURE.md).
+The portfolio, the study view and the study builder are screens over three source modules with boundaries a test holds: the engine makes and keeps a study, the viewer looks through any study, and the loader is the screens. See [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Settings
 

@@ -2,10 +2,11 @@
 // and hand its data to any page.
 //
 //   StudyBuilder.mount(target, options)        the builder, drawn on a page
+//   StudyBuilder.mountStudy(target, options)   one built study, for a page with its own list
 //   StudyBuilder.buildStudy(settings, options) a study with no page at all
 //   StudyBuilder.createBuilder(options)        the same, keeping R for more
 
-import { mount as mountAt } from './loader/widget.js';
+import { mount as mountAt, mountStudy as mountStudyAt } from './loader/widget.js';
 import { buildStudy as build, createBuilder as create } from './engine/build.js';
 
 /* global __STUDY_BUILDER_VERSION__ */
@@ -29,6 +30,8 @@ const withBase = (options = {}) => ({ base: scriptBase, ...options });
 
 /** Mount the builder on a page; see widget.js. */
 export const mount = (target, options) => mountAt(target, withBase(options));
+/** Draw one built study and nothing else; see widget.js. */
+export const mountStudy = (target, options) => mountStudyAt(target, withBase(options));
 /** Build one study with no page; see build.js. */
 export const buildStudy = (settings, options) => build(settings, withBase(options));
 /** A builder that keeps R between studies; see build.js. */

@@ -3,7 +3,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { StudyBuilderError, createBuilder, rOptions, studyOf } from '../src/engine/build.js';
 import { createConnection, foldersOf } from '../src/engine/r.js';
 import { FILES_STAMP } from '../src/engine/files.js';
-import { mount } from '../src/loader/widget.js';
+import { mount, mountStudy } from '../src/loader/widget.js';
 import { readSettings } from '../src/engine/core.js';
 import {
   CONFIG_FORMAT,
@@ -573,6 +573,27 @@ describe('the loader on a page', () => {
     q('[data-table="adam:ADAE"]').click();
     expect(q('.sv-title').textContent).toContain('ADAE');
     expect(handle.state().viewing).toMatchObject({ view: 'tables', table: 'adam:ADAE' });
+  });
+
+  it('draws one built study alone for a page with its own list: its facts and its views, no head, no way to the form', async () => {
+    mounted();
+    const study = await handle.build();
+    handle.destroy();
+    const onView = vi.fn();
+    document.body.innerHTML = '<div id="b"></div>';
+    handle = mountStudy('#b', { study, viewing: { view: 'tables' }, onView });
+    expect(handle.state().screen).toBe('study');
+    expect(q('.sb-head')).toBeNull();
+    expect(q('[data-action="change"]')).toBeNull();
+    expect(q('[data-action="back"]')).toBeNull();
+    expect(document.querySelectorAll('.sb-fact')).toHaveLength(6);
+    expect([...document.querySelectorAll('.sv-view')].map((tab) => tab.textContent)).toContain(
+      'Overview'
+    );
+    expect(q('.sv-view[aria-selected="true"]').textContent).toBe('Tables');
+    q('.sv-view[data-view="overview"]').click();
+    expect(onView).toHaveBeenCalled();
+    expect(() => mountStudy('#b', {})).toThrow(/needs a study/);
   });
 
   it('hands the study to the page, downloads it whole, and goes back to its settings to change them', async () => {
