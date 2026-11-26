@@ -21,8 +21,9 @@
 #   (`source_col`), where it would name them as the source system does.
 # - Site ids that begin "SITE", where it would write "0X1234". R reads a column
 #   of such values from a CSV file as hexadecimal numbers.
-# - A study table whose `phase` and `therapeutic_area` are what was asked for.
-#   Neither shapes the data.
+# - A study table whose `phase` and `therapeutic_area` are what was asked for,
+#   and study results shaped by them a little: gsm.datasim's study profile.
+#   A protocol's own indication is handed on for the study table.
 
 # The packages gsm.datasim's code calls by bare name, or by package.
 builder_packages <- c(
@@ -57,8 +58,7 @@ builder_limits <- list(
 builder_notes <- c(
   "Arms, lab results, ECGs and adverse event terms are gsm.datasim's study results: a lab's toxicity grade is not worked out from its result, and the terms are a short list of its own, not MedDRA.",
   "gsm.datasim is asked for columns under gsm's names, as gsm.mapping's specs say, where it would name them as the source system does.",
-  "gsm.datasim is asked for site ids that begin SITE, where it would write 0X1234, which R would read back from a file as a number.",
-  "The study table's phase and therapeutic area are what was asked for. gsm.datasim does not shape the data by either."
+  "gsm.datasim is asked for site ids that begin SITE, where it would write 0X1234, which R would read back from a file as a number."
 )
 
 .builder_state <- new.env()
@@ -543,11 +543,16 @@ builder_run <- function(
   # panels drawn. That plan is gsm.datasim's study design.
   design <- NULL
   arms <- NULL
+  indication <- NULL
   if (!is.null(protocol)) {
     if (!("VISIT" %in% wanted)) stop("A protocol's schedule needs the visits domain.", call. = FALSE)
     read <- yaml::yaml.load(as.character(protocol))
     design <- list(visits = read$plan)
     arms <- as.character(unlist(read$arms))
+    # The protocol's own indication is what the study table says.
+    if (is.character(read$indication) && length(read$indication) == 1 && nzchar(read$indication)) {
+      indication <- read$indication
+    }
   }
   # Arms, lab results and ECGs are gsm.datasim's to make: its `results`. The
   # arms are the protocol's when there is one, and gsm.datasim's own otherwise.
@@ -578,9 +583,11 @@ builder_run <- function(
     # A protocol's schedule is gsm.datasim's to follow: its `design`.
     design = design,
     results = results,
-    # The study table says the phase and the area asked for.
+    # The study table says the phase and the area asked for, and gsm.datasim
+    # shapes the study results by them: its study profile.
     phase = phase,
     therapeutic_area = therapeutic_area,
+    indication = indication,
     # Vital signs, by the spec handed in; gsm's column names; ids a CSV keeps.
     specs = if (with_vitals) vitals_spec["Raw_VS"] else NULL,
     column_names = "gsm",
@@ -588,6 +595,12 @@ builder_run <- function(
     verbose = FALSE
   ))
   dates <- names(study$raw_data)
+  # What the phase and the area changed, in gsm.datasim's own words.
+  profile_note <- paste0(
+    "Phase and therapeutic area shape the study results a little, by gsm.datasim's study profile. ",
+    study_profile(phase, therapeutic_area)$said,
+    " The numbers are guesses at believable sizes, not fitted to data."
+  )
 
   # One snapshot, through every layer asked for. gsm.datasim made each
   # snapshot; the same workflows are run on whichever is asked for.
@@ -623,7 +636,7 @@ builder_run <- function(
       ))
     })
     out <- list(list(id = "raw", label = "Raw", tables = raw))
-    notes <- c(builder_notes, schedule_note)
+    notes <- c(builder_notes, profile_note, schedule_note)
 
     # "raw" may be named among them and asks for nothing more: a page always
     # names it, so that a study of raw alone is not asked for with an empty list.

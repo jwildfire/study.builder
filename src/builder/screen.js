@@ -9,6 +9,7 @@ import {
   LIMITS,
   OUTLIERS,
   PHASES,
+  profileSaid,
   ASSUMED,
   SNAPSHOTS,
   readAssumptions,
@@ -764,7 +765,7 @@ export function builderScreen(app) {
       el(
         'p',
         'sb-soft',
-        'Every row is synthetic. Phase and area are labels: they do not shape the data yet.'
+        `Every row is synthetic. Phase and area shape the results a little. ${profileSaid(s.form.phase, s.form.area)}`
       )
     );
     page.append(main, side);

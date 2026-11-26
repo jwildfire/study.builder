@@ -47,6 +47,8 @@ export {
   LIMITS,
   OUTLIERS,
   PHASES,
+  PROFILE_SAID,
+  profileSaid,
   SNAPSHOTS,
   STANDARD,
   ASSUMED,

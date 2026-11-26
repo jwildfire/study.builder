@@ -28,8 +28,13 @@
 #'   by arm), terms for the adverse events, and participants who leave early. See
 #'   [apply_study_results()]. Default `NULL`.
 #' @param phase,therapeutic_area Optional. What the study table says of each,
-#'   in place of the value drawn at random. Labels only: neither shapes the
-#'   data. The random draw is still made, so naming one changes nothing else.
+#'   in place of the value drawn at random. The random draw is still made, so
+#'   naming one moves nothing the generators make. With `results`, the two also
+#'   shape the study results a little, by the study's profile: see
+#'   [study_profile()] for what each changes and by how much. Default `NULL`.
+#' @param indication Optional. What the study table says the indication is, in
+#'   place of the value drawn at random; a study with a protocol hands its own.
+#'   When left out and the therapeutic area's profile names one, that is used.
 #'   Default `NULL`.
 #' @param specs Optional named list of table specs for domains the installed
 #'   `gsm.mapping` has no mapping workflow for, as `list(Raw_VS = <spec>)`.
@@ -76,6 +81,7 @@ create_longitudinal_study <- function(study_id = "STUDY-001",
                                       results = NULL,
                                       phase = NULL,
                                       therapeutic_area = NULL,
+                                      indication = NULL,
                                       specs = NULL,
                                       column_names = c("source", "gsm"),
                                       site_id_prefix = "0X",
@@ -84,6 +90,11 @@ create_longitudinal_study <- function(study_id = "STUDY-001",
   validate_study_inputs(participants, sites, snapshots, domains)
   design <- validate_study_design(design)
   results <- validate_study_results(results)
+  # The study's profile: what its phase and area change in the study results.
+  # One handed in with the results is used as it is.
+  profile <- study_profile(phase, therapeutic_area)
+  if (!is.null(results) && is.null(results$profile)) results$profile <- profile
+  if (is.null(indication) && !is.null(results)) indication <- results$profile$indication
   column_names <- match.arg(column_names)
   specs <- validate_study_specs(specs)
   site_id_prefix <- validate_site_id_prefix(site_id_prefix)
@@ -103,6 +114,7 @@ create_longitudinal_study <- function(study_id = "STUDY-001",
     risk_profile = risk_profile,
     phase = phase,
     therapeutic_area = therapeutic_area,
+    indication = indication,
     specs = specs,
     site_id_prefix = site_id_prefix,
     verbose = verbose

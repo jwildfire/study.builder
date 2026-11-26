@@ -86,6 +86,15 @@
 #' who reached `day`. Rows for people who were never enrolled are kept.
 #' The participant table's own days-on-study columns are left as they were.
 #'
+#' @section Profile:
+#' `results$profile` is the study's profile, as [study_profile()] returns one:
+#' what its phase and therapeutic area change. It widens or narrows the spread
+#' of lab results, changes the share of participants with a rise in liver or
+#' kidney tests, makes some classes of adverse event commoner, and moves a
+#' share of adverse events to or from serious and a grade up or down.
+#' `create_longitudinal_study()` sets it from its `phase` and
+#' `therapeutic_area`; `FALSE` is the neutral profile, which changes nothing.
+#'
 #' @section What is not modelled:
 #' A lab's toxicity grade (`toxgrg_nsv`) is the simulator's own and is not
 #' worked out from the result beside it. An adverse event's term does not
@@ -97,8 +106,8 @@
 #' @param results `TRUE` for the default (two arms, "Placebo" and "Active",
 #'   and ECGs), or a list with `arms` (character vector of arm names), `ecg`
 #'   (logical), `scores` (a list of scores to follow; see Scores), `events`
-#'   (see Adverse events) and `dropout` (see Dropout). `NULL` or `FALSE` adds
-#'   nothing.
+#'   (see Adverse events), `dropout` (see Dropout) and `profile` (see
+#'   Profile). `NULL` or `FALSE` adds nothing.
 #' @param snapshot_date The snapshot's date, for what has happened by then. The
 #'   last date in the snapshot when left out.
 #'
@@ -132,6 +141,15 @@ apply_study_results <- function(lRaw, results = TRUE, snapshot_date = NULL) {
   placebo <- grep("placebo|control", arms, ignore.case = TRUE)
   placebo <- if (length(placebo)) arms[placebo[1]] else arms[1]
   active <- enrolled & !is.na(arm) & arm != placebo
+
+  # What the study's phase and therapeutic area change (see `study_profile()`).
+  # The shares of participants with each lab pattern are worked out once, so
+  # the labs and the adverse events that say so agree.
+  profile <- if (is.null(results$profile)) study_profile() else results$profile
+  share_chronic <- min(0.5, 0.12 * profile$chronic)
+  share_liver <- min(0.5, 0.12 * profile$liver)
+  share_liver_more <- min(0.25, 0.06 * profile$liver)
+  share_kidney <- min(0.5, 0.06 * profile$kidney)
 
   day_one <- as.Date(rep(NA_character_, nrow(subj)))
   for (column in intersect(c("firstdosedate", "enrolldt", "firstparticipantdate"), names(subj))) {
@@ -172,7 +190,7 @@ apply_study_results <- function(lRaw, results = TRUE, snapshot_date = NULL) {
     t <- .results_key(test)
     v <- if (is.null(lb_visit)) rep(0, nrow(lb)) else .results_key(as.character(lb[[lb_visit]]))
     days <- if (is.null(lb_visit)) rep(NA_real_, nrow(lb)) else days_at(as.character(lb$subjid), as.character(lb[[lb_visit]]))
-    spread <- log(range$hi / range$lo) / 4
+    spread <- log(range$hi / range$lo) / 4 * profile$spread
     level <- stats::qnorm(.results_unif(s, t, salt = 21))
     noise <- stats::qnorm(.results_unif(s, t, v, salt = 22))
     value <- exp(log(sqrt(range$lo * range$hi)) + spread * (0.8 * level + 0.6 * noise))
@@ -192,18 +210,18 @@ apply_study_results <- function(lRaw, results = TRUE, snapshot_date = NULL) {
     transaminase <- range$kind %in% c("alt", "ast")
     factor <- rep(1, nrow(lb))
     # Above the range from the start, on every arm.
-    from_start <- transaminase & is_enrolled & chronic < 0.12
+    from_start <- transaminase & is_enrolled & chronic < share_chronic
     factor[from_start] <- chronic_size[from_start]
     # A rise after the first dose on an arm that is not placebo; a small one, rarely, on placebo.
-    drug <- transaminase & is_active & liver < 0.12
+    drug <- transaminase & is_active & liver < share_liver
     factor[drug] <- factor[drug] * (1 + (liver_size[drug] - 1) * rise[drug])
     mild <- transaminase & is_enrolled & !is_active & liver < 0.03
     factor[mild] <- factor[mild] * (1 + 1.2 * rise[mild])
-    bili <- range$kind == "tb" & is_active & liver < 0.06
+    bili <- range$kind == "tb" & is_active & liver < share_liver_more
     factor[bili] <- 1 + (3 + liver_size[bili] / 3) * rise[bili]
-    alp <- range$kind == "alp" & is_active & liver < 0.06
+    alp <- range$kind == "alp" & is_active & liver < share_liver_more
     factor[alp] <- 1 + 0.4 * rise[alp]
-    creat <- range$kind == "creat" & is_active & kidney < 0.06
+    creat <- range$kind == "creat" & is_active & kidney < share_kidney
     factor[creat] <- 1 + (kidney_size[creat] - 1) * stays[creat]
 
     lRaw$Raw_LB[["lbresn"]] <- signif(value * factor, 3)
@@ -326,6 +344,9 @@ apply_study_results <- function(lRaw, results = TRUE, snapshot_date = NULL) {
     all(c("subjid", "mdrpt_nsv", "mdrsoc_nsv") %in% names(lRaw$Raw_AE))) {
     ae <- as.data.frame(lRaw$Raw_AE, stringsAsFactors = FALSE)
     terms <- .results_ae_terms()
+    # A class the study's profile makes commoner is drawn that many times as often.
+    more <- unname(profile$classes[terms$soc])
+    terms$weight <- terms$weight * ifelse(is.na(more), 1, more)
     if (!all(as.character(ae$mdrpt_nsv) %in% terms$term)) {
       ae_subj <- as.character(ae$subjid)
       who <- match(ae_subj, id)
@@ -354,6 +375,13 @@ apply_study_results <- function(lRaw, results = TRUE, snapshot_date = NULL) {
       ae$mdrpt_nsv <- term
       ae$mdrsoc_nsv <- soc
       # A serious event is grade 3 or more; one that is not serious, 3 or less.
+      # The study's profile moves a share of events to serious, or from it.
+      if ("aeser" %in% names(ae) && profile$serious != 0) {
+        was <- !is.na(ae$aeser) & ae$aeser == "Y"
+        move <- .results_unif(s, nth, salt = 75) < abs(profile$serious)
+        if (profile$serious > 0) ae$aeser[!was & !is.na(ae$aeser) & move] <- "Y"
+        if (profile$serious < 0) ae$aeser[was & move] <- "N"
+      }
       if (all(c("aeser", "aetoxgr") %in% names(ae))) {
         grade <- suppressWarnings(as.integer(ae$aetoxgr))
         serious <- !is.na(ae$aeser) & ae$aeser == "Y"
@@ -362,6 +390,18 @@ apply_study_results <- function(lRaw, results = TRUE, snapshot_date = NULL) {
         grade[raise] <- ifelse(up[raise] < 0.6, 3L, ifelse(up[raise] < 0.9, 4L, 5L))
         lower <- !serious & !is.na(grade) & grade > 3L
         grade[lower] <- 3L
+        # The study's profile moves a share of events a grade up, or down,
+        # within what seriousness allows: 3 or more when serious, 3 or less when not.
+        if (profile$severe != 0) {
+          step <- .results_unif(s, nth, salt = 76) < abs(profile$severe) & !is.na(grade)
+          if (profile$severe > 0) {
+            grade[step & ((serious & grade < 5L) | (!serious & grade < 3L))] <-
+              grade[step & ((serious & grade < 5L) | (!serious & grade < 3L))] + 1L
+          } else {
+            grade[step & ((serious & grade > 3L) | (!serious & grade > 1L))] <-
+              grade[step & ((serious & grade > 3L) | (!serious & grade > 1L))] - 1L
+          }
+        }
         ae$aetoxgr <- grade
       }
 
@@ -374,11 +414,11 @@ apply_study_results <- function(lRaw, results = TRUE, snapshot_date = NULL) {
         told <- .results_unif(key, salt = 74) < 0.8
         signals <- list(
           list(
-            who = active & .results_unif(key, salt = 31) < 0.12 & told, day = liver_day - 21,
+            who = active & .results_unif(key, salt = 31) < share_liver & told, day = liver_day - 21,
             term = "Alanine aminotransferase increased"
           ),
           list(
-            who = active & .results_unif(key, salt = 36) < 0.06 & told, day = rep(21, length(key)),
+            who = active & .results_unif(key, salt = 36) < share_kidney & told, day = rep(21, length(key)),
             term = "Blood creatinine increased"
           ),
           list(
@@ -574,7 +614,7 @@ validate_study_results <- function(results) {
   }
   list(
     arms = arms, ecg = is.null(results$ecg) || isTRUE(as.logical(results$ecg)[1]), scores = scores,
-    events = events, dropout = dropout
+    events = events, dropout = dropout, profile = validate_study_profile(results$profile)
   )
 }
 
