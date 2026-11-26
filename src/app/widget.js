@@ -108,6 +108,7 @@ export function mount(
     chosen: new Set(),
     layersChosen: new Set(),
     presets: Array.isArray(presetsGiven) ? presetsGiven : [],
+    protocols: [], // the ready-made protocols' facts, for the portfolio's list
     shelved: [],
     screen: openingStudy ? 'study' : openingScreen === 'describe' ? 'describe' : 'library',
     // idle → building → idle, or → failed.
@@ -405,6 +406,24 @@ export function mount(
       arrived();
     });
   }
+  // The ready-made protocols are listed with the studies, each with the facts
+  // the list beside the protocol files gives. A page with its own protocols,
+  // or none, lists none.
+  if (presetsGiven !== false && protocolsGiven === undefined && typeof fetch === 'function') {
+    Promise.resolve()
+      .then(() => fetch(`${withSlash}protocols/index.json`))
+      .then((response) => (response && response.ok ? response.json() : []))
+      .then(
+        (found) => {
+          if (s.destroyed || !Array.isArray(found) || !found.length) return;
+          s.protocols = found
+            .filter((one) => one && one.id && one.file)
+            .map((one) => ({ ...one, url: `${withSlash}protocols/${one.file}` }));
+          if (s.screen === 'library') draw();
+        },
+        () => {}
+      );
+  }
 
   return {
     /** Build the study the form describes, as pressing Build does. */
@@ -428,6 +447,7 @@ export function mount(
       failure: s.failure,
       said: s.said,
       presets: s.presets.map((preset) => preset.id),
+      protocols: s.protocols.map((protocol) => protocol.id),
       shelved: s.shelved.map((entry) => entry.id),
       viewing: { ...s.viewing }
     }),

@@ -35,7 +35,8 @@
         <p>
           Every study you can have, in one table. A study with its data ready opens at once; one
           that is settings only is built first. Studies and settings you save stay in this browser.
-          The <a href="#protocols-title">protocols</a> a new study can follow are below.
+          A protocol a new study can follow is a row too: CDISC's five public USDM examples, the
+          data form of an ICH M11 protocol.
         </p>
         <p class="next">
           Open takes you to the <a href="./study.html">study view</a>. Build, Edit and New study
@@ -45,21 +46,6 @@
 
       <div id="portfolio"></div>
       <noscript>study.builder needs JavaScript.</noscript>
-
-      <section class="tool" id="protocols-head">
-        <h2 id="protocols-title">Protocols</h2>
-        <p>
-          A study can follow a protocol's schedule of activities. study.builder reads a CDISC USDM
-          study definition, version 4: the data form of an ICH M11 protocol. These are CDISC's own
-          five public examples, each as the reader makes it, and each builds a study with real R.
-        </p>
-        <p class="next">
-          Open one in the <a href="./builder.html">study builder</a> to see its schedule as a grid,
-          change it, and build. Your own USDM file opens there too.
-        </p>
-      </section>
-      <p id="said" role="status">Fetching the protocols…</p>
-      <div id="protocols" class="protocols"></div>
 
       <footer>
         Everything runs in this browser. Nothing is sent anywhere. Data is simulated by
@@ -81,79 +67,6 @@
             )
         }
       });
-    </script>
-    <script>
-      // The list is written by `npm run protocols` from the copied example files.
-      (async () => {
-        const said = document.getElementById('said');
-        const box = document.getElementById('protocols');
-        const el = (tag, className, text) => {
-          const node = document.createElement(tag);
-          if (className) node.className = className;
-          if (text !== undefined) node.textContent = text;
-          return node;
-        };
-        let list = [];
-        try {
-          const response = await fetch('./protocols/index.json');
-          if (!response.ok) throw new Error('The list of protocols could not be fetched.');
-          list = await response.json();
-        } catch (error) {
-          said.textContent = error && error.message ? error.message : String(error);
-          return;
-        }
-        said.textContent = '';
-        const phases = { P1: 'Phase 1', P2: 'Phase 2', P3: 'Phase 3', P4: 'Phase 4' };
-        for (const one of list) {
-          const card = el('article', 'protocol');
-          card.dataset.protocol = one.id;
-          card.append(el('span', 'protocol-name', one.name), el('h3', null, one.title || one.name));
-          const facts = el('dl');
-          const fact = (label, value) => {
-            if (value === null || value === undefined || value === '') return;
-            facts.append(el('dt', null, label), el('dd', null, String(value)));
-          };
-          fact('Phase', phases[one.phase] || one.phase);
-          fact('Indication', one.indication);
-          fact('Planned', one.participants ? one.participants + ' participants' : '');
-          fact('Arms', one.arms.join(', '));
-          fact('Schedule', one.visits + ' visits, day ' + one.days[0] + ' to ' + one.days[1]);
-          fact(
-            'Activities',
-            one.activities +
-              ' scheduled, ' +
-              one.simulated +
-              ' simulated; vital signs at ' +
-              one.vitals +
-              ' visits, labs at ' +
-              one.labs
-          );
-          if (one.design) {
-            fact(
-              'Design',
-              one.design.objectives +
-                ' objectives, ' +
-                one.design.endpoints +
-                ' endpoints, ' +
-                one.design.estimands +
-                (one.design.estimands === 1 ? ' estimand' : ' estimands')
-            );
-          }
-          card.append(facts);
-          if (one.notes.length) {
-            const left = el('details');
-            left.append(el('summary', null, 'What is left out: ' + one.notes.length));
-            const lines = el('ul');
-            for (const note of one.notes) lines.append(el('li', null, note));
-            left.append(lines);
-            card.append(left);
-          }
-          const open = el('a', 'protocol-open', 'Open in the study builder →');
-          open.href = './builder.html#protocol:' + encodeURIComponent(one.id);
-          card.append(open, el('span', 'protocol-source', 'From CDISC DDF-RA · ' + one.source));
-          box.append(card);
-        }
-      })();
     </script>
   </body>
 </html>

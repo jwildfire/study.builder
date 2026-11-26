@@ -631,6 +631,45 @@ describe('the loader on a page', () => {
     expect(r.connect).not.toHaveBeenCalled();
   });
 
+  it('lists the ready-made protocols as rows of the studies table, and hands the page the one to use', async () => {
+    const listed = [
+      {
+        id: 'pilot',
+        file: 'pilot.protocol.json',
+        name: 'CDISC PILOT',
+        title: 'LZZT',
+        phase: 'P2',
+        indication: 'Alzheimer’s disease',
+        participants: 300,
+        arms: ['Placebo', 'Low', 'High'],
+        visits: 16,
+        activities: 30,
+        simulated: 6
+      }
+    ];
+    const fetched = vi.fn(async () => ({ ok: true, json: async () => listed }));
+    vi.stubGlobal('fetch', fetched);
+    const builder = vi.fn();
+    mounted({ presets: [SETTINGS_ONLY], links: { builder } });
+    await settle();
+    vi.unstubAllGlobals();
+    expect(fetched).toHaveBeenCalledWith(expect.stringMatching(/protocols\/index\.json$/));
+    expect(handle.state().protocols).toEqual(['pilot']);
+    const row = q('[data-protocol="protocol:pilot"]');
+    expect(row.querySelector('strong').textContent).toBe('LZZT (CDISC PILOT)');
+    expect(row.querySelector('.sb-pill').textContent).toBe('Protocol');
+    expect(row.querySelector('.sb-data').textContent).toBe('Protocol only');
+    expect(row.textContent).toContain('300 participants planned · 3 arms · 16 visits');
+    expect(row.textContent).toContain('Phase 2, Alzheimer’s disease. 30 activities scheduled');
+    row.querySelector('[data-action="use-protocol"]').click();
+    expect(builder).toHaveBeenLastCalledWith('protocol:pilot', {});
+    // A page with protocols of its own, or none, lists none.
+    handle.destroy();
+    mounted({ presets: [SETTINGS_ONLY], protocols: false });
+    await settle();
+    expect(q('[data-protocol]')).toBeNull();
+  });
+
   it('shows the pipeline: what the study was asked to be, a card for every workflow by layer, and a workflow as it is written', async () => {
     const { saved } = mounted();
     const study = await handle.build();

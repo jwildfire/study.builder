@@ -37,6 +37,7 @@ export const STYLES = `
 .sb-said[data-kind=problem]{background:none;border:1px solid var(--sb-bad);color:var(--sb-bad)}
 .sb-pill{align-self:flex-start;font:600 .64rem/1 var(--sb-mono);letter-spacing:.06em;text-transform:uppercase;padding:.3rem .5rem;border-radius:999px;white-space:nowrap;background:var(--sb-accent-soft);color:var(--sb-accent)}
 .sb-pill[data-kind=saved]{background:var(--sb-blue-soft);color:var(--sb-blue)}
+.sb-pill[data-kind=protocol]{background:var(--sb-ok-soft);color:var(--sb-ok)}
 .sb-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,15rem),1fr));gap:.9rem}
 .sb-card{display:flex;flex-direction:column;gap:.45rem;min-width:0;padding:1rem;background:var(--sb-card);border:1px solid var(--sb-rule);border-radius:12px}
 .sb-card-new{border-style:dashed;background:none}
