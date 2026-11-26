@@ -3,7 +3,7 @@
     {
       "id": "phase1-small",
       "name": "Phase 1, small: 40 participants at 4 sites",
-      "about": "A small early study over 6 months. Quick to open and to look through.",
+      "about": "A small early study over 6 months, with every monthly snapshot kept. Quick to open and to look through.",
       "hosted": true,
       "settings": {
         "name": "READY-P1",
@@ -12,7 +12,8 @@
         "participants": 40,
         "sites": 4,
         "months": 6,
-        "seed": 101
+        "seed": 101,
+        "snapshots": "all"
       }
     },
     {
@@ -76,6 +77,7 @@
         "sites": 12,
         "months": 7,
         "seed": 505,
+        "snapshots": "all",
         "domains": ["VISIT", "AE", "LB", "VS", "EG", "PD", "STUDCOMP", "SDRGCOMP"]
       }
     }

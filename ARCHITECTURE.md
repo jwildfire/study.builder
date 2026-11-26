@@ -10,7 +10,7 @@
 
 - `StudyBuilder.mount` is the three together: portfolio, then builder, then study view. It is `src/app/`, which holds what the three share and moves a reader between them.
 - `StudyBuilder.mountStudy` is the study view alone, for a page with its own list of studies (safety.viz's Data tab). It starts no R and reads no saved studies.
-- A program builder (several studies built together) and snapshots in the study view are planned, and are not built.
+- A program builder (several studies built together) is planned, and is not built.
 
 ## How the code is laid out
 
@@ -48,6 +48,7 @@ Seven folders under `src/`. Each has one job, and a test (`tests/architecture.te
 - **A page's own views.** `mount(..., { views: [{ id, label, render }] })` puts a page's views before the viewer's three. The study view uses it for the overview and the schedule.
 - **Mapping.** A table may carry `roles`: what a page reads from it (`{ id, label, kind, value, options, needed }`). The viewer shows them in Columns and calls `onRole(table, role, value)`; the page changes its mapping and hands the study back with `setStudy(next, { keep: true })`. The viewer holds no mapping of its own.
 - **A study, kept.** `savedOf(study)` is the settings and what R returned; `openStudy(document)` rebuilds the same study with no R and checks its key. Presets are a list of settings, some with the address of such a document.
+- **Snapshots.** R returns the last snapshot as the study, and the earlier ones under `history` when asked, each put through the same workflows. `studyOf` reads an earlier one only when it is asked for (`study.at(date)`); the manifest gives each a key and folds them into the study's. The study view swaps the viewer's study and keeps the reader's place.
 - **A protocol.** `src/engine/protocol.js` holds study.builder's own small model of a design (visits with day and window, activities, which is at which) and the one reader that fills it from CDISC USDM. Settings carry a `protocol`; R is sent it as text with the plan worked out; nothing else knows USDM.
 - **A host page** (safety.viz) uses the engine to list and open studies, the builder to make one, the study view to show one it made, and the viewer to look through whatever is loaded, simulated or not.
 

@@ -17,7 +17,7 @@ import { studyScreen } from './screen.js';
  * @param {Object} options
  * @param {Object} options.study A built study, as `buildStudy` or `openStudy` gives one.
  * @param {?string} [options.theme] `light` or `dark`. Unless told, the widget matches the page behind it.
- * @param {{view: string, table: string}} [options.viewing] Where the study's views open.
+ * @param {{view: string, table: string, snapshot: string}} [options.viewing] Where the study's views open, and at which snapshot when the study kept them.
  * @param {(at: Object) => void} [options.onView] Called as the reader moves between views and tables.
  * @param {(name: string, bytes: Uint8Array|string, type: string) => void} [options.save] Something else to save a file with.
  * @returns {{study: Function, state: Function, destroy: Function}} The handle.

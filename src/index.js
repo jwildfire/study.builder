@@ -47,6 +47,7 @@ export {
   LIMITS,
   OUTLIERS,
   PHASES,
+  SNAPSHOTS,
   STANDARD,
   readSettings,
   withLayerNeeds,
@@ -56,7 +57,7 @@ export {
 export { DOWNLOADS, PACKAGES, StudyBuilderError, rOptions, studyOf } from './engine/build.js';
 export { WEBR_VERSION, createConnection } from './engine/r.js';
 export { firstRows } from './shared/csv.js';
-export { columnsOf, overviewOf } from './engine/overview.js';
+export { columnsOf, growthOf, overviewOf } from './engine/overview.js';
 export { zipOf } from './engine/zip.js';
 export { COPIED_FROM } from './engine/files.js';
 export { KEYS, RAW_LABELS, RESULT_LABELS, metadataOf } from './engine/metadata.js';

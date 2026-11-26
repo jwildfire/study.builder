@@ -2,10 +2,17 @@
 // what each layer holds.
 
 import { CAVEATS } from '../engine/core.js';
-import { overviewOf } from '../engine/overview.js';
+import { growthOf, overviewOf } from '../engine/overview.js';
 
-/** The study at a glance, for the viewer's first view. */
-export function overview({ el }, study, box) {
+/**
+ * The study at a glance, for the viewer's first view.
+ * @param {{el: Function}} dom The maker of elements.
+ * @param {Object} study The study, or one of its snapshots, to count.
+ * @param {Element} box Where to draw.
+ * @param {Object} [whole] The study the snapshot is of, for how it grew.
+ * @returns {void}
+ */
+export function overview({ el }, study, box, whole = study) {
   const about = overviewOf(study);
   const tiles = el('ul', 'sb-tiles');
   for (const one of about.counts) {
@@ -47,6 +54,27 @@ export function overview({ el }, study, box) {
       about.layers.map((row) => [row.label, String(row.tables), row.rows.toLocaleString('en-US')])
     )
   );
+  const number = (value) => (value === null ? '' : Number(value).toLocaleString('en-US'));
+  const growth = growthOf(whole);
+  if (growth.length) {
+    const grew = table(
+      'How the study grew, snapshot by snapshot',
+      ['Snapshot', 'Date', 'Participants', 'Sites', 'Visits', 'Adverse events'],
+      growth.map((row) => [
+        `${row.number} of ${growth.length}`,
+        row.date,
+        ...(row.problem
+          ? ['Not built', '', '', '']
+          : [row.participants, row.sites, row.visits, row.events].map(number))
+      ])
+    );
+    grew.classList.add('sb-growth');
+    [...grew.querySelectorAll('tbody tr')].forEach((line, index) => {
+      line.dataset.snapshot = growth[index].date;
+      if (growth[index].date === study.snapshotDate) line.setAttribute('aria-current', 'true');
+    });
+    lower.append(grew);
+  }
   const notes = el('details', 'sb-caveats');
   notes.append(el('summary', null, 'What a study built here is, and is not'));
   const lines = el('ul');

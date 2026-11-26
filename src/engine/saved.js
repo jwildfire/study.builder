@@ -50,6 +50,7 @@ export function settingsOfArgs(args) {
     months: args.months,
     outliers: outliers ? outliers.id : DEFAULTS.outliers,
     seed: args.seed === undefined ? null : args.seed,
+    ...(args.history ? { snapshots: 'all' } : {}),
     domains: [...args.domains],
     layers: [...args.layers],
     ...(args.protocol ? { protocol: protocolOfArgs(args) } : {})

@@ -81,7 +81,19 @@ export function studyScreen(context) {
               { name: 'metadata.json', text: `${JSON.stringify(study.metadata, null, 2)}\n` },
               ...Object.entries(layers).flatMap(([layer, files]) =>
                 files.map((file) => ({ ...file, name: `${layer}/${file.name}` }))
-              )
+              ),
+              // The earlier snapshots, when they were kept, each in a folder of its date.
+              ...(study.history || []).slice(0, -1).flatMap((entry) => {
+                const then = entry.study();
+                return then
+                  ? Object.entries(then.files().layers).flatMap(([layer, files]) =>
+                      files.map((file) => ({
+                        ...file,
+                        name: `snapshots/${entry.date}/${layer}/${file.name}`
+                      }))
+                    )
+                  : [];
+              })
             ]),
             'application/zip'
           );
@@ -96,6 +108,16 @@ export function studyScreen(context) {
     page.append(head);
   }
 
+  // The snapshot that is shown: the last, unless the reader was at another.
+  const kept = study.history || [];
+  let shown = (viewing.snapshot && study.at && study.at(viewing.snapshot)) || study;
+  let viewer = null;
+  let where = { view: viewing.view, table: viewing.table };
+  const tell = () => {
+    if (typeof onChange !== 'function') return;
+    onChange(kept.length > 1 ? { ...where, snapshot: shown.snapshotDate } : where);
+  };
+
   const args = study.args;
   const facts = el('div', 'sb-facts-row');
   const phaseOf = PHASES.find((entry) => entry.id === args.phase);
@@ -109,6 +131,35 @@ export function studyScreen(context) {
   ]) {
     facts.append(el('span', 'sb-fact', String(fact)));
   }
+  // A study that kept its monthly snapshots can be looked at as it stood at any.
+  if (kept.length > 1) {
+    const pick = el('label', 'sb-fact sb-snapshot');
+    const select = el('select');
+    select.name = 'snapshot';
+    for (const entry of kept) {
+      const option = el(
+        'option',
+        null,
+        `${entry.date} · ${entry.number} of ${kept.length}${entry.problem ? ' · not built' : ''}`
+      );
+      option.value = entry.date;
+      option.disabled = Boolean(entry.problem);
+      option.selected = entry.date === shown.snapshotDate;
+      if (entry.problem) option.title = entry.problem;
+      select.append(option);
+    }
+    select.onchange = () => {
+      const next = study.at(select.value);
+      if (!next) return;
+      shown = next;
+      page.dataset.snapshot = shown.snapshotDate;
+      viewer.setStudy(fromBuilt(shown), { keep: true });
+      tell();
+    };
+    pick.append(el('span', null, 'Snapshot'), select);
+    facts.append(pick);
+  }
+  page.dataset.snapshot = shown.snapshotDate;
   if (!studyOnly) {
     facts.append(button('sb-link', 'Change and rebuild', () => go('describe'), 'change'));
   }
@@ -118,14 +169,14 @@ export function studyScreen(context) {
 
   const holder = el('div', 'sb-viewer');
   page.append(holder);
-  const viewer = mountViewer(holder, {
-    study: fromBuilt(study),
+  viewer = mountViewer(holder, {
+    study: fromBuilt(shown),
     theme,
     save,
     view: viewing.view,
     table: viewing.table,
     views: [
-      { id: 'overview', label: 'Overview', render: (box) => overview({ el }, study, box) },
+      { id: 'overview', label: 'Overview', render: (box) => overview({ el }, shown, box, study) },
       // The protocol the build followed, when it followed one.
       ...(study.protocol
         ? [
@@ -147,7 +198,8 @@ export function studyScreen(context) {
         : [])
     ],
     onChange: (at) => {
-      if (typeof onChange === 'function') onChange(at);
+      where = at;
+      tell();
     }
   });
   return { page, viewer };

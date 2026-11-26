@@ -92,8 +92,33 @@ export function overviewOf(study) {
     facts,
     counts,
     countries,
-    layers
+    layers,
+    growth: growthOf(study)
   };
+}
+
+/**
+ * How a study grew, when its earlier snapshots were kept: the rows of its raw
+ * tables at each snapshot, oldest first. Counted from what each snapshot
+ * holds; no table's text is read.
+ * @param {Object} study What `buildStudy` resolved to.
+ * @returns {Array<{date: string, number: number, problem: ?string, participants: ?number, sites: ?number, visits: ?number, events: ?number}>} A line a snapshot; empty when only the last was kept.
+ */
+export function growthOf(study) {
+  const kept = (study.history || []).length > 1 ? study.history : [];
+  return kept.map((entry) => {
+    const then = entry.study();
+    const rows = (id) => (then && then.table('raw', id) ? then.table('raw', id).rows : null);
+    return {
+      date: entry.date,
+      number: entry.number,
+      problem: entry.problem,
+      participants: rows('SUBJ'),
+      sites: rows('SITE'),
+      visits: rows('VISIT'),
+      events: rows('AE')
+    };
+  });
 }
 
 /**

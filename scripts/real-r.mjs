@@ -207,6 +207,58 @@ check('and the same study has the same key', again.manifest.key === first.manife
 const other = await build({ seed: 8 });
 check('a different seed has a different key', other.manifest.key !== first.manifest.key);
 
+// 2b. Every monthly snapshot, everyMonth.
+const everyMonth = await build({
+  participants: 40,
+  sites: 4,
+  months: 4,
+  seed: 7,
+  snapshots: 'all'
+});
+const lastOnly = await build({ participants: 40, sites: 4, months: 4, seed: 7 });
+check(
+  'a study asked for every snapshot has one a month, oldest first',
+  everyMonth.history.length === 4 &&
+    everyMonth.history.every((entry, index) => entry.number === index + 1) &&
+    [...everyMonth.history]
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .every((entry, index) => entry === everyMonth.history[index]),
+  everyMonth.history.map((entry) => entry.date).join(' ')
+);
+check(
+  'every earlier snapshot was built, through every layer',
+  everyMonth.history.every(
+    (entry) => !entry.problem && entry.study().layers.length === everyMonth.layers.length
+  ),
+  everyMonth.history.map((entry) => entry.problem || 'ok').join(' | ')
+);
+check(
+  'a snapshot never holds more participants than the one after it',
+  everyMonth.history.every(
+    (entry, index) =>
+      index === 0 ||
+      everyMonth.history[index - 1].study().table('raw', 'SUBJ').rows <=
+        entry.study().table('raw', 'SUBJ').rows
+  ),
+  everyMonth.history.map((entry) => entry.study().table('raw', 'SUBJ').rows).join(' ')
+);
+check(
+  'keeping the earlier snapshots leaves the last as it is with none kept',
+  everyMonth.layers.every((layer, at) =>
+    layer.tables.every((table, index) => table.text === lastOnly.layers[at].tables[index].text)
+  ),
+  everyMonth.layers
+    .flatMap((layer, at) =>
+      layer.tables.filter((table, index) => table.text !== lastOnly.layers[at].tables[index].text)
+    )
+    .map((table) => `${table.layer}/${table.id}`)
+    .join(' ')
+);
+check(
+  'and its key covers them',
+  everyMonth.manifest.snapshots.length === 3 && everyMonth.manifest.key !== lastOnly.manifest.key
+);
+
 // 3. Every optional domain.
 const every = await build({
   participants: 60,

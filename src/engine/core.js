@@ -212,6 +212,15 @@ export const DEFAULT_DOMAINS = Object.freeze(
   DOMAINS.filter((domain) => !domain.core && domain.on).map((domain) => domain.id)
 );
 
+/**
+ * Which of a study's monthly snapshots are kept. gsm.datasim makes a study as
+ * a snapshot a month, each holding what was known by then.
+ */
+export const SNAPSHOTS = Object.freeze([
+  Object.freeze({ id: 'last', label: 'Last only' }),
+  Object.freeze({ id: 'all', label: 'Every month' })
+]);
+
 /** What a study is unless the caller says otherwise. */
 export const DEFAULTS = Object.freeze({
   name: 'BUILT-001',
@@ -222,6 +231,7 @@ export const DEFAULTS = Object.freeze({
   months: 9,
   outliers: 'typical',
   seed: null,
+  snapshots: 'last',
   protocol: null,
   domains: DEFAULT_DOMAINS,
   layers: DEFAULT_LAYERS
@@ -231,7 +241,7 @@ export const DEFAULTS = Object.freeze({
 export const CAVEATS = Object.freeze([
   'Every row is synthetic, made by gsm.datasim. No real participant or site is in it.',
   'Phase and therapeutic area are labels. gsm.datasim does not shape the data by either, so a phase only fills in a typical size.',
-  'Only the study’s last monthly snapshot is returned.',
+  'Only the study’s last monthly snapshot is kept, unless every month is asked for.',
   'Every table that is not raw is built off raw by a workflow, and says which. The ADaM tables are a light form: enough for charts, not a submission.',
   'The site metrics are gsm’s own, run as gsm runs them. A simulated study’s flags say nothing about any real site.',
   'Arms, lab results and ECGs are simulated: a few participants on an active arm have a rise in liver tests, creatinine or QTc. A lab’s toxicity grade is not worked out from its result, and adverse events do not follow the arm. Adverse event terms are placeholders.'
@@ -275,7 +285,7 @@ function whole(value) {
  * Read settings: every problem with them, each a sentence, and, when there is
  * none, what R is asked for. A setting left out is the default's; numbers may
  * be numbers or the text a form field holds.
- * @param {Object} [settings] `name`, `phase`, `area`, `participants`, `sites`, `months`, `outliers`, `seed`, `domains`, `layers` and `protocol` (a protocol whose schedule the build follows; protocol.js).
+ * @param {Object} [settings] `name`, `phase`, `area`, `participants`, `sites`, `months`, `outliers`, `seed`, `snapshots` (`last`, or `all` to keep every monthly snapshot), `domains`, `layers` and `protocol` (a protocol whose schedule the build follows; protocol.js).
  * @returns {{problems: string[], args: ?Object, domains: string[]}} The problems; the arguments of `builder_run` less the folders R is told; and every domain the study will hold.
  */
 export function readSettings(settings = {}) {
@@ -311,6 +321,9 @@ export function readSettings(settings = {}) {
   const seed = seedGiven === '' ? null : whole(seedGiven);
   if (seedGiven !== '' && (seed === null || seed > 2147483647)) {
     problems.push('The seed must be a whole number, or left empty.');
+  }
+  if (!SNAPSHOTS.some((entry) => entry.id === given.snapshots)) {
+    problems.push('Choose which snapshots to keep: the last only, or every month.');
   }
   const known = new Set(DOMAINS.map((domain) => domain.id));
   const chosen = Array.isArray(given.domains) ? given.domains : [];
@@ -370,6 +383,8 @@ export function readSettings(settings = {}) {
       layers,
       // A seed left empty is not sent: R then draws as it will.
       ...(seed === null ? {} : { seed }),
+      // Every monthly snapshot is kept only when asked: it is several times the work.
+      ...(given.snapshots === 'all' ? { history: true } : {}),
       // The protocol goes to R as text, with the plan R follows worked out here.
       ...(protocol ? { protocol: JSON.stringify({ ...protocol, plan: planOf(protocol) }) } : {})
     }

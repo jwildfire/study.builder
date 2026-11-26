@@ -19,7 +19,7 @@ study.builder is three things a reader uses, each with its parts. A page takes a
 | Study builder | A study described, and built     | The trial (phase, area, size, seed); a protocol's schedule of activities, edited as a grid; the layers and raw domains; what building gives, and the build | The form of `StudyBuilder.mount`; `buildStudy` and `createBuilder` with no page                           |
 
 - Planned, not built: a **program builder**, which describes and builds several studies together.
-- Planned, not built: **snapshots** in the study view. gsm.datasim already makes a study as monthly snapshots; the app shows only the last.
+- **Snapshots.** gsm.datasim makes a study as a snapshot a month. Ask for every month (`snapshots: 'all'`, or Snapshots kept in the form) and the study view has a snapshot picker: the study as it stood at any month, through every layer, and a table of how it grew. `study.history` lists them and `study.at(date)` returns one. The last only is kept unless asked, since every month is several times the work and the size.
 - Each has its own folder under `src/`: `portfolio`, `study` and `builder`.
 - Under all three is one engine (settings, the build in R, layers, metadata, saving and opening) that has no page. [ARCHITECTURE.md](ARCHITECTURE.md) has how the code is laid out.
 

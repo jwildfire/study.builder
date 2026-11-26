@@ -9,6 +9,7 @@ import {
   LIMITS,
   OUTLIERS,
   PHASES,
+  SNAPSHOTS,
   readSettings,
   withLayerNeeds,
   withNeeds,
@@ -275,7 +276,18 @@ export function builderScreen(app) {
         ),
         2.2
       ),
-      field('Seed · optional', input('seed', { type: 'number', min: 0 }))
+      field('Seed · optional', input('seed', { type: 'number', min: 0 })),
+      field(
+        'Snapshots kept',
+        segmented(
+          'snapshots',
+          SNAPSHOTS.map((entry) => [entry.id, entry.label]),
+          (value) => {
+            s.form = { ...s.form, snapshots: value };
+          }
+        ),
+        2
+      )
     );
     trial.append(first, second);
     main.append(el('h3', null, 'The trial'), trial);
@@ -414,7 +426,12 @@ export function builderScreen(app) {
       const fact = (label, value) => facts.append(el('dt', null, label), el('dd', null, value));
       if (read.args) {
         fact('Participants', `${read.args.participants} at ${count(read.args.sites, 'site')}`);
-        fact('Monthly snapshots', String(read.args.months));
+        fact(
+          'Monthly snapshots',
+          read.args.history
+            ? `${read.args.months}, every one kept`
+            : `${read.args.months}, the last kept`
+        );
       }
       if (s.form.protocol) fact('Planned visits', String(s.form.protocol.visits.length));
       fact('Raw domains', String(inStudy.size));

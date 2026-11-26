@@ -46,13 +46,24 @@ export async function manifestOf(study) {
   }
   // The key is of the tables alone: their layers, their names and their
   // checksums, in order. When and where the study was built is not in it.
-  const key = await sha256(tables.map((table) => `${table.file}:${table.sha256}`).join('\n'));
+  const lines = tables.map((table) => `${table.file}:${table.sha256}`);
+  // A study that keeps its earlier snapshots is keyed by them too: each has a
+  // key of its own, worked out the same way.
+  const snapshots = [];
+  for (const entry of (study.history || []).slice(0, -1)) {
+    const then = entry.study();
+    const key = then ? (await manifestOf(then)).key : `problem:${entry.problem}`;
+    snapshots.push({ snapshot_date: entry.date, key });
+    lines.push(`snapshot:${entry.date}:${key}`);
+  }
+  const key = await sha256(lines.join('\n'));
   return {
     format: MANIFEST_FORMAT,
     key: `sha256:${key}`,
     study: { id: study.id, snapshot_date: study.snapshotDate, snapshots: study.snapshots },
     simulation: { ...study.args },
     packages: { ...study.packages },
+    ...(snapshots.length ? { snapshots } : {}),
     tables
   };
 }

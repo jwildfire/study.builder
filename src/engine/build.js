@@ -231,6 +231,59 @@ function tableOf(entry, layer) {
  * @returns {Object} The study.
  */
 export function studyOf(value, args) {
+  const study = snapshotOf(value, args);
+  // The snapshots before the last, oldest first, when they were kept. Each is
+  // read only when it is asked for.
+  const earlier = list(value.history).map((entry, index) => {
+    const one = {
+      date: String(entry.snapshot_date),
+      number: index + 1,
+      problem: entry.problem ? String(entry.problem) : null
+    };
+    let read = null;
+    one.study = () => {
+      if (one.problem) return null;
+      if (!read) {
+        read = snapshotOf(
+          {
+            ...value,
+            layers: entry.layers,
+            snapshot_date: entry.snapshot_date,
+            history: undefined
+          },
+          args
+        );
+        read.snapshotNumber = one.number;
+      }
+      return read;
+    };
+    return one;
+  });
+  study.snapshotNumber = study.snapshots;
+  /**
+   * The study's snapshots, oldest first: each a `date`, its `number`, a
+   * `problem` when its workflows could not be run, and `study()`, the study as
+   * it stood then. The last is the study itself. One entry when only the last
+   * was kept.
+   */
+  study.history = [
+    ...earlier,
+    { date: String(study.snapshotDate), number: study.snapshots, problem: null, study: () => study }
+  ];
+  /**
+   * The study as it stood at a snapshot.
+   * @param {string} date A snapshot's date.
+   * @returns {?Object} That snapshot as a study, or null when it was not kept or could not be built.
+   */
+  study.at = (date) => {
+    const found = study.history.find((entry) => entry.date === String(date));
+    return found ? found.study() : null;
+  };
+  return study;
+}
+
+/** One snapshot R returned, as a study. */
+function snapshotOf(value, args) {
   const given = list(value && value.layers);
   const rawGiven = given.find((layer) => layer.id === 'raw');
   if (!rawGiven || !list(rawGiven.tables).length) {

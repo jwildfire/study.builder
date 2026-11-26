@@ -576,6 +576,73 @@ describe('the loader on a page', () => {
     expect(handle.state().viewing).toMatchObject({ view: 'tables', table: 'adam:ADAE' });
   });
 
+  it('keeps every monthly snapshot when asked, and shows the study as it stood at any', async () => {
+    // An earlier snapshot: one participant, no adverse event yet. And one that could not be built.
+    const earlier = {
+      snapshot_date: '2012-07-31',
+      layers: ANSWER.layers.map((layer) => ({
+        ...layer,
+        tables: layer.tables.map((table) =>
+          table.id === 'SUBJ' && layer.id === 'raw'
+            ? { ...table, rows: 1, text: '"studyid","subjid","agerep"\n"BUILT-001","S1",40\n' }
+            : table
+        )
+      }))
+    };
+    const history = [
+      { snapshot_date: '2012-06-30', problem: 'no visits yet', layers: [] },
+      earlier
+    ];
+    const { r, saved } = mounted({}, { status: 'ok', value: { ...ANSWER, snapshots: 3, history } });
+    q('[data-snapshots="all"]').click();
+    expect(handle.settings().snapshots).toBe('all');
+    const study = await handle.build();
+    expect(r.made[0].runs[0].request.args.history).toBe(true);
+    expect(
+      study.history.map((entry) => [entry.date, entry.number, Boolean(entry.problem)])
+    ).toEqual([
+      ['2012-06-30', 1, true],
+      ['2012-07-31', 2, false],
+      ['2012-09-30', 3, false]
+    ]);
+    expect(study.at('2012-07-31').table('raw', 'SUBJ').rows).toBe(1);
+    expect(study.at('2012-06-30')).toBeNull();
+    expect(study.at('2012-09-30')).toBe(study);
+    expect(study.manifest.snapshots.map((one) => one.snapshot_date)).toEqual([
+      '2012-06-30',
+      '2012-07-31'
+    ]);
+    // The key covers the earlier snapshots: the same study with none kept has another.
+    const alone = await openStudy({ ...savedOf(study), key: null, study: { ...ANSWER } });
+    expect(alone.manifest.key).not.toBe(study.manifest.key);
+    expect(alone.history).toHaveLength(1);
+    // A saved study keeps them.
+    const again = await openStudy(JSON.parse(JSON.stringify(savedOf(study))));
+    expect(again.manifest.key).toBe(study.manifest.key);
+    expect(again.history).toHaveLength(3);
+
+    const pick = q('select[name="snapshot"]');
+    expect([...pick.options].map((option) => [option.value, option.disabled])).toEqual([
+      ['2012-06-30', true],
+      ['2012-07-31', false],
+      ['2012-09-30', false]
+    ]);
+    expect(pick.value).toBe('2012-09-30');
+    expect(document.querySelectorAll('.sb-growth tbody tr')).toHaveLength(3);
+    expect(q('.sb-tile-value').textContent).toBe('2');
+    pick.value = '2012-07-31';
+    pick.dispatchEvent(new Event('change'));
+    expect(q('.sb-screen').dataset.snapshot).toBe('2012-07-31');
+    expect(q('.sb-tile-value').textContent).toBe('1');
+    expect(q('.sb-growth tr[aria-current="true"]').dataset.snapshot).toBe('2012-07-31');
+    expect(handle.state().viewing.snapshot).toBe('2012-07-31');
+    // The download holds the earlier snapshot in a folder of its date.
+    press('zip');
+    const names = new TextDecoder('latin1').decode(saved[0].bytes);
+    expect(names).toContain('snapshots/2012-07-31/raw/Raw_SUBJ.csv');
+    expect(names).not.toContain('snapshots/2012-06-30/');
+  });
+
   it('draws one built study alone for a page with its own list: its facts and its views, no head, no way to the form', async () => {
     mounted();
     const study = await handle.build();
