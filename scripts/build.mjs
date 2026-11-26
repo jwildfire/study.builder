@@ -90,6 +90,8 @@ for (const name of readdirSync(path.join(root, 'presets'))) {
     cpSync(path.join(root, 'presets', name), path.join(out, 'presets', name));
   }
 }
+// The studies feed: one list of all of them, and its format.
+cpSync(path.join(root, 'studies'), path.join(out, 'studies'), { recursive: true });
 // The site: a home page and a page for each part, each with the version said.
 for (const name of readdirSync(path.join(root, 'site'))) {
   if (name.endsWith('.html')) {

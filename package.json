@@ -20,6 +20,8 @@
     "protocols:check": "node scripts/protocols.mjs --check",
     "presets": "node scripts/presets.mjs",
     "presets:check": "node scripts/presets.mjs --check",
+    "studies": "node scripts/studies.mjs",
+    "studies:check": "node scripts/studies.mjs --check",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

@@ -3,11 +3,14 @@
 //
 //   StudyBuilder.mount(target, options)        the builder, drawn on a page
 //   StudyBuilder.mountStudy(target, options)   one built study, for a page with its own list
+//   StudyBuilder.mountPicker(target, options)  the studies feed as a list to pick from
 //   StudyBuilder.buildStudy(settings, options) a study with no page at all
+//   StudyBuilder.listStudies(url)              the studies feed, with no page; see engine/studies.js
 //   StudyBuilder.createBuilder(options)        the same, keeping R for more
 
 import { mount as mountAt } from './app/widget.js';
 import { mountStudy as mountStudyAt } from './study/widget.js';
+import { mountPicker as mountPickerAt } from './portfolio/picker.js';
 import { buildStudy as build, createBuilder as create } from './engine/build.js';
 
 /* global __STUDY_BUILDER_VERSION__ */
@@ -33,6 +36,8 @@ const withBase = (options = {}) => ({ base: scriptBase, ...options });
 export const mount = (target, options) => mountAt(target, withBase(options));
 /** Draw one built study and nothing else; see study/widget.js. */
 export const mountStudy = (target, options) => mountStudyAt(target, withBase(options));
+/** The studies feed as a list to pick from, and nothing else; see portfolio/picker.js. */
+export const mountPicker = (target, options) => mountPickerAt(target, withBase(options));
 /** Build one study with no page; see build.js. */
 export const buildStudy = (settings, options) => build(settings, withBase(options));
 /** A builder that keeps R between studies; see build.js. */
@@ -85,6 +90,17 @@ export {
   savedOf,
   settingsOfArgs
 } from './engine/saved.js';
+export {
+  KIND_MARKS,
+  STUDIES_FORMAT,
+  STUDY_KINDS,
+  describeStudy,
+  factsLine,
+  listStudies,
+  openListed,
+  readStudies,
+  readTable
+} from './engine/studies.js';
 export {
   ACTIVITY_DOMAINS,
   PROTOCOL_FORMAT,

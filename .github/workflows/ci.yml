@@ -24,6 +24,7 @@ jobs:
       - run: npm run files:check
       - run: npm run protocols:check
       - run: npm run presets:check
+      - run: npm run studies:check
       - run: npm test
       - run: npm run build:check
       - run: npm run build

@@ -1,0 +1,218 @@
+{
+  "format": "study.builder/studies/1",
+  "studies": [
+    {
+      "id": "preset:phase1-small",
+      "kind": "study",
+      "name": "Phase 1, small: 40 participants at 4 sites",
+      "about": "A small early study over 6 months, with every monthly snapshot kept. Quick to open and to look through.",
+      "facts": {
+        "study": "READY-P1",
+        "phase": "P1",
+        "area": "Oncology",
+        "participants": 40,
+        "sites": 4,
+        "months": 6,
+        "snapshots": 6
+      },
+      "line": "Phase 1 · 40 participants · 4 sites · 6 months",
+      "file": {
+        "url": "../presets/phase1-small.study.json.gz",
+        "sha256": "6eb32e43638bad289fcf205409da2157d100e3641ccf6ffd09de13a0632b3543",
+        "bytes": 1162846,
+        "key": "sha256:45b7142bb06f5fee9d81a90e1b34668a87653a29ba13eeedc08f1d2af2838dca"
+      }
+    },
+    {
+      "id": "preset:phase2-oncology",
+      "kind": "study",
+      "name": "Phase 2 oncology: 150 participants at 20 sites",
+      "about": "The builder's default study, over 9 months, with every layer.",
+      "facts": {
+        "study": "READY-P2",
+        "phase": "P2",
+        "area": "Oncology",
+        "participants": 150,
+        "sites": 20,
+        "months": 9,
+        "snapshots": 1
+      },
+      "line": "Phase 2 · 150 participants · 20 sites · 9 months",
+      "file": {
+        "url": "../presets/phase2-oncology.study.json.gz",
+        "sha256": "5eec799e3a82fb1db156749833f2d66488ae2f7d3f2fbb94c8619303d266a20a",
+        "bytes": 1346638,
+        "key": "sha256:001a419ded7a107c6f2ee8b932fb70578550b5830f67a134e0321f4682f488e9"
+      }
+    },
+    {
+      "id": "preset:phase2-many-outliers",
+      "kind": "settings",
+      "name": "Phase 2 virology, many outliers: 200 participants at 25 sites",
+      "about": "Settings only. More sites stand out, for trying site metrics and flags.",
+      "facts": {
+        "study": "OUTLIERS-P2",
+        "phase": "P2",
+        "area": "Virology",
+        "participants": 200,
+        "sites": 25,
+        "months": 9,
+        "snapshots": 1
+      },
+      "line": "Phase 2 · 200 participants · 25 sites · 9 months",
+      "settings": {
+        "name": "OUTLIERS-P2",
+        "phase": "P2",
+        "area": "Virology",
+        "participants": 200,
+        "sites": 25,
+        "months": 9,
+        "outliers": "many",
+        "seed": 303
+      }
+    },
+    {
+      "id": "preset:phase3-large",
+      "kind": "settings",
+      "name": "Phase 3, large: 500 participants at 60 sites",
+      "about": "Settings only: the largest study the builder makes, over 12 months. Too large to host, so Build makes it.",
+      "facts": {
+        "study": "LARGE-P3",
+        "phase": "P3",
+        "area": "Inflammation",
+        "participants": 500,
+        "sites": 60,
+        "months": 12,
+        "snapshots": 1
+      },
+      "line": "Phase 3 · 500 participants · 60 sites · 12 months",
+      "settings": {
+        "name": "LARGE-P3",
+        "phase": "P3",
+        "area": "Inflammation",
+        "participants": 500,
+        "sites": 60,
+        "months": 12,
+        "seed": 404
+      }
+    },
+    {
+      "id": "preset:cdisc-pilot-protocol",
+      "kind": "study",
+      "name": "CDISC pilot protocol: 16 visits on its schedule of activities",
+      "about": "Read from the pilot study's CDISC USDM file. Visits, vital signs and labs follow the protocol's schedule of activities. Bilirubin is added to its chemistry panel, which the file's lab list leaves out. ADAS-Cog (11) is simulated by arm: the 3.0 difference and 6.5 standard deviation are the protocol's own sample size sentence; the rest are ours.",
+      "facts": {
+        "study": "PILOT-PROTOCOL",
+        "phase": "P2",
+        "area": "Inflammation",
+        "participants": 120,
+        "sites": 12,
+        "months": 7,
+        "snapshots": 7,
+        "protocol": "CDISC PILOT - LZZT"
+      },
+      "line": "Phase 2 · 120 participants · 12 sites · 7 months",
+      "file": {
+        "url": "../presets/cdisc-pilot-protocol.study.json.gz",
+        "sha256": "d685afa9434d5fbc02a5e10aa6c7fd48927a6aa21924bb5f8aac77c8742c53b2",
+        "bytes": 2312936,
+        "key": "sha256:9e41ba70f50756281cc1d75663231303257bf61c7dcb1eed6bfc0297c5923cd1"
+      }
+    },
+    {
+      "id": "protocol:cdisc-pilot",
+      "kind": "protocol",
+      "name": "LZZT (CDISC PILOT - LZZT)",
+      "about": "30 activities scheduled, 6 simulated. From CDISC DDF-RA, CDISC_Pilot_Study.json.",
+      "facts": {
+        "phase": "P2",
+        "indication": "Alzheimer's disease",
+        "participants": 300,
+        "arms": 3,
+        "visits": 16
+      },
+      "line": "Phase 2 · 300 participants planned · 3 arms · 16 visits",
+      "file": {
+        "url": "../protocols/cdisc-pilot.protocol.json",
+        "sha256": "addd057e74d03da8a7e91ff60da72467f13a97a216921cf5d65e9f549d33ac7c",
+        "bytes": 21061
+      }
+    },
+    {
+      "id": "protocol:cdisc-pilot-devices",
+      "kind": "protocol",
+      "name": "H2Q-MC-LZZT (CDISC PILOT - LZZT)",
+      "about": "30 activities scheduled, 6 simulated. From CDISC DDF-RA, devices.json.",
+      "facts": {
+        "phase": "P2",
+        "indication": "Indication 1",
+        "participants": 300,
+        "arms": 3,
+        "visits": 16
+      },
+      "line": "Phase 2 · 300 participants planned · 3 arms · 16 visits",
+      "file": {
+        "url": "../protocols/cdisc-pilot-devices.protocol.json",
+        "sha256": "eb3a9f00d81e66c2b763c7d98edde61ea8dabada965558416fbc2aaed9083a00",
+        "bytes": 18932
+      }
+    },
+    {
+      "id": "protocol:alexion-wilsons",
+      "kind": "protocol",
+      "name": "Copper and Molybdenum Balance in Participants with Wilson Disease Treated with ALXN1840 (ALXN1840-WD-204)",
+      "about": "35 activities scheduled, 8 simulated. From CDISC DDF-RA, Alexion_NCT04573309_Wilsons.json.",
+      "facts": {
+        "phase": "P2",
+        "indication": "Wilson's Disease",
+        "participants": 10,
+        "arms": 1,
+        "visits": 51
+      },
+      "line": "Phase 2 · 10 participants planned · 1 arm · 51 visits",
+      "file": {
+        "url": "../protocols/alexion-wilsons.protocol.json",
+        "sha256": "752da07890946060eab0a5f9d8f361fb5246f8ffd53db7f769b8dcbed2e19be3",
+        "bytes": 34382
+      }
+    },
+    {
+      "id": "protocol:lilly-nasal-glucagon",
+      "kind": "protocol",
+      "name": "A Study of Nasal Glucagon (LY900018) in Japanese Participants With Diabetes Mellitus (LY900018)",
+      "about": "26 activities scheduled, 6 simulated. From CDISC DDF-RA, EliLilly_NCT03421379_Diabetes.json.",
+      "facts": {
+        "phase": "P3",
+        "indication": "T1DM",
+        "participants": 75,
+        "arms": 2,
+        "visits": 15
+      },
+      "line": "Phase 3 · 75 participants planned · 2 arms · 15 visits",
+      "file": {
+        "url": "../protocols/lilly-nasal-glucagon.protocol.json",
+        "sha256": "4ec0c9287f69ad34856c568e634b685d8effaea8e64ff167f582c6483cbc0f96",
+        "bytes": 17327
+      }
+    },
+    {
+      "id": "protocol:observational",
+      "kind": "protocol",
+      "name": "SIMPLE (SCOPE1)",
+      "about": "4 activities scheduled, 3 simulated. From CDISC DDF-RA, observational.json.",
+      "facts": {
+        "phase": "P3",
+        "indication": "Indication 1",
+        "participants": 120,
+        "arms": 2,
+        "visits": 6
+      },
+      "line": "Phase 3 · 120 participants planned · 2 arms · 6 visits",
+      "file": {
+        "url": "../protocols/observational.protocol.json",
+        "sha256": "990022a6a8a84759a733e21f920f8d791e9e8bc9e27f1e3e8988385c2075b63a",
+        "bytes": 7882
+      }
+    }
+  ]
+}
