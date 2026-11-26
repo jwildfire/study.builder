@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Study builder · study.builder</title>
+    <meta
+      name="description"
+      content="Describe a simulated clinical trial and build it in the browser with gsm.datasim."
+    />
+    <link rel="stylesheet" href="./site.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1><a href="./">study.builder</a></h1>
+        <span>v{{version}} · experimental</span>
+        <nav aria-label="study.builder">
+          <a href="./">Home</a>
+          <a href="./portfolio.html">Portfolio</a>
+          <a href="./study.html">Study view</a>
+          <a href="./builder.html" aria-current="page">Study builder</a>
+          <a href="https://github.com/jwildfire/study.builder">GitHub</a>
+        </nav>
+      </header>
+
+      <section class="tool">
+        <h2>Study builder</h2>
+        <p>
+          Describe a study and build it. Choose a phase and size, or open a CDISC protocol and the
+          study follows its schedule of activities; say what an efficacy score should do by arm;
+          choose the layers and raw domains. The first build starts R in this browser, which takes
+          about half a minute.
+        </p>
+        <p class="next">
+          When it is built, the study opens here in the study view, where you can save it. Saved
+          studies and settings are listed in the <a href="./portfolio.html">portfolio</a>.
+        </p>
+      </section>
+
+      <p id="said" role="status"></p>
+      <div id="builder"></div>
+      <noscript>study.builder needs JavaScript: it runs R in this browser.</noscript>
+
+      <footer>
+        Everything runs in this browser. Nothing is sent anywhere. Data is simulated by
+        <a href="https://github.com/Gilead-Public/gsm.datasim">gsm.datasim</a>.
+      </footer>
+    </main>
+
+    <script src="./study.builder.js"></script>
+    <script>
+      // The form alone. The address may name whose settings to start from:
+      // `preset:<id>` or `shelf:<id>`, with `&build` to build at once.
+      (async () => {
+        const said = document.getElementById('said');
+        const [asked, ...rest] = decodeURIComponent(window.location.hash.slice(1)).split('&');
+        const shelf = StudyBuilder.createShelf();
+        let settings = null;
+        try {
+          if (asked.startsWith('preset:')) {
+            const presets = await StudyBuilder.fetchPresets('./presets/index.json');
+            const found = presets.find((preset) => 'preset:' + preset.id === asked);
+            settings = found ? found.settings : null;
+          } else if (asked.startsWith('shelf:') && shelf.available) {
+            settings = (await shelf.open(asked.slice(6))).settings;
+          }
+        } catch (error) {
+          said.textContent = error && error.message ? error.message : String(error);
+        }
+        const handle = StudyBuilder.mount('#builder', {
+          screen: 'describe',
+          presets: false,
+          shelf,
+          ...(settings ? { settings } : {}),
+          // The way back to the list is this site's portfolio page.
+          links: { portfolio: () => window.location.assign('./portfolio.html') }
+        });
+        window.__studyBuilder = handle;
+        if (settings && rest.includes('build')) handle.build();
+      })();
+    </script>
+  </body>
+</html>

@@ -21,6 +21,7 @@ study.builder is three things a reader uses, each with its parts. A page takes a
 - Planned, not built: a **program builder**, which describes and builds several studies together.
 - **Snapshots.** gsm.datasim makes a study as a snapshot a month. Ask for every month (`snapshots: 'all'`, or Snapshots kept in the form) and the study view has a snapshot picker: the study as it stood at any month, through every layer, and a table of how it grew. `study.history` lists them and `study.at(date)` returns one. The last only is kept unless asked, since every month is several times the work and the size.
 - Each has its own folder under `src/`: `portfolio`, `study` and `builder`.
+- Each has a page of its own on the site: [portfolio](https://jwildfire.github.io/study.builder/portfolio.html), [study view](https://jwildfire.github.io/study.builder/study.html) and [study builder](https://jwildfire.github.io/study.builder/builder.html).
 - Under all three is one engine (settings, the build in R, layers, metadata, saving and opening) that has no page. [ARCHITECTURE.md](ARCHITECTURE.md) has how the code is laid out.
 
 ## What it gives you

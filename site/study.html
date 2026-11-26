@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Study view · study.builder</title>
+    <meta
+      name="description"
+      content="One simulated study, looked through: overview, schedule, design, efficacy, every table and one participant."
+    />
+    <link rel="stylesheet" href="./site.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1><a href="./">study.builder</a></h1>
+        <span>v{{version}} · experimental</span>
+        <nav aria-label="study.builder">
+          <a href="./">Home</a>
+          <a href="./portfolio.html">Portfolio</a>
+          <a href="./study.html" aria-current="page">Study view</a>
+          <a href="./builder.html">Study builder</a>
+          <a href="https://github.com/jwildfire/study.builder">GitHub</a>
+        </nav>
+      </header>
+
+      <section class="tool">
+        <h2>Study view</h2>
+        <p>
+          One study, looked through. Overview counts it; Schedule and Design show the protocol it
+          follows; Efficacy shows a score by arm; Tables, Columns and One participant go through
+          every layer. A study that kept its monthly snapshots has a Snapshot picker.
+        </p>
+        <p class="next">
+          Other studies are in the <a href="./portfolio.html">portfolio</a>. Make your own in the
+          <a href="./builder.html">study builder</a>.
+        </p>
+      </section>
+
+      <label class="pick">
+        Study
+        <select id="which" disabled>
+          <option>Fetching…</option>
+        </select>
+      </label>
+      <p id="said" role="status"></p>
+      <div id="study"></div>
+      <noscript>study.builder needs JavaScript.</noscript>
+
+      <footer>
+        Everything runs in this browser. Nothing is sent anywhere. Data is simulated by
+        <a href="https://github.com/Gilead-Public/gsm.datasim">gsm.datasim</a>.
+      </footer>
+    </main>
+
+    <script src="./study.builder.js"></script>
+    <script>
+      // The study view alone. The address names the study: `preset:<id>` for a
+      // ready-made one, `shelf:<id>` for one saved in this browser.
+      (async () => {
+        const said = document.getElementById('said');
+        const which = document.getElementById('which');
+        const FIRST = 'preset:cdisc-pilot-protocol';
+        const shelf = StudyBuilder.createShelf();
+        const presets = (await StudyBuilder.fetchPresets('./presets/index.json')).filter(
+          (preset) => preset.study
+        );
+        let saved = [];
+        try {
+          saved = shelf.available
+            ? (await shelf.list()).filter((entry) => entry.kind === 'study')
+            : [];
+        } catch {
+          saved = [];
+        }
+        const choices = [
+          ...presets.map((preset) => ({ id: 'preset:' + preset.id, name: preset.name, preset })),
+          ...saved.map((entry) => ({
+            id: 'shelf:' + entry.id,
+            name: entry.name + ' (saved in this browser)',
+            entry
+          }))
+        ];
+        which.replaceChildren(
+          ...choices.map((choice) => {
+            const option = document.createElement('option');
+            option.value = choice.id;
+            option.textContent = choice.name;
+            return option;
+          })
+        );
+        which.disabled = false;
+        let shown = null;
+        const show = async () => {
+          const asked = decodeURIComponent(window.location.hash.slice(1));
+          const choice =
+            choices.find((one) => one.id === asked) ||
+            choices.find((one) => one.id === FIRST) ||
+            choices[0];
+          if (shown) shown.destroy();
+          shown = null;
+          if (!choice) {
+            said.textContent = 'No study could be fetched from this page.';
+            return;
+          }
+          which.value = choice.id;
+          said.textContent = 'Opening ' + choice.name + '…';
+          try {
+            const study = choice.preset
+              ? (await StudyBuilder.openPreset(choice.preset)).study
+              : await StudyBuilder.openStudy(await shelf.open(choice.entry.id));
+            said.textContent = '';
+            shown = StudyBuilder.mountStudy('#study', { study });
+          } catch (error) {
+            said.textContent = error && error.message ? error.message : String(error);
+          }
+        };
+        which.onchange = () => {
+          window.location.hash = encodeURIComponent(which.value);
+        };
+        window.addEventListener('hashchange', show);
+        show();
+      })();
+    </script>
+  </body>
+</html>

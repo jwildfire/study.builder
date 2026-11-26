@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Portfolio · study.builder</title>
+    <meta
+      name="description"
+      content="The studies study.builder offers: ready-made, saved in this browser, or built from settings."
+    />
+    <link rel="stylesheet" href="./site.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1><a href="./">study.builder</a></h1>
+        <span>v{{version}} · experimental</span>
+        <nav aria-label="study.builder">
+          <a href="./">Home</a>
+          <a href="./portfolio.html" aria-current="page">Portfolio</a>
+          <a href="./study.html">Study view</a>
+          <a href="./builder.html">Study builder</a>
+          <a href="https://github.com/jwildfire/study.builder">GitHub</a>
+        </nav>
+      </header>
+
+      <section class="tool">
+        <h2>Portfolio</h2>
+        <p>
+          Every study you can have, in one table. A study with its data ready opens at once; one
+          that is settings only is built first. Studies and settings you save stay in this browser.
+        </p>
+        <p class="next">
+          Open takes you to the <a href="./study.html">study view</a>. Build, Edit and New study
+          take you to the <a href="./builder.html">study builder</a>.
+        </p>
+      </section>
+
+      <div id="portfolio"></div>
+      <noscript>study.builder needs JavaScript.</noscript>
+
+      <footer>
+        Everything runs in this browser. Nothing is sent anywhere. Data is simulated by
+        <a href="https://github.com/Gilead-Public/gsm.datasim">gsm.datasim</a>.
+      </footer>
+    </main>
+
+    <script src="./study.builder.js"></script>
+    <script>
+      // The portfolio alone: where it would open a study or the form, this
+      // page goes to the page of that part, naming the row in the address.
+      StudyBuilder.mount('#portfolio', {
+        links: {
+          study: (id) => window.location.assign('./study.html#' + encodeURIComponent(id)),
+          builder: (id, how) =>
+            window.location.assign(
+              './builder.html' +
+                (id ? '#' + encodeURIComponent(id) + (how && how.build ? '&build' : '') : '')
+            )
+        }
+      });
+    </script>
+  </body>
+</html>

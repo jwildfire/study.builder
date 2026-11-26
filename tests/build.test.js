@@ -578,6 +578,25 @@ describe('the loader on a page', () => {
     expect(handle.state().viewing).toMatchObject({ view: 'tables', table: 'adam:ADAE' });
   });
 
+  it('hands a page the row to show or to take settings from, when the page shows studies and the form elsewhere', async () => {
+    const study = vi.fn();
+    const builder = vi.fn();
+    const hosted = { ...SETTINGS_ONLY, id: 'small', study: './small.study.json' };
+    const { r } = mounted({ presets: [SETTINGS_ONLY, hosted], links: { study, builder } });
+    q('[data-study="preset:small"] [data-action="open"]').click();
+    expect(study).toHaveBeenCalledWith('preset:small');
+    q('[data-settings="preset:big"] [data-action="build-these"]').click();
+    expect(builder).toHaveBeenLastCalledWith('preset:big', { build: true });
+    q('[data-settings="preset:big"] [data-action="edit"]').click();
+    expect(builder).toHaveBeenLastCalledWith('preset:big', {});
+    press('new');
+    expect(builder).toHaveBeenLastCalledWith(null, {});
+    // The page stays on the portfolio, and R was never asked.
+    await settle();
+    expect(handle.state().screen).toBe('library');
+    expect(r.connect).not.toHaveBeenCalled();
+  });
+
   it('keeps every monthly snapshot when asked, and shows the study as it stood at any', async () => {
     // An earlier snapshot: one participant, no adverse event yet. And one that could not be built.
     const earlier = {

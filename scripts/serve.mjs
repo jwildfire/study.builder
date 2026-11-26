@@ -14,6 +14,7 @@ const flag = (name, otherwise) => {
 const port = Number(flag('--port', '8650'));
 const host = flag('--host', '127.0.0.1');
 const TYPES = {
+  '.css': 'text/css; charset=utf-8',
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
   '.mjs': 'text/javascript; charset=utf-8',

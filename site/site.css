@@ -1,0 +1,201 @@
+:root {
+  --bg: #fafaf8;
+  --ink: #1f2328;
+  --soft: #5b6470;
+  --rule: #e4e6e3;
+  --accent: #6c3270;
+  --code: #f1f0ec;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #15191c;
+    --ink: #e8e6e1;
+    --soft: #9aa5ab;
+    --rule: #2f373c;
+    --accent: #d9a3dd;
+    --code: #1c2226;
+  }
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font:
+    16px/1.5 -apple-system,
+    system-ui,
+    sans-serif;
+}
+main {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 1.6rem 1rem 4rem;
+}
+header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem 0.8rem;
+  margin: 0 0 1.4rem;
+  padding: 0 0 0.9rem;
+  border-bottom: 1px solid var(--rule);
+}
+header h1 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+header span,
+footer {
+  color: var(--soft);
+  font-size: 0.86rem;
+}
+header a,
+footer a,
+section a {
+  color: var(--accent);
+}
+header nav {
+  margin-left: auto;
+  font-size: 0.86rem;
+}
+section.use {
+  margin-top: 2.4rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--rule);
+}
+section.use h2 {
+  font-size: 1.05rem;
+  margin: 0 0 0.5rem;
+}
+section.use p {
+  max-width: 60rem;
+  margin: 0 0 0.7rem;
+}
+pre {
+  overflow-x: auto;
+  padding: 0.8rem 1rem;
+  background: var(--code);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+.about {
+  margin: 0 0 1.6rem;
+}
+.about h2 {
+  margin: 0 0 0.5rem;
+  font:
+    500 1.9rem/1.15 Georgia,
+    'Iowan Old Style',
+    serif;
+  text-wrap: balance;
+}
+.about p {
+  max-width: 46rem;
+  margin: 0 0 0.9rem;
+  color: var(--soft);
+}
+.about ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: 0.7rem;
+}
+.about li {
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  font-size: 0.9rem;
+}
+.about li strong {
+  display: block;
+  margin-bottom: 0.2rem;
+  font:
+    600 0.7rem/1.3 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.about .start {
+  margin: 0.9rem 0 0;
+  color: var(--ink);
+  font-size: 0.92rem;
+}
+#handed {
+  color: var(--soft);
+  font-size: 0.9rem;
+  min-height: 1.4rem;
+}
+footer {
+  margin-top: 2.4rem;
+}
+header nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 1rem;
+}
+header nav a[aria-current='page'] {
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: none;
+}
+header h1 a {
+  color: inherit;
+  text-decoration: none;
+}
+.about li a {
+  display: inline-block;
+  margin-top: 0.5rem;
+  color: var(--accent);
+  font-weight: 600;
+}
+.tool {
+  margin: 0 0 1.4rem;
+}
+.tool h2 {
+  margin: 0 0 0.4rem;
+  font:
+    500 1.6rem/1.2 Georgia,
+    'Iowan Old Style',
+    serif;
+}
+.tool p {
+  max-width: 46rem;
+  margin: 0 0 0.6rem;
+  color: var(--soft);
+}
+.tool .next {
+  color: var(--ink);
+  font-size: 0.92rem;
+}
+.tool a {
+  color: var(--accent);
+}
+.pick {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 1rem;
+  font-size: 0.92rem;
+}
+.pick select {
+  font: inherit;
+  max-width: 100%;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--ink);
+}
+#said {
+  color: var(--soft);
+  font-size: 0.9rem;
+  min-height: 1.4rem;
+}

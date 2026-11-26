@@ -9,7 +9,8 @@
 //   _site/study.viewer.mjs       the same, as a module
 //   _site/r/, _site/vendor/,     what R in the browser fetches
 //   _site/workflows/
-//   _site/index.html             the builder on a page of its own
+//   _site/index.html             the home page; portfolio.html, study.html and
+//                                builder.html show each part on a page of its own
 
 import { build } from 'esbuild';
 import { cpSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
@@ -89,11 +90,16 @@ for (const name of readdirSync(path.join(root, 'presets'))) {
     cpSync(path.join(root, 'presets', name), path.join(out, 'presets', name));
   }
 }
-const page = readFileSync(path.join(root, 'site/index.html'), 'utf8').replaceAll(
-  '{{version}}',
-  version
-);
-writeFileSync(path.join(out, 'index.html'), page);
+// The site: a home page and a page for each part, each with the version said.
+for (const name of readdirSync(path.join(root, 'site'))) {
+  if (name.endsWith('.html')) {
+    const page = readFileSync(path.join(root, 'site', name), 'utf8').replaceAll(
+      '{{version}}',
+      version
+    );
+    writeFileSync(path.join(out, name), page);
+  } else cpSync(path.join(root, 'site', name), path.join(out, name));
+}
 // GitHub Pages would otherwise run the folder through Jekyll.
 writeFileSync(path.join(out, '.nojekyll'), '');
 console.log(`✓ Built _site/ — study.builder ${version}`);

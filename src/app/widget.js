@@ -51,6 +51,7 @@ export { saveFile };
  * @param {string|Object[]|false} [options.presets] Ready-made studies and settings: the address of a list (`presets/index.json` under the base unless told), the presets themselves, or `false` for none.
  * @param {Object|false} [options.shelf] Where the reader's saved studies and settings are kept (`createShelf`); this browser unless told, and `false` for nowhere.
  * @param {Array<{label: string, url: string}>|false} [options.protocols] Ready-made protocols the form offers to try, each a name and the address of a protocol file; the CDISC pilot protocol under the base unless told, and `false` for none.
+ * @param {{study?: (id: string) => void, builder?: (id: ?string, how: {build?: boolean}) => void, portfolio?: () => void}} [options.links] For a page that shows a study, or the form, somewhere else: the portfolio calls `study` with a row's id (`preset:…` or `shelf:…`) where it would open it, `builder` where it would go to the form, with the row whose settings to take (or null for a new study) and whether to build at once; and `portfolio` where the form or the study would go back to the list.
  * @param {Function} [options.createBuilder] Something else to make the builder with; used by the tests.
  * @param {(name: string, bytes: Uint8Array|string, type: string) => void} [options.save] Something else to save a file with; used by the tests.
  * @returns {{build: Function, open: Function, show: Function, study: Function, settings: Function, state: Function, destroy: Function}} The handle.
@@ -75,7 +76,8 @@ export function mount(
     save = saveFile,
     presets: presetsGiven = undefined,
     shelf: shelfGiven = undefined,
-    protocols: protocolsGiven = undefined
+    protocols: protocolsGiven = undefined,
+    links = {}
   } = {}
 ) {
   const root = typeof target === 'string' ? document.querySelector(target) : target;
@@ -97,6 +99,7 @@ export function mount(
             }
           ];
   const shelf = shelfGiven === false ? null : shelfGiven || createShelf();
+  const elsewhere = links || {};
 
   // What the three modules share. Each screen reads it and changes it.
   const s = {
@@ -158,8 +161,13 @@ export function mount(
     s.saidKind = kind;
   };
   /** Whether the portfolio has anything to list. */
-  const listed = () => s.presets.length > 0 || s.shelved.length > 0;
+  const listed = () => Boolean(elsewhere.portfolio) || s.presets.length > 0 || s.shelved.length > 0;
   const go = (next) => {
+    // A page whose portfolio is somewhere else is told, in place of the list here.
+    if (next === 'library' && elsewhere.portfolio) {
+      elsewhere.portfolio();
+      return;
+    }
     s.screen = next;
     draw();
   };
@@ -300,7 +308,8 @@ export function mount(
     saidLine,
     fileButton,
     refreshShelf,
-    openDocument
+    openDocument,
+    links: elsewhere
   };
 
   function study() {
@@ -345,7 +354,7 @@ export function mount(
     const shell = el('div', 'sb');
     themed(shell, theme, root);
     // With nothing to list, the portfolio is only a way to the form.
-    if (s.screen === 'library' && !listed()) s.screen = 'describe';
+    if (s.screen === 'library' && (!listed() || elsewhere.portfolio)) s.screen = 'describe';
     if (s.screen === 'study' && !s.study) s.screen = 'describe';
     shell.append(
       s.screen === 'study'

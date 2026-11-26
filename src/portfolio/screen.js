@@ -30,7 +30,8 @@ export function portfolioScreen(app) {
     saidLine,
     fileButton,
     refreshShelf,
-    openDocument
+    openDocument,
+    links = {}
   } = app;
 
   function library() {
@@ -49,7 +50,12 @@ export function portfolioScreen(app) {
     const actions = el('div', 'sb-row');
     actions.append(
       fileButton(),
-      button('sb-primary', 'New study', () => go('describe'), 'new')
+      button(
+        'sb-primary',
+        'New study',
+        () => (links.builder ? links.builder(null, {}) : go('describe')),
+        'new'
+      )
     );
     head.append(words, actions);
     page.append(head);
@@ -168,11 +174,19 @@ export function portfolioScreen(app) {
       const act = el('td', 'sb-study-act');
       const buttons = el('div', 'sb-row');
       if (one.data) {
-        const open = button('sb-primary', 'Open', () => attempt(one.open), 'open');
+        // A page that shows a study elsewhere is told which; else it is opened here.
+        const open = button(
+          'sb-primary',
+          'Open',
+          () => (links.study ? links.study(one.id) : attempt(one.open)),
+          'open'
+        );
         open.setAttribute('aria-label', `Open ${one.name}`);
         buttons.append(open);
       } else {
-        const use = (then) => () =>
+        const use = (then, how) => () =>
+          links.builder ? links.builder(one.id, how) : useHere(then);
+        const useHere = (then) =>
           attempt(async () => {
             take(await one.settings());
             s.problems = [];
@@ -182,14 +196,14 @@ export function portfolioScreen(app) {
         const edit = button(
           '',
           'Edit',
-          use(() => go('describe')),
+          use(() => go('describe'), {}),
           'edit'
         );
         edit.setAttribute('aria-label', `Edit the settings of ${one.name}`);
         const run = button(
           'sb-primary',
           'Build',
-          use(() => build()),
+          use(() => build(), { build: true }),
           'build-these'
         );
         run.setAttribute('aria-label', `Build ${one.name}`);
