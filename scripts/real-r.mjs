@@ -259,17 +259,98 @@ check(
   everyMonth.manifest.snapshots.length === 3 && everyMonth.manifest.key !== lastOnly.manifest.key
 );
 
+// 2c. An efficacy score, on a protocol.
+const pilotProtocol = JSON.parse(
+  readFileSync(path.join(root, 'protocols/cdisc-pilot.protocol.json'), 'utf8')
+);
+const scored = await build({
+  name: 'SCORED',
+  participants: 300,
+  sites: 20,
+  months: 7,
+  seed: 505,
+  protocol: pilotProtocol,
+  efficacy: {
+    name: 'ADAS-Cog (11)',
+    visits: ['Baseline', 'Week 8', 'Week 16', 'Week 24'],
+    baseline: 24,
+    sd: 6.5,
+    change: 2.5,
+    effects: { 'Xanomeline Low Dose': -1.5, 'Xanomeline High Dose': -3 },
+    min: 0,
+    max: 70
+  }
+});
+const scores = firstRows(scored.table('raw', 'QS').text, Infinity);
+const scoreAt = (name) => scores.header.indexOf(name);
+check(
+  'an efficacy score is a raw scores table: only at the visits asked for, within its range',
+  scores.rows.length > 0 &&
+    scores.rows.every(
+      (row) =>
+        ['Baseline', 'Week 8', 'Week 16', 'Week 24'].includes(row[scoreAt('visnam')]) &&
+        Number(row[scoreAt('qsresn')]) >= 0 &&
+        Number(row[scoreAt('qsresn')]) <= 70
+    ),
+  `${scores.rows.length} rows`
+);
+check(
+  'ADQS is built from it by workflow, a row for a row, with a baseline and a change',
+  scored.table('adam', 'ADQS').rows === scores.rows.length &&
+    ['BASE', 'CHG', 'ABLFL'].every((column) =>
+      scored.table('adam', 'ADQS').columns.some((one) => one.name === column)
+    )
+);
+const scoreSummary = firstRows(scored.table('analysis', 'EfficacySummary').text, Infinity);
+const sumAt = (name) => scoreSummary.header.indexOf(name);
+const stat = (arm, visit, statistic) => {
+  const found = scoreSummary.rows.find(
+    (row) =>
+      row[sumAt('ARM')] === arm &&
+      row[sumAt('VISIT')] === visit &&
+      row[sumAt('STATISTIC')] === statistic
+  );
+  return found ? Number(found[sumAt('VALUE')]) : null;
+};
+check(
+  'the results table has a row a result: n, mean and sd for each arm and visit, and a difference from the reference arm',
+  stat('Placebo', 'Week 8', 'n') > 0 &&
+    stat('Placebo', 'Baseline', 'mean') === 0 &&
+    stat('Xanomeline High Dose', 'Week 8', 'difference') !== null &&
+    stat('Placebo', 'Week 8', 'difference') === null &&
+    scoreSummary.rows.every((row) => row[sumAt('REFARM')] === 'Placebo'),
+  scoreSummary.rows.length + ' rows'
+);
+check(
+  'the spread of the change is about what was asked for',
+  Math.abs(stat('Xanomeline High Dose', 'Week 8', 'sd') - 6.5) < 2,
+  String(stat('Xanomeline High Dose', 'Week 8', 'sd'))
+);
+const unscored = await build({
+  name: 'SCORED',
+  participants: 300,
+  sites: 20,
+  months: 7,
+  seed: 505,
+  protocol: pilotProtocol
+});
+check(
+  'a score changes no other raw table, and with none asked for there is no scores table',
+  !unscored.table('raw', 'QS') &&
+    unscored.domains.every((domain) => domain.text === scored.table('raw', domain.id).text)
+);
+
 // 3. Every optional domain.
 const every = await build({
   participants: 60,
   sites: 6,
   months: 4,
   seed: 1,
-  domains: DOMAINS.filter((domain) => !domain.core).map((domain) => domain.id)
+  domains: DOMAINS.filter((domain) => !domain.core && !domain.asked).map((domain) => domain.id)
 });
 check(
   'every one of the 19 domains can be made',
-  every.domains.length === DOMAINS.length,
+  every.domains.length === DOMAINS.filter((domain) => !domain.asked).length,
   every.domains.map((domain) => domain.id).join(' ')
 );
 

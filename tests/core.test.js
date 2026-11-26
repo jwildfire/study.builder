@@ -228,6 +228,7 @@ describe('the ADaM workflows', () => {
       'ADAE',
       'ADEG',
       'ADLB',
+      'ADQS',
       'ADSL',
       'ADVS'
     ]);
@@ -292,9 +293,11 @@ describe('study.builder’s workflows, of every layer', () => {
       'ADaM_ADAE',
       'ADaM_ADEG',
       'ADaM_ADLB',
+      'ADaM_ADQS',
       'ADaM_ADSL',
       'ADaM_ADVS',
-      'Analysis_AESummary'
+      'Analysis_AESummary',
+      'Analysis_EfficacySummary'
     ]);
     for (const workflow of ownWorkflows) {
       for (const [column, line] of Object.entries(workflow.columns)) {

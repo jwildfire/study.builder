@@ -9,6 +9,7 @@ import {
   daysOf,
   designSaid,
   domainOf,
+  efficacyOf,
   endpointLink,
   isUsdm,
   planOf,
@@ -17,7 +18,9 @@ import {
   readProtocol,
   readUsdm
 } from '../src/engine/protocol.js';
-import { LIMITS, readSettings } from '../src/engine/core.js';
+import { LIMITS, readEfficacy, readSettings } from '../src/engine/core.js';
+import { efficacy as drawEfficacy, efficacyResults } from '../src/study/efficacy.js';
+import { settingsOfArgs } from '../src/engine/saved.js';
 import { createBuilder, studyOf } from '../src/engine/build.js';
 import { configOf, protocolOfArgs, readDocument, readPresets } from '../src/engine/saved.js';
 import { mount } from '../src/app/widget.js';
@@ -214,6 +217,118 @@ describe('a protocol’s design', () => {
   });
 });
 
+describe('an efficacy score', () => {
+  const PILOT_SCORE = {
+    name: 'ADAS-Cog (11)',
+    visits: ['Baseline', 'Week 8', 'Week 16', 'Week 24'],
+    baseline: 24,
+    sd: 6.5,
+    change: 2.5,
+    effects: { 'Xanomeline Low Dose': -1.5, 'Xanomeline High Dose': '-3' },
+    min: 0,
+    max: 70
+  };
+
+  it('is the one the protocol’s estimand points at, where it is scheduled, with no difference until one is said', () => {
+    expect(efficacyOf(pilot())).toMatchObject({
+      name: 'ADAS-Cog',
+      visits: ['Screening 1', 'Baseline', 'Week 8', 'Week 16', 'Week 24'],
+      effects: {},
+      change: 0
+    });
+    const { design: _design, ...bare } = pilot();
+    expect(efficacyOf(readProtocol(bare))).toBeNull();
+  });
+
+  it('is read whole: the reference arm, a difference for every other arm, and the day the full change is reached', () => {
+    const read = readEfficacy(PILOT_SCORE, pilot());
+    expect(read.problems).toEqual([]);
+    expect(read.efficacy).toMatchObject({
+      reference: 'Placebo',
+      effects: { 'Xanomeline Low Dose': -1.5, 'Xanomeline High Dose': -3 },
+      day: 169,
+      better: 'lower'
+    });
+    expect(readEfficacy({ ...PILOT_SCORE, sd: 0 }, pilot()).problems).toEqual([
+      'The standard deviation of the efficacy score must be above 0.'
+    ]);
+    expect(readEfficacy({ ...PILOT_SCORE, visits: ['Nowhere'] }, pilot()).problems).toEqual([
+      'The efficacy score needs at least one of the protocol’s visits.'
+    ]);
+  });
+
+  it('goes to R as text beside the protocol, brings the scores domain, and is read back; it needs a protocol', () => {
+    const read = readSettings({ protocol: pilot(), efficacy: PILOT_SCORE, domains: ['AE', 'QS'] });
+    expect(read.problems).toEqual([]);
+    expect(read.args.domains).toContain('QS');
+    expect(JSON.parse(read.args.efficacy).scores[0]).toEqual({
+      name: 'ADAS-Cog (11)',
+      visits: ['Baseline', 'Week 8', 'Week 16', 'Week 24'],
+      baseline: 24,
+      sd: 6.5,
+      change: 2.5,
+      effects: { 'Xanomeline Low Dose': -1.5, 'Xanomeline High Dose': -3 },
+      day: 169,
+      min: 0,
+      max: 70
+    });
+    expect(settingsOfArgs(read.args).efficacy).toMatchObject({ name: 'ADAS-Cog (11)', sd: 6.5 });
+    // Asked for by name with no score, the scores domain is not made.
+    expect(readSettings({ protocol: pilot(), domains: ['AE', 'QS'] }).args.domains).not.toContain(
+      'QS'
+    );
+    expect(readSettings({ efficacy: PILOT_SCORE }).problems).toEqual([
+      'An efficacy score needs a protocol: its arms and the visits it is measured at.'
+    ]);
+  });
+
+  it('is drawn from the results table: a line an arm, the numbers by visit, and what the simulator was told', () => {
+    const line = (arm, visit, number, statistic, value) =>
+      `"Change","Set","ADAS-Cog (11)","${arm}","${visit}",${number},"${statistic}",${value},"Placebo"`;
+    const text = [
+      '"ANALYSIS","ANALYSISSET","PARAM","ARM","VISIT","VISITNUM","STATISTIC","VALUE","REFARM"',
+      line('Placebo', 'Baseline', 2, 'n', 50),
+      line('Placebo', 'Baseline', 2, 'mean', 0),
+      line('Active', 'Baseline', 2, 'n', 50),
+      line('Active', 'Baseline', 2, 'mean', 0),
+      line('Placebo', 'Week 24', 14, 'n', 40),
+      line('Placebo', 'Week 24', 14, 'mean', 2.4),
+      line('Placebo', 'Week 24', 14, 'sd', 6.1),
+      line('Active', 'Week 24', 14, 'n', 41),
+      line('Active', 'Week 24', 14, 'mean', -0.5),
+      line('Active', 'Week 24', 14, 'sd', 6.6),
+      line('Active', 'Week 24', 14, 'difference', -2.9),
+      ''
+    ].join('\n');
+    const study = {
+      table: (layer, id) =>
+        layer === 'analysis' && id === 'EfficacySummary' ? { rows: 11, text } : null,
+      args: {
+        efficacy: JSON.stringify({ scores: [{ change: 2.5, sd: 6.5, effects: { Active: -3 } }] })
+      }
+    };
+    const results = efficacyResults(study);
+    expect(results.arms).toEqual(['Placebo', 'Active']);
+    expect(results.value('Active', 'Week 24', 'difference')).toBe(-2.9);
+    expect(efficacyResults({ table: () => null })).toBeNull();
+    document.body.innerHTML = '<div id="e"></div>';
+    const box = document.querySelector('#e');
+    drawEfficacy(domOf(document), study, box);
+    expect(box.querySelectorAll('polyline')).toHaveLength(2);
+    expect(box.querySelector('polyline[data-arm="Active"]')).not.toBeNull();
+    const active = box.querySelector('.sb-efficacy-table tr[data-arm="Active"]');
+    expect([...active.children].map((cell) => cell.textContent)).toEqual([
+      'Week 24',
+      'Active',
+      '41',
+      '−0.5',
+      '6.6',
+      '−2.9'
+    ]);
+    expect(box.querySelector('.sb-efficacy-told').textContent).toContain('Active −3.0');
+  });
+});
+
 describe('a protocol in the settings', () => {
   it('fills the settings it says, within the simulator’s limits, and brings the domains its schedule needs', () => {
     const { settings, notes } = protocolSettings(pilot(), LIMITS);
@@ -321,6 +436,23 @@ describe('a protocol in the loader', () => {
     const first = q('.sb-grid tbody tr');
     expect(first.querySelector('.sb-pill').textContent).not.toBe('Not simulated');
     expect(q('.sb-grid tr[data-simulated="false"] .sb-pill').textContent).toBe('Not simulated');
+    // The score the protocol points at is offered, with a difference to type for each other arm.
+    expect(handle.settings().efficacy).toMatchObject({ name: 'ADAS-Cog' });
+    expect(document.querySelectorAll('.sb-efficacy-arms tbody tr')).toHaveLength(3);
+    const high = q('[name="efficacy-effect-Xanomeline High Dose"]');
+    high.value = '-3';
+    high.dispatchEvent(new Event('input'));
+    q('[name="efficacy-sd"]').value = '6.5';
+    q('[name="efficacy-sd"]').dispatchEvent(new Event('input'));
+    q('[name="efficacy-sd"]').dispatchEvent(new Event('change'));
+    expect(handle.settings().efficacy.effects['Xanomeline High Dose']).toBe('-3');
+    // 300 participants in three arms: the protocol's own 90% power.
+    expect(
+      q('.sb-efficacy-arms tr[data-arm="Xanomeline High Dose"] td:last-child').textContent
+    ).toBe('About 90%');
+    q('[data-efficacy="off"]').click();
+    expect(handle.settings().efficacy).toBeNull();
+    expect(q('.sb-efficacy-arms')).toBeNull();
   });
 
   it('offers a ready-made protocol to try, fetched from the page; one that cannot be fetched is said', async () => {

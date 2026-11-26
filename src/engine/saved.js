@@ -34,6 +34,14 @@ export function protocolOfArgs(args) {
   return protocol;
 }
 
+/** The efficacy score a study was built with, from what R was asked for. */
+export function efficacyOfArgs(args) {
+  if (!args || !args.efficacy) return null;
+  const [score] = JSON.parse(args.efficacy).scores;
+  const { day: _day, ...efficacy } = score;
+  return efficacy;
+}
+
 /**
  * Settings as a form holds them, from what R was asked for.
  * @param {Object} args The arguments `readSettings` made.
@@ -53,7 +61,8 @@ export function settingsOfArgs(args) {
     ...(args.history ? { snapshots: 'all' } : {}),
     domains: [...args.domains],
     layers: [...args.layers],
-    ...(args.protocol ? { protocol: protocolOfArgs(args) } : {})
+    ...(args.protocol ? { protocol: protocolOfArgs(args) } : {}),
+    ...(args.efficacy ? { efficacy: efficacyOfArgs(args) } : {})
   };
 }
 

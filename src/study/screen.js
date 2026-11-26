@@ -10,6 +10,7 @@ import { mountViewer } from '../viewer/widget.js';
 import { fromBuilt } from '../viewer/built.js';
 import { count } from '../shared/dom.js';
 import { design } from './design.js';
+import { efficacy, efficacyResults } from './efficacy.js';
 import { overview } from './overview.js';
 import { scheduleGrid } from './schedule.js';
 
@@ -204,6 +205,16 @@ export function studyScreen(context) {
               id: 'design',
               label: 'Design',
               render: (box) => design({ el }, study.protocol, box)
+            }
+          ]
+        : []),
+      // The efficacy score, when the study simulated one.
+      ...(efficacyResults(study)
+        ? [
+            {
+              id: 'efficacy',
+              label: 'Efficacy',
+              render: (box) => efficacy({ el }, shown, box)
             }
           ]
         : [])

@@ -65,11 +65,21 @@
     {
       "id": "cdisc-pilot-protocol",
       "name": "CDISC pilot protocol: 16 visits on its schedule of activities",
-      "about": "Read from the pilot study's CDISC USDM file. Visits, vital signs and labs follow the protocol's schedule of activities. Bilirubin is added to its chemistry panel, which the file's lab list leaves out.",
+      "about": "Read from the pilot study's CDISC USDM file. Visits, vital signs and labs follow the protocol's schedule of activities. Bilirubin is added to its chemistry panel, which the file's lab list leaves out. ADAS-Cog (11) is simulated by arm: the 3.0 difference and 6.5 standard deviation are the protocol's own sample size sentence; the rest are ours.",
       "hosted": true,
       "protocol": "protocols/cdisc-pilot.protocol.json",
       "collects": { "Chemistry": ["Bilirubin"] },
       "settings": {
+        "efficacy": {
+          "name": "ADAS-Cog (11)",
+          "visits": ["Baseline", "Week 8", "Week 16", "Week 24"],
+          "baseline": 24,
+          "sd": 6.5,
+          "change": 2.5,
+          "effects": { "Xanomeline Low Dose": -1.5, "Xanomeline High Dose": -3 },
+          "min": 0,
+          "max": 70
+        },
         "name": "PILOT-PROTOCOL",
         "phase": "P2",
         "area": "Inflammation",

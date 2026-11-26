@@ -89,6 +89,15 @@ export const DOMAINS = Object.freeze(
       needs: 'VISIT',
       feeds: 'eg'
     },
+    {
+      // Made when the settings say an efficacy score to simulate, and only then.
+      id: 'QS',
+      label: 'Scores',
+      grain: 'One row per participant, visit and score: a questionnaire or rating total',
+      needs: 'VISIT',
+      feeds: 'qs',
+      asked: 'efficacy'
+    },
     { id: 'PD', label: 'Protocol deviations', grain: 'One row per deviation', on: true },
     {
       id: 'STUDCOMP',
@@ -122,6 +131,7 @@ export const DOMAINS = Object.freeze(
       large: false,
       needs: null,
       feeds: null,
+      asked: null,
       ...domain,
       table: `Raw_${domain.id}`
     })
@@ -204,7 +214,8 @@ export const STANDARD = Object.freeze([
   Object.freeze({ id: 'ae', name: 'adae.csv', label: 'Adverse events', from: 'AE' }),
   Object.freeze({ id: 'bds', name: 'adlb.csv', label: 'Labs', from: 'LB' }),
   Object.freeze({ id: 'bds', name: 'advs.csv', label: 'Vital signs', from: 'VS' }),
-  Object.freeze({ id: 'eg', name: 'adeg.csv', label: 'ECGs', from: 'EG' })
+  Object.freeze({ id: 'eg', name: 'adeg.csv', label: 'ECGs', from: 'EG' }),
+  Object.freeze({ id: 'qs', name: 'adqs.csv', label: 'Scores', from: 'QS' })
 ]);
 
 /** The optional domains made unless the caller says otherwise. */
@@ -233,6 +244,7 @@ export const DEFAULTS = Object.freeze({
   seed: null,
   snapshots: 'last',
   protocol: null,
+  efficacy: null,
   domains: DEFAULT_DOMAINS,
   layers: DEFAULT_LAYERS
 });
@@ -285,7 +297,7 @@ function whole(value) {
  * Read settings: every problem with them, each a sentence, and, when there is
  * none, what R is asked for. A setting left out is the default's; numbers may
  * be numbers or the text a form field holds.
- * @param {Object} [settings] `name`, `phase`, `area`, `participants`, `sites`, `months`, `outliers`, `seed`, `snapshots` (`last`, or `all` to keep every monthly snapshot), `domains`, `layers` and `protocol` (a protocol whose schedule the build follows; protocol.js).
+ * @param {Object} [settings] `name`, `phase`, `area`, `participants`, `sites`, `months`, `outliers`, `seed`, `snapshots` (`last`, or `all` to keep every monthly snapshot), `domains`, `layers`, `protocol` (a protocol whose schedule the build follows; protocol.js) and `efficacy` (a score to simulate by arm, for a study with a protocol; `readEfficacy`).
  * @returns {{problems: string[], args: ?Object, domains: string[]}} The problems; the arguments of `builder_run` less the folders R is told; and every domain the study will hold.
  */
 export function readSettings(settings = {}) {
@@ -326,7 +338,10 @@ export function readSettings(settings = {}) {
     problems.push('Choose which snapshots to keep: the last only, or every month.');
   }
   const known = new Set(DOMAINS.map((domain) => domain.id));
-  const chosen = Array.isArray(given.domains) ? given.domains : [];
+  // The scores domain is not chosen: it is made when an efficacy score is asked for.
+  const asked = new Set(DOMAINS.filter((domain) => domain.asked).map((domain) => domain.id));
+  const chosenGiven = Array.isArray(given.domains) ? given.domains : [];
+  const chosen = chosenGiven.filter((id) => !asked.has(id));
   const unknown = chosen.filter((id) => !known.has(id));
   if (unknown.length) problems.push(`Not a domain study.builder makes: ${unknown.join(', ')}.`);
   const optional = withNeeds(chosen.filter((id) => known.has(id))).filter(
@@ -367,6 +382,23 @@ export function readSettings(settings = {}) {
         ])
       ]).filter((id) => !DOMAINS.find((domain) => domain.id === id).core)
     : optional;
+  // An efficacy score, when one is asked for: it needs a protocol, whose arms
+  // and visits it is said in.
+  let efficacy = null;
+  if (given.efficacy !== null && given.efficacy !== undefined) {
+    if (!protocol) {
+      if (given.protocol === null || given.protocol === undefined) {
+        problems.push(
+          'An efficacy score needs a protocol: its arms and the visits it is measured at.'
+        );
+      }
+    } else {
+      const read = readEfficacy(given.efficacy, protocol);
+      problems.push(...read.problems);
+      efficacy = read.efficacy;
+    }
+  }
+  const withEfficacy = efficacy ? withNeeds([...withProtocol, 'QS']) : withProtocol;
   if (problems.length) return { problems, args: null, domains };
   return {
     problems,
@@ -379,16 +411,98 @@ export function readSettings(settings = {}) {
       outlier_intensity: outliers.intensity,
       phase: phase.id,
       therapeutic_area: given.area,
-      domains: withProtocol,
+      domains: withEfficacy.filter((id) => !DOMAINS.find((domain) => domain.id === id).core),
       layers,
       // A seed left empty is not sent: R then draws as it will.
       ...(seed === null ? {} : { seed }),
       // Every monthly snapshot is kept only when asked: it is several times the work.
       ...(given.snapshots === 'all' ? { history: true } : {}),
       // The protocol goes to R as text, with the plan R follows worked out here.
-      ...(protocol ? { protocol: JSON.stringify({ ...protocol, plan: planOf(protocol) }) } : {})
+      ...(protocol ? { protocol: JSON.stringify({ ...protocol, plan: planOf(protocol) }) } : {}),
+      // The score goes to R as text too, as gsm.datasim's study results take one.
+      ...(efficacy ? { efficacy: JSON.stringify({ scores: [scoreOf(efficacy)] }) } : {})
     }
   };
+}
+
+const finite = (value) => {
+  if (value === null || value === undefined || String(value).trim() === '') return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+};
+
+/** The arm the others are compared with: the first named placebo or control, or the first. */
+export function referenceArm(arms) {
+  return arms.find((arm) => /placebo|control/i.test(arm)) || arms[0] || '';
+}
+
+/**
+ * Read an efficacy score and write it back whole, or say what is wrong with it.
+ * @param {Object} given `name`; `visits` (names of the protocol's visits it is measured at); `baseline` (mean at baseline); `sd` (standard deviation of the change from baseline); `change` (mean change on the reference arm by the last visit); `effects` (for each other arm, its mean difference from the reference arm by the last visit); `min` and `max` (the score's range); `better` (`lower` or `higher`).
+ * @param {Object} protocol The protocol, read.
+ * @returns {{problems: string[], efficacy: ?Object}} The problems, and the score when there are none.
+ */
+export function readEfficacy(given, protocol) {
+  const problems = [];
+  if (!isRecord(given)) return { problems: ['The efficacy score cannot be read.'], efficacy: null };
+  const name = isText(given.name) ? given.name.trim() : '';
+  if (!name) problems.push('The efficacy score needs a name.');
+  const known = new Set(protocol.visits.map((visit) => visit.name));
+  const visits = (Array.isArray(given.visits) ? given.visits : []).filter((visit) =>
+    known.has(visit)
+  );
+  if (!visits.length)
+    problems.push('The efficacy score needs at least one of the protocol’s visits.');
+  const numbers = {};
+  for (const [field, label, fallback] of [
+    ['baseline', 'The baseline mean', 50],
+    ['sd', 'The standard deviation', 10],
+    ['change', 'The change on the reference arm', 0],
+    ['min', 'The lowest score', 0],
+    ['max', 'The highest score', 100]
+  ]) {
+    const value = given[field] === undefined ? fallback : finite(given[field]);
+    if (value === null) problems.push(`${label} of the efficacy score must be a number.`);
+    else numbers[field] = value;
+  }
+  if (numbers.sd !== undefined && numbers.sd <= 0) {
+    problems.push('The standard deviation of the efficacy score must be above 0.');
+  }
+  if (numbers.min !== undefined && numbers.max !== undefined && numbers.min >= numbers.max) {
+    problems.push('The lowest score must be below the highest.');
+  }
+  const reference = referenceArm(protocol.arms);
+  const effects = {};
+  for (const arm of protocol.arms.filter((one) => one !== reference)) {
+    const said = isRecord(given.effects) ? given.effects[arm] : undefined;
+    const value = said === undefined ? 0 : finite(said);
+    if (value === null) problems.push(`The difference for ${arm} must be a number.`);
+    else effects[arm] = value;
+  }
+  if (problems.length) return { problems, efficacy: null };
+  // The full change is reached at the last visit the score is measured at.
+  const day = Math.max(
+    1,
+    ...protocol.visits.filter((visit) => visits.includes(visit.name)).map((visit) => visit.day)
+  );
+  return {
+    problems,
+    efficacy: {
+      name,
+      visits: protocol.visits.map((visit) => visit.name).filter((visit) => visits.includes(visit)),
+      ...numbers,
+      effects,
+      reference,
+      day,
+      better: given.better === 'higher' ? 'higher' : 'lower'
+    }
+  };
+}
+
+/** An efficacy score as gsm.datasim's study results take one. */
+function scoreOf(efficacy) {
+  const { name, visits, baseline, sd, change, effects, day, min, max } = efficacy;
+  return { name, visits, baseline, sd, change, effects, day, min, max };
 }
 
 /**

@@ -216,6 +216,45 @@ export function endpointLink(protocol, said) {
 }
 
 /**
+ * The efficacy score a protocol points at, with plain numbers to start from:
+ * the endpoint its first estimand is of, or else its first endpoint, whose
+ * activity is on the schedule and is not simulated. The protocol says which
+ * score and where it is measured; it holds no assumed effect, so every
+ * difference starts at 0.
+ * @param {Object} protocol The protocol.
+ * @returns {?Object} Settings for `efficacy`, or null when the protocol points at no such score.
+ */
+export function efficacyOf(protocol) {
+  const design = protocol && protocol.design;
+  if (!design || protocol.arms.length < 2) return null;
+  const endpoints = design.objectives.flatMap((objective) => objective.endpoints);
+  const first = design.estimands
+    .map((estimand) => endpoints.find((endpoint) => endpoint.id === estimand.endpoint))
+    .filter(Boolean);
+  for (const endpoint of [...first, ...endpoints]) {
+    const link = endpointLink(protocol, endpoint.text);
+    if (!link.activity || link.simulated) continue;
+    const activity = protocol.activities.find((one) => one.name === link.activity);
+    const visits = protocol.visits
+      .filter((visit) => (protocol.schedule[visit.id] || []).includes(activity.id))
+      .map((visit) => visit.name);
+    return {
+      name: activity.name,
+      endpoint: endpoint.text,
+      visits,
+      baseline: 50,
+      sd: 10,
+      change: 0,
+      effects: {},
+      min: 0,
+      max: 100,
+      better: 'lower'
+    };
+  }
+  return null;
+}
+
+/**
  * Read a protocol and write it back whole, or say what is wrong with it.
  * @param {Object} given A protocol, as `readUsdm` makes one or as a page edited it.
  * @returns {Object} The protocol: every visit with a whole study day and windows, in day order; every activity with its domain; the schedule naming only visits and activities it has.

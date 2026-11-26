@@ -49,7 +49,9 @@ export {
   PHASES,
   SNAPSHOTS,
   STANDARD,
+  readEfficacy,
   readSettings,
+  referenceArm,
   withLayerNeeds,
   withNeeds,
   withPhase
@@ -86,6 +88,7 @@ export {
   isUsdm,
   planOf,
   designSaid,
+  efficacyOf,
   endpointLink,
   protocolSaid,
   protocolSettings,

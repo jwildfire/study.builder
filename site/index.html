@@ -91,6 +91,53 @@
         font-size: 0.82rem;
         line-height: 1.45;
       }
+      .about {
+        margin: 0 0 1.6rem;
+      }
+      .about h2 {
+        margin: 0 0 0.5rem;
+        font:
+          500 1.9rem/1.15 Georgia,
+          'Iowan Old Style',
+          serif;
+        text-wrap: balance;
+      }
+      .about p {
+        max-width: 46rem;
+        margin: 0 0 0.9rem;
+        color: var(--soft);
+      }
+      .about ol {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+        gap: 0.7rem;
+      }
+      .about li {
+        padding: 0.8rem 0.9rem;
+        border: 1px solid var(--rule);
+        border-radius: 10px;
+        font-size: 0.9rem;
+      }
+      .about li strong {
+        display: block;
+        margin-bottom: 0.2rem;
+        font:
+          600 0.7rem/1.3 ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          monospace;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--accent);
+      }
+      .about .start {
+        margin: 0.9rem 0 0;
+        color: var(--ink);
+        font-size: 0.92rem;
+      }
       #handed {
         color: var(--soft);
         font-size: 0.9rem;
@@ -109,11 +156,43 @@
         <nav><a href="https://github.com/jwildfire/study.builder">Source on GitHub</a></nav>
       </header>
 
+      <section class="about" aria-labelledby="about-title">
+        <h2 id="about-title">A clinical trial's data, simulated in your browser</h2>
+        <p>
+          study.builder makes a whole synthetic study, from raw data to ADaM tables, site metrics
+          and reports, and lets you look through all of it. R runs in this page, so nothing is
+          installed and nothing is sent anywhere. Every row is made up: no real participant or site
+          is in it.
+        </p>
+        <ol>
+          <li>
+            <strong>Portfolio</strong>
+            The list below. Open a ready-made study at once, or build one from its settings.
+          </li>
+          <li>
+            <strong>Study view</strong>
+            One study, looked through: an overview, the schedule and design when it follows a
+            protocol, an efficacy score by arm, every table of every layer, and one participant at a
+            time. Pick a monthly snapshot to see the study as it stood then.
+          </li>
+          <li>
+            <strong>Study builder</strong>
+            Describe your own under New study: its size, a CDISC protocol to follow, the layers and
+            domains to make. The first build takes about half a minute.
+          </li>
+        </ol>
+        <p class="start">
+          New here? Open <em>CDISC pilot protocol</em> below and press through its tabs. To use a
+          study in your own page or package, see <a href="#use">Use it from another page</a> and the
+          <a href="https://github.com/jwildfire/study.builder#readme">README</a>.
+        </p>
+      </section>
+
       <div id="builder"></div>
       <noscript>study.builder needs JavaScript: it runs R in this browser.</noscript>
       <p id="handed" role="status"></p>
 
-      <section class="use">
+      <section class="use" id="use">
         <h2>Use it from another page</h2>
         <p>
           One script defines <code>StudyBuilder</code>. Draw the builder in an element and take the

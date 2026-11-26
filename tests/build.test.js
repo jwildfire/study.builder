@@ -137,13 +137,15 @@ describe('what R is given', () => {
     expect(options.files.map((file) => file.path)).toContain(
       '/study.builder/vendor/gsm.mapping-vitals/workflow/1_mappings/VS.yaml'
     );
-    expect(options.files.slice(-6).map((file) => file.path)).toEqual([
+    expect(options.files.slice(-8).map((file) => file.path)).toEqual([
       '/study.builder/workflows/adam/ADAE.yaml',
       '/study.builder/workflows/adam/ADEG.yaml',
       '/study.builder/workflows/adam/ADLB.yaml',
+      '/study.builder/workflows/adam/ADQS.yaml',
       '/study.builder/workflows/adam/ADSL.yaml',
       '/study.builder/workflows/adam/ADVS.yaml',
-      '/study.builder/workflows/analysis/AESummary.yaml'
+      '/study.builder/workflows/analysis/AESummary.yaml',
+      '/study.builder/workflows/analysis/EfficacySummary.yaml'
     ]);
     // gsm's metric and reporting workflows, and the one R file the reporting needs.
     const paths = options.files.map((file) => file.path);

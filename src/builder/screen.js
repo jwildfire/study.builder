@@ -10,14 +10,22 @@ import {
   OUTLIERS,
   PHASES,
   SNAPSHOTS,
+  readEfficacy,
   readSettings,
+  referenceArm,
   withLayerNeeds,
   withNeeds,
   withPhase
 } from '../engine/core.js';
 import { DOWNLOADS } from '../engine/build.js';
 import { configOf } from '../engine/saved.js';
-import { planOf, protocolSaid, protocolSettings, readProtocol } from '../engine/protocol.js';
+import {
+  efficacyOf,
+  planOf,
+  protocolSaid,
+  protocolSettings,
+  readProtocol
+} from '../engine/protocol.js';
 import { scheduleGrid } from '../study/schedule.js';
 import { count, messageOf } from '../shared/dom.js';
 
@@ -40,7 +48,9 @@ export function takeProtocol(app, protocol, from) {
   const { s, say, go } = app;
   const filled = protocolSettings(protocol, LIMITS);
   const { domains, ...settings } = filled.settings;
-  s.form = { ...s.form, ...settings, protocol };
+  // The score the protocol points at, when it points at one: simulated with no
+  // difference between the arms until the reader says one.
+  s.form = { ...s.form, ...settings, protocol, efficacy: efficacyOf(protocol) };
   for (const id of domains) {
     if (DOMAINS.some((domain) => domain.id === id && !domain.core)) s.chosen.add(id);
   }
@@ -153,7 +163,7 @@ export function builderScreen(app) {
         'sb-link',
         'Remove the protocol',
         () => {
-          s.form = { ...s.form, protocol: null };
+          s.form = { ...s.form, protocol: null, efficacy: null };
           say('The protocol is removed. The study will have the simulator’s own eight visits.');
           draw();
         },
@@ -161,6 +171,181 @@ export function builderScreen(app) {
       )
     );
     section.append(acts);
+    return section;
+  }
+
+  /** About how likely a difference is to be seen, two-sided at 0.05, with `n` in each arm. */
+  const power = (difference, sd, n) => {
+    if (!difference || !(sd > 0) || !(n > 1)) return null;
+    const z = Math.abs(difference) / (sd * Math.sqrt(2 / n)) - 1.96;
+    // The normal distribution's share below z (Abramowitz and Stegun 26.2.17).
+    const t = 1 / (1 + 0.2316419 * Math.abs(z));
+    const tail =
+      Math.exp((-z * z) / 2) *
+      0.3989423 *
+      t *
+      (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
+    return z >= 0 ? 1 - tail : tail;
+  };
+
+  /**
+   * The efficacy score: which one, where it is measured, and what the
+   * simulator assumes of it for each arm. Null when the protocol points at no
+   * score that could be simulated.
+   */
+  function efficacySection() {
+    const protocol = s.form.protocol;
+    const pointed = efficacyOf(protocol);
+    const on = s.form.efficacy;
+    if (!pointed && !on) return null;
+    const section = el('div', 'sb-efficacy-form');
+    const busy = s.phase === 'building';
+    const set = (change) => {
+      s.form = { ...s.form, efficacy: { ...s.form.efficacy, ...change } };
+    };
+    const toggle = el('div', 'sb-seg');
+    toggle.setAttribute('role', 'group');
+    for (const [value, label] of [
+      ['on', 'Simulate it'],
+      ['off', 'Leave it out']
+    ]) {
+      const one = el('button', null, label);
+      one.type = 'button';
+      one.dataset.efficacy = value;
+      one.setAttribute('aria-pressed', String((value === 'on') === Boolean(on)));
+      one.disabled = busy;
+      one.onclick = () => {
+        s.form = { ...s.form, efficacy: value === 'on' ? on || pointed : null };
+        draw();
+      };
+      toggle.append(one);
+    }
+    const shown = on || pointed;
+    section.append(
+      el(
+        'p',
+        'sb-soft',
+        `${shown.endpoint || shown.name}. Measured at ${shown.visits.join(', ')}. The protocol says which score and where; the numbers below are yours, and are sent to the simulator beside it.`
+      ),
+      toggle
+    );
+    if (!on) return section;
+
+    const number = (name, value, onInput, label) => {
+      const control = el('input', 'sb-input');
+      control.type = 'number';
+      control.step = 'any';
+      control.name = name;
+      control.value = value === null || value === undefined ? '' : String(value);
+      control.disabled = busy;
+      if (label) control.setAttribute('aria-label', label);
+      control.oninput = () => onInput(control.value);
+      control.onchange = () => draw();
+      return control;
+    };
+    const title = el('input', 'sb-input');
+    title.name = 'efficacy-name';
+    title.value = on.name || '';
+    title.disabled = busy;
+    title.oninput = () => set({ name: title.value });
+    const better = el('div', 'sb-seg');
+    better.setAttribute('role', 'group');
+    for (const [value, label] of [
+      ['lower', 'Lower'],
+      ['higher', 'Higher']
+    ]) {
+      const one = el('button', null, label);
+      one.type = 'button';
+      one.dataset.better = value;
+      one.setAttribute('aria-pressed', String((on.better || 'lower') === value));
+      one.disabled = busy;
+      one.onclick = () => {
+        set({ better: value });
+        draw();
+      };
+      better.append(one);
+    }
+    const first = el('div', 'sb-fields');
+    first.append(field('Score', title, 2), field('Better is', better, 1.4));
+    section.append(first);
+
+    const reference = referenceArm(protocol.arms);
+    const last = on.visits.at(-1);
+    const each = Math.floor((Number(s.form.participants) || 0) / (protocol.arms.length || 1));
+    const arms = el('table', 'sb-table sb-efficacy-arms');
+    const head = el('tr');
+    for (const said of ['Arm', `Difference from ${reference} at ${last}`, 'Chance of seeing it']) {
+      head.append(el('th', null, said));
+    }
+    const thead = el('thead');
+    thead.append(head);
+    const body = el('tbody');
+    for (const arm of protocol.arms) {
+      const row = el('tr');
+      row.dataset.arm = arm;
+      const name = el('td', null, arm);
+      const cell = el('td');
+      const chance = el('td', 'sb-soft');
+      if (arm === reference) {
+        const pill = el('span', 'sb-pill', 'Reference');
+        pill.dataset.kind = 'none';
+        name.append(' ', pill);
+        cell.textContent = '0';
+      } else {
+        const effect = (on.effects || {})[arm];
+        cell.append(
+          number(
+            `efficacy-effect-${arm}`,
+            effect === undefined ? 0 : effect,
+            (value) => set({ effects: { ...(s.form.efficacy.effects || {}), [arm]: value } }),
+            `Difference from ${reference} for ${arm}`
+          )
+        );
+        const likely = power(Number(effect), Number(on.sd), each);
+        chance.textContent =
+          likely === null ? 'No difference to see' : `About ${Math.round(likely * 100)}%`;
+      }
+      row.append(name, cell, chance);
+      body.append(row);
+    }
+    arms.append(thead, body);
+    section.append(arms);
+
+    const second = el('div', 'sb-fields');
+    second.append(
+      field(
+        'Baseline mean',
+        number('efficacy-baseline', on.baseline, (value) => set({ baseline: value }))
+      ),
+      field(
+        'Standard deviation of change',
+        number('efficacy-sd', on.sd, (value) => set({ sd: value }))
+      ),
+      field(
+        `Change on ${reference} by ${last}`,
+        number('efficacy-change', on.change, (value) => set({ change: value })),
+        1.4
+      ),
+      field(
+        'Lowest score',
+        number('efficacy-min', on.min, (value) => set({ min: value }))
+      ),
+      field(
+        'Highest score',
+        number('efficacy-max', on.max, (value) => set({ max: value }))
+      )
+    );
+    section.append(second);
+    const read = readEfficacy(on, protocol);
+    section.append(
+      el(
+        'p',
+        'sb-soft',
+        read.problems.length
+          ? read.problems.join(' ')
+          : `The chance is arithmetic on these numbers for ${each} participants in each arm, two-sided at 0.05, were all of them to reach ${last}. It writes no data. Participants who have not reached ${last} when the study is looked at, or who left, make the real chance lower.`
+      )
+    );
     return section;
   }
 
@@ -322,6 +507,10 @@ export function builderScreen(app) {
       }
       main.append(ask);
     }
+    if (s.form.protocol) {
+      const section = efficacySection();
+      if (section) main.append(el('h3', null, 'Efficacy: what the simulator assumes'), section);
+    }
 
     // The layers, as the pipeline they are: each is built from the one before.
     const included = new Set(withLayerNeeds([...s.layersChosen]));
@@ -377,9 +566,11 @@ export function builderScreen(app) {
 
     // The raw domains, as chips.
     const inStudy = new Set(withNeeds([...s.chosen]));
-    main.append(el('h3', null, `Raw domains: ${inStudy.size} of ${DOMAINS.length}`));
+    // A domain that is asked for another way (scores, by an efficacy score) has no chip.
+    const pressed = DOMAINS.filter((domain) => !domain.asked);
+    main.append(el('h3', null, `Raw domains: ${inStudy.size} of ${pressed.length}`));
     const chips = el('div', 'sb-chips');
-    for (const domain of DOMAINS) {
+    for (const domain of pressed) {
       const neededBy = DOMAINS.filter(
         (other) => other.needs === domain.id && s.chosen.has(other.id)
       ).map((other) => other.label);

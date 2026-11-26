@@ -125,7 +125,7 @@ export function mount(
     s.form = { ...DEFAULTS, ...settings };
     s.chosen = new Set(
       (Array.isArray(s.form.domains) ? s.form.domains : DEFAULTS.domains).filter((id) =>
-        DOMAINS.some((domain) => domain.id === id && !domain.core)
+        DOMAINS.some((domain) => domain.id === id && !domain.core && !domain.asked)
       )
     );
     s.layersChosen = new Set(

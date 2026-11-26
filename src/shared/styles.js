@@ -134,6 +134,13 @@ p.sb-problems{padding-left:.7rem}
 .sb-estimand dt{font:600 .64rem/1.5 var(--sb-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--sb-soft)}
 .sb-estimand dd{margin:0}
 @media (max-width:540px){.sb-estimand{grid-template-columns:1fr}}
+.sb-efficacy{background:var(--sb-card);border:1px solid var(--sb-rule);border-radius:10px;padding:.6rem;overflow-x:auto}
+.sb-efficacy-chart{display:block;width:100%;min-width:30rem;height:auto}
+.sb-efficacy-chart text{font-family:inherit}
+.sb-efficacy-told{margin:.6rem 0 0}
+.sb-efficacy-form{display:flex;flex-direction:column;gap:.7rem}
+.sb-efficacy-form p{margin:0}
+.sb-efficacy-arms .sb-input{max-width:8rem}
 .sb-growth tr[aria-current=true] td{font-weight:600;background:var(--sb-accent-soft)}
 .sb-viewer{margin-top:.6rem;min-width:0}
 .sb-viewer .sv{--sv-accent:var(--sb-accent);--sv-accent-soft:var(--sb-accent-soft);--sv-on-accent:var(--sb-on-accent);--sv-card:var(--sb-card);--sv-ink:var(--sb-ink);--sv-soft:var(--sb-soft);--sv-rule:var(--sb-rule);--sv-line:var(--sb-line);--sv-sink:var(--sb-sink)}
