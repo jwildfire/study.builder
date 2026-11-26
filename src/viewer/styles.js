@@ -8,7 +8,7 @@ const DARK =
   '--sv-card:#1c2226;--sv-ink:#e8e6e1;--sv-soft:#9aa5ab;--sv-line:#3a4349;--sv-rule:#2f373c;--sv-accent:#d9a3dd;--sv-accent-soft:#33243a;--sv-on-accent:#1c2226;--sv-warn:#f0c674;--sv-warn-soft:#3a2f17;--sv-ok:#8fd3a6;--sv-ok-soft:#1d3326;--sv-sink:#232a2e';
 
 export const VIEWER_STYLES = `
-.sv{--sv-card:#fff;--sv-ink:#1f2328;--sv-soft:#5b6470;--sv-line:#c9cdc8;--sv-rule:#e4e6e3;--sv-accent:#6c3270;--sv-accent-soft:#f1e8f2;--sv-on-accent:#fff;--sv-warn:#7a4b00;--sv-warn-soft:#fbf0d9;--sv-ok:#1c5a34;--sv-ok-soft:#dcefe2;--sv-sink:#f4f5f2;--sv-mono:ui-monospace,"IBM Plex Mono",SFMono-Regular,Menlo,monospace;--sv-sans:inherit;box-sizing:border-box;display:flex;flex-wrap:wrap;gap:0 1.5rem;color:var(--sv-ink);font-family:var(--sv-sans);font-size:.9rem;line-height:1.45}
+.sv{--sv-card:#fff;--sv-ink:#1f2328;--sv-soft:#5b6470;--sv-line:#c9cdc8;--sv-rule:#e4e6e3;--sv-accent:#6c3270;--sv-accent-soft:#f1e8f2;--sv-on-accent:#fff;--sv-warn:#7a4b00;--sv-warn-soft:#fbf0d9;--sv-ok:#1c5a34;--sv-ok-soft:#dcefe2;--sv-sink:#f4f5f2;--sv-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;--sv-sans:inherit;box-sizing:border-box;display:flex;flex-wrap:wrap;gap:0 1.5rem;color:var(--sv-ink);font-family:var(--sv-sans);font-size:.9rem;line-height:1.45}
 @media (prefers-color-scheme:dark){.sv:not([data-theme=light]){${DARK}}}
 .sv[data-theme=dark]{${DARK}}
 .sv *,.sv *::before,.sv *::after{box-sizing:border-box}

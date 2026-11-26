@@ -12,6 +12,7 @@ import { count } from '../shared/dom.js';
 import { design } from './design.js';
 import { efficacy, efficacyResults } from './efficacy.js';
 import { overview } from './overview.js';
+import { pipeline } from './pipeline.js';
 import { scheduleGrid } from './schedule.js';
 
 /**
@@ -217,7 +218,20 @@ export function studyScreen(context) {
               render: (box) => efficacy({ el }, shown, box)
             }
           ]
-        : [])
+        : []),
+      // What the study was asked to be, and the workflows that built it.
+      {
+        id: 'pipeline',
+        label: 'Pipeline',
+        render: (box) =>
+          pipeline({ el, button }, shown, box, {
+            save,
+            open: (table) => {
+              viewer.show('tables');
+              viewer.open(table);
+            }
+          })
+      }
     ],
     onChange: (at) => {
       where = at;

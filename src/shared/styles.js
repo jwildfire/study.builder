@@ -1,6 +1,9 @@
 // The look of the portfolio, the builder and the study view. Every colour and font is a custom property on `.sb`, so a
 // page that hosts it can set its own: `.sb { --sb-accent: … }`. The defaults
 // are safety.viz's: warm paper, a plum accent, small mono labels, pill buttons.
+// The serif and the mono are rainbow-hex's (Instrument Serif, IBM Plex Mono), named
+// first and loaded by the page, never by the widget: a page without them gets
+// the faces after them, as before.
 
 export const STYLE_ID = 'study-builder-styles';
 
@@ -8,7 +11,7 @@ const DARK =
   '--sb-card:#1c2226;--sb-ink:#e8e6e1;--sb-soft:#9aa5ab;--sb-line:#3a4349;--sb-rule:#2f373c;--sb-accent:#d9a3dd;--sb-accent-soft:#33243a;--sb-on-accent:#1c2226;--sb-warn:#f0c674;--sb-warn-soft:#3a2f17;--sb-bad:#f09a9a;--sb-ok:#8fd3a6;--sb-ok-soft:#1d3326;--sb-blue:#8cc4e6;--sb-blue-soft:#1b2f3b;--sb-sink:#232a2e';
 
 export const STYLES = `
-.sb{--sb-card:#fff;--sb-ink:#1f2328;--sb-soft:#5b6470;--sb-line:#c9cdc8;--sb-rule:#e4e6e3;--sb-accent:#6c3270;--sb-accent-soft:#f1e8f2;--sb-on-accent:#fff;--sb-warn:#7a4b00;--sb-warn-soft:#fbf0d9;--sb-bad:#a12a2a;--sb-ok:#1c5a34;--sb-ok-soft:#dcefe2;--sb-blue:#1d5a80;--sb-blue-soft:#e3eef5;--sb-sink:#f1f2ee;--sb-mono:ui-monospace,"IBM Plex Mono",SFMono-Regular,Menlo,monospace;--sb-serif:Georgia,"Iowan Old Style",serif;--sb-sans:inherit;box-sizing:border-box;color:var(--sb-ink);font-family:var(--sb-sans);font-size:.95rem;line-height:1.5}
+.sb{--sb-card:#fff;--sb-ink:#1f2328;--sb-soft:#5b6470;--sb-line:#c9cdc8;--sb-rule:#e4e6e3;--sb-accent:#6c3270;--sb-accent-soft:#f1e8f2;--sb-on-accent:#fff;--sb-warn:#7a4b00;--sb-warn-soft:#fbf0d9;--sb-bad:#a12a2a;--sb-ok:#1c5a34;--sb-ok-soft:#dcefe2;--sb-blue:#1d5a80;--sb-blue-soft:#e3eef5;--sb-sink:#f1f2ee;--sb-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;--sb-serif:"Instrument Serif",Georgia,"Iowan Old Style",serif;--sb-sans:inherit;box-sizing:border-box;color:var(--sb-ink);font-family:var(--sb-sans);font-size:.95rem;line-height:1.5}
 @media (prefers-color-scheme:dark){.sb:not([data-theme=light]){${DARK}}}
 .sb[data-theme=dark]{${DARK}}
 .sb *,.sb *::before,.sb *::after{box-sizing:border-box}
@@ -141,6 +144,47 @@ p.sb-problems{padding-left:.7rem}
 .sb-efficacy-form{display:flex;flex-direction:column;gap:.7rem}
 .sb-efficacy-form p{margin:0}
 .sb-efficacy-arms .sb-input{max-width:8rem}
+.sb-config{background:var(--sb-card);border:1px solid var(--sb-rule);border-radius:10px;padding:.6rem .9rem}
+.sb-config summary{cursor:pointer;font-weight:600;min-height:2rem;line-height:2rem}
+.sb-config .sb-row{margin-top:.6rem}
+.sb-config-facts{margin:.4rem 0 0;display:grid;grid-template-columns:minmax(8rem,max-content) 1fr;gap:.25rem 1rem;font-size:.86rem}
+.sb-config-facts dt{font:600 .64rem/1.7 var(--sb-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--sb-soft)}
+.sb-config-facts dd{margin:0;overflow-wrap:anywhere}
+@media (max-width:540px){.sb-config-facts{grid-template-columns:1fr}}
+.sb-pipeline-scroll{overflow-x:auto;padding-bottom:.3rem}
+.sb-pipeline{display:flex;align-items:flex-start;gap:.7rem;min-width:max-content}
+.sb-lane{display:flex;flex-direction:column;gap:.35rem;width:11.5rem;padding:.5rem;background:var(--sb-sink);border-radius:10px}
+.sb-lane-head{display:flex;flex-direction:column;padding:.1rem .2rem .3rem;font-size:.84rem}
+.sb-lane-head strong{font:600 .68rem/1.4 var(--sb-mono);letter-spacing:.08em;text-transform:uppercase}
+.sb .sb-node{display:flex;flex-direction:column;align-items:flex-start;gap:.05rem;width:100%;padding:.4rem .55rem;border:1px solid var(--sb-rule);border-left:3px solid var(--sb-line);border-radius:8px;background:var(--sb-card);text-align:left;font-size:.84rem}
+.sb .sb-node strong{font-weight:600;overflow-wrap:anywhere}
+.sb .sb-node:hover{border-color:var(--sb-accent)}
+.sb .sb-node[data-role=picked]{border-color:var(--sb-accent);border-left-color:var(--sb-accent);background:var(--sb-accent-soft)}
+.sb .sb-node[data-role=reads]{border-left-color:var(--sb-blue);background:var(--sb-blue-soft)}
+.sb .sb-node[data-role=feeds]{border-left-color:var(--sb-ok);background:var(--sb-ok-soft)}
+.sb .sb-node[data-role=other]{opacity:.45}
+.sb-pipeline-legend{display:flex;flex-wrap:wrap;gap:.4rem;margin:.5rem 0 0}
+.sb-node-key{padding:.15rem .5rem;border-radius:999px;border-left:3px solid var(--sb-line);font-size:.78rem}
+.sb-node-key[data-role=picked]{background:var(--sb-accent-soft);border-left-color:var(--sb-accent)}
+.sb-node-key[data-role=reads]{background:var(--sb-blue-soft);border-left-color:var(--sb-blue)}
+.sb-node-key[data-role=feeds]{background:var(--sb-ok-soft);border-left-color:var(--sb-ok)}
+.sb-workflow:empty{display:none}
+.sb-workflow{margin-top:.8rem;padding:.8rem .9rem;background:var(--sb-card);border:1px solid var(--sb-accent);border-radius:10px;display:flex;flex-direction:column;gap:.7rem}
+.sb-workflow-head{display:flex;justify-content:space-between;align-items:flex-start;gap:.8rem}
+.sb-workflow-head h4{margin:0;font-size:1.05rem;overflow-wrap:anywhere}
+.sb-workflow-head p{margin:.2rem 0 0}
+.sb-workflow-layer{font:600 .64rem/1.4 var(--sb-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--sb-accent)}
+.sb-workflow-section h5{margin:0 0 .3rem;font:600 .68rem/1.3 var(--sb-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--sb-soft)}
+.sb-workflow-tables,.sb-workflow-reads{margin:0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:.3rem .9rem;font-size:.86rem}
+.sb-workflow-tables li{display:flex;flex-wrap:wrap;align-items:baseline;gap:.4rem}
+.sb-workflow-reads li{font-family:var(--sb-mono);font-size:.8rem;padding:.15rem .45rem;border-radius:6px;background:var(--sb-blue-soft)}
+.sb-workflow code{font-family:var(--sb-mono);font-size:.82rem}
+.sb-workflow-spec{margin:0 0 .35rem;display:flex;flex-wrap:wrap;align-items:center;gap:.3rem}
+.sb-workflow-steps{margin:0;padding-left:1.4rem;display:flex;flex-direction:column;gap:.55rem;font-size:.86rem}
+.sb-workflow-step{display:flex;flex-wrap:wrap;gap:.4rem;align-items:baseline}
+.sb-workflow-step code:first-child{font-weight:600}
+.sb-workflow-param{margin:.15rem 0 0;display:flex;flex-wrap:wrap;gap:.4rem;align-items:baseline}
+.sb-workflow-param pre{flex:1 1 100%;margin:.1rem 0 0;padding:.5rem .6rem;background:var(--sb-sink);border-radius:8px;font:.78rem/1.45 var(--sb-mono);white-space:pre-wrap;overflow-wrap:anywhere}
 .sb-growth tr[aria-current=true] td{font-weight:600;background:var(--sb-accent-soft)}
 .sb-viewer{margin-top:.6rem;min-width:0}
 .sb-viewer .sv{--sv-accent:var(--sb-accent);--sv-accent-soft:var(--sb-accent-soft);--sv-on-accent:var(--sb-on-accent);--sv-card:var(--sb-card);--sv-ink:var(--sb-ink);--sv-soft:var(--sb-soft);--sv-rule:var(--sb-rule);--sv-line:var(--sb-line);--sv-sink:var(--sb-sink)}

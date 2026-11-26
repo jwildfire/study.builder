@@ -197,6 +197,30 @@ check(
   )
 );
 
+// 1b. Every table built by a workflow carries that workflow as it is written.
+const built = first.layers.slice(1).flatMap((layer) => layer.tables);
+check(
+  'every table built by a workflow carries it as written: what it says of itself, its input spec and its steps',
+  built.length > 0 &&
+    built.every(
+      (table) =>
+        table.definition &&
+        table.definition.meta.some((pair) => pair.key === 'ID') &&
+        table.definition.steps.length > 0 &&
+        table.definition.steps.every((step) => step.name)
+    ),
+  built
+    .filter((table) => !table.definition || !table.definition.steps.length)
+    .map((table) => `${table.layer}/${table.id}`)
+    .join(' ')
+);
+check(
+  'an ADaM workflow’s steps hold its queries, word for word',
+  first
+    .table('adam', 'ADAE')
+    .definition.steps.some((step) => step.params.some((pair) => /SELECT/.test(pair.value)))
+);
+
 // 2. The same seed builds the same study.
 const again = await build({ seed: 7 });
 check(

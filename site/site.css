@@ -1,3 +1,9 @@
+/* study.builder's own site. The type and the hex strip are rainbow-hex 1.0
+   (https://github.com/jwildfire/rainbow-hex): Instrument Serif for headings,
+   Instrument Sans for text, IBM Plex Mono for labels, and the seven-hue
+   spectrum seen through a strip of hex outlines under the header. The seven
+   colours and the hex outline are copied from its rainbow-hex-tokens.css;
+   copy them again when the packet changes. The pages load the three faces. */
 :root {
   --bg: #fafaf8;
   --ink: #1f2328;
@@ -5,10 +11,24 @@
   --rule: #e4e6e3;
   --accent: #6c3270;
   --code: #f1f0ec;
+  --sans: 'Instrument Sans', system-ui, -apple-system, sans-serif;
+  --serif: 'Instrument Serif', Georgia, 'Iowan Old Style', serif;
+  --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --h1: #d87972;
+  --h2: #c78a3b;
+  --h3: #77a95b;
+  --h4: #00afa9;
+  --h5: #519fdd;
+  --h6: #988bdd;
+  --h7: #c67bb6;
+  --card: #fff;
+  --spec: linear-gradient(90deg, #d87972, #c78a3b, #77a95b, #00afa9, #519fdd, #988bdd, #c67bb6);
+  --hex: url("data:image/svg+xml;utf8,%3Csvg xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg' width%3D'6.928' height%3D'9.000' viewBox%3D'0 0 6.928 9.000'%3E%3Cg fill%3D'none' stroke%3D'%23000' stroke-width%3D'0.9'%3E%3Cpolygon points%3D'3.464%2C0.50 6.928%2C2.50 6.928%2C6.50 3.464%2C8.50 0.000%2C6.50 0.000%2C2.50'%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E");
 }
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #15191c;
+    --card: #1c2226;
     --ink: #e8e6e1;
     --soft: #9aa5ab;
     --rule: #2f373c;
@@ -20,10 +40,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--ink);
-  font:
-    16px/1.5 -apple-system,
-    system-ui,
-    sans-serif;
+  font: 16px/1.5 var(--sans);
 }
 main {
   max-width: 72rem;
@@ -35,14 +52,26 @@ header {
   flex-wrap: wrap;
   align-items: baseline;
   gap: 0.4rem 0.8rem;
+  position: relative;
   margin: 0 0 1.4rem;
-  padding: 0 0 0.9rem;
-  border-bottom: 1px solid var(--rule);
+  padding: 0 0 calc(0.9rem + 9px);
+}
+/* The hex strip: the spectrum, seen through a row of hex outlines. */
+header::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 9px;
+  background: var(--spec);
+  -webkit-mask: var(--hex) repeat-x left top / auto 9px;
+  mask: var(--hex) repeat-x left top / auto 9px;
 }
 header h1 {
   margin: 0;
   font-size: 1.15rem;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--mono);
 }
 header span,
 footer {
@@ -71,6 +100,10 @@ section.use p {
   max-width: 60rem;
   margin: 0 0 0.7rem;
 }
+pre,
+code {
+  font-family: var(--mono);
+}
 pre {
   overflow-x: auto;
   padding: 0.8rem 1rem;
@@ -85,10 +118,7 @@ pre {
 }
 .about h2 {
   margin: 0 0 0.5rem;
-  font:
-    500 1.9rem/1.15 Georgia,
-    'Iowan Old Style',
-    serif;
+  font: 400 2.1rem/1.1 var(--serif);
   text-wrap: balance;
 }
 .about p {
@@ -96,7 +126,7 @@ pre {
   margin: 0 0 0.9rem;
   color: var(--soft);
 }
-.about ol {
+.about .parts {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -104,20 +134,16 @@ pre {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
   gap: 0.7rem;
 }
-.about li {
+.about .parts li {
   padding: 0.8rem 0.9rem;
   border: 1px solid var(--rule);
   border-radius: 10px;
   font-size: 0.9rem;
 }
-.about li strong {
+.about .parts li strong {
   display: block;
   margin-bottom: 0.2rem;
-  font:
-    600 0.7rem/1.3 ui-monospace,
-    SFMono-Regular,
-    Menlo,
-    monospace;
+  font: 600 0.7rem/1.3 var(--mono);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--accent);
@@ -149,7 +175,7 @@ header h1 a {
   color: inherit;
   text-decoration: none;
 }
-.about li a {
+.about .parts li a {
   display: inline-block;
   margin-top: 0.5rem;
   color: var(--accent);
@@ -160,10 +186,7 @@ header h1 a {
 }
 .tool h2 {
   margin: 0 0 0.4rem;
-  font:
-    500 1.6rem/1.2 Georgia,
-    'Iowan Old Style',
-    serif;
+  font: 400 1.8rem/1.15 var(--serif);
 }
 .tool p {
   max-width: 46rem;
@@ -198,4 +221,169 @@ header h1 a {
   color: var(--soft);
   font-size: 0.9rem;
   min-height: 1.4rem;
+}
+
+/* How a study is made: six stages in a row, each marked with one hue of the
+   spectrum, joined by arrows. On a narrow page they stack. */
+.flow {
+  margin: 1.4rem 0 1.6rem;
+}
+.flow figcaption {
+  margin: 0 0 0.6rem;
+  font: 600 0.7rem/1.3 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--soft);
+}
+.flow ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 1.1rem;
+}
+.stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+  padding: 0.7rem 0.75rem 0.8rem;
+  border: 1px solid var(--rule);
+  border-top: 3px solid var(--hue);
+  border-radius: 10px;
+  background: var(--card);
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+/* The arrow to the next stage. */
+.stage:not(:last-child)::after {
+  content: '→';
+  position: absolute;
+  top: 50%;
+  right: -0.95rem;
+  transform: translateY(-50%);
+  color: var(--soft);
+  font-size: 0.9rem;
+}
+.stage-top {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.hexi {
+  flex: 0 0 auto;
+  width: 1.15rem;
+  height: 1.15rem;
+}
+.hexi polygon {
+  fill: color-mix(in srgb, var(--hue) 28%, transparent);
+  stroke: var(--hue);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+.stage-label {
+  font: 600 0.66rem/1.2 var(--mono);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--soft);
+}
+.stage strong {
+  font: 400 1.12rem/1.2 var(--serif);
+}
+.stage p {
+  margin: 0;
+  max-width: none;
+  color: var(--soft);
+  font-size: 0.82rem;
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: auto;
+  padding-top: 0.35rem;
+}
+.chips span {
+  padding: 0.08rem 0.4rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--hue) 16%, transparent);
+  font: 500 0.66rem/1.5 var(--mono);
+}
+@media (max-width: 68rem) {
+  .flow ol {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .stage:nth-child(3)::after {
+    content: none;
+  }
+}
+@media (max-width: 40rem) {
+  .flow ol {
+    grid-template-columns: 1fr;
+  }
+  .stage:not(:last-child)::after {
+    content: '↓';
+    top: auto;
+    right: auto;
+    left: 50%;
+    bottom: -1.15rem;
+    transform: translateX(-50%);
+  }
+}
+/* A small picture of each part, drawn in the page's own colours. */
+.thumb {
+  display: block;
+  width: 100%;
+  max-width: 17rem;
+  height: auto;
+  margin: 0 0 0.7rem;
+}
+.thumb .t-card {
+  fill: var(--card);
+  stroke: var(--rule);
+}
+.thumb .t-line {
+  stroke: var(--rule);
+  fill: none;
+}
+.thumb .t-ink {
+  fill: var(--ink);
+  opacity: 0.75;
+}
+.thumb .t-soft {
+  fill: var(--soft);
+  opacity: 0.45;
+}
+.thumb .t-accent {
+  fill: var(--accent);
+}
+.thumb .t-ghost {
+  fill: none;
+  stroke: var(--soft);
+  stroke-opacity: 0.5;
+}
+.thumb polyline {
+  fill: none;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.thumb .t-a {
+  stroke: var(--soft);
+}
+.thumb .t-b {
+  stroke: var(--h5);
+}
+.thumb .t-c {
+  stroke: var(--accent);
+}
+.thumb .t-cdot {
+  fill: var(--accent);
+}
+.thumb .t-hexrow polygon {
+  fill: color-mix(in srgb, var(--h4) 25%, transparent);
+  stroke: var(--h4);
+  stroke-width: 1.5;
 }

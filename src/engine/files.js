@@ -84,7 +84,7 @@ export const WORKFLOW_FILES = [
 ];
 
 /** A stamp of every file R fetches: it changes when any of them does. */
-export const FILES_STAMP = "dadd7c78b2be";
+export const FILES_STAMP = "c5700e2779cd";
 
 /** What each copy was copied from. */
 export const COPIED_FROM = {

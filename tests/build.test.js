@@ -94,6 +94,25 @@ const ANSWER = {
           columns: [column('USUBJID'), column('AESEV')],
           text: '"USUBJID","AESEV"\n"S1","MODERATE"\n',
           made: { workflow: 'ADaM_ADAE', from: ['Raw_AE', 'ADaM_ADSL'] },
+          definition: {
+            meta: [
+              { key: 'Type', value: 'ADaM' },
+              { key: 'ID', value: 'ADAE' }
+            ],
+            spec: [
+              { table: 'Raw_AE', columns: [{ name: 'subjid', type: 'character', required: true }] }
+            ],
+            steps: [
+              {
+                output: 'ADaM_ADAE',
+                name: 'workr::RunQuery',
+                params: [
+                  { key: 'df', value: 'Raw_AE' },
+                  { key: 'strQuery', value: 'SELECT subjid AS USUBJID FROM df' }
+                ]
+              }
+            ]
+          },
           mapping: [
             { column: 'USUBJID', from: 'Raw_AE.subjid', how: 'Copied' },
             { column: 'AESEV', from: 'Raw_AE.aetoxgr', how: 'Derived: the toxicity grade in words' }
@@ -560,6 +579,7 @@ describe('the loader on a page', () => {
     // The viewer: the study's layers in its rail, and the overview first.
     expect([...document.querySelectorAll('.sv-view')].map((tab) => tab.textContent)).toEqual([
       'Overview',
+      'Pipeline',
       'Tables',
       'Columns',
       'One participant'
@@ -595,6 +615,36 @@ describe('the loader on a page', () => {
     await settle();
     expect(handle.state().screen).toBe('library');
     expect(r.connect).not.toHaveBeenCalled();
+  });
+
+  it('shows the pipeline: what the study was asked to be, a card for every workflow by layer, and a workflow as it is written', async () => {
+    const { saved } = mounted();
+    const study = await handle.build();
+    expect(study.table('adam', 'ADAE').definition.steps[0].name).toBe('workr::RunQuery');
+    q('.sv-view[data-view="pipeline"]').click();
+    expect(q('.sb-config-facts').textContent).toContain('BUILT-001');
+    expect([...document.querySelectorAll('.sb-lane')].map((lane) => lane.dataset.layer)).toEqual(
+      study.layers.map((layer) => layer.id)
+    );
+    expect(document.querySelectorAll('.sb-lane[data-layer="raw"] .sb-node')).toHaveLength(2);
+    // Pick the ADaM workflow: what it was built from is marked, and its steps are shown.
+    q('.sb-node[data-card="adam:ADaM_ADAE"]').click();
+    expect(q('.sb-node[data-card="raw:Raw_AE"]').dataset.role).toBe('reads');
+    expect(q('.sb-node[data-card="raw:Raw_SUBJ"]').dataset.role).toBe('other');
+    expect(q('.sb-workflow h4').textContent).toBe('ADaM_ADAE');
+    expect(q('.sb-workflow-steps').textContent).toContain('SELECT subjid AS USUBJID FROM df');
+    expect(
+      [...document.querySelectorAll('.sb-workflow-reads li')].map((li) => li.textContent)
+    ).toEqual(['Raw_AE', 'ADaM_ADSL']);
+    // Picked from the raw side, what is built from it is marked.
+    q('.sb-node[data-card="raw:Raw_AE"]').click();
+    expect(q('.sb-node[data-card="adam:ADaM_ADAE"]').dataset.role).toBe('feeds');
+    // The settings can be saved from here, and a table opened in the Tables view.
+    press('pipeline-settings');
+    expect(saved.at(-1).name).toBe('BUILT-001.settings.json');
+    q('[data-action="pipeline-open"]').click();
+    expect(q('.sv-view[aria-selected="true"]').textContent).toBe('Tables');
+    expect(handle.state().viewing).toMatchObject({ view: 'tables', table: 'raw:AE' });
   });
 
   it('keeps every monthly snapshot when asked, and shows the study as it stood at any', async () => {

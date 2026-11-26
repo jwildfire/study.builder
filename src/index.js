@@ -60,6 +60,7 @@ export { DOWNLOADS, PACKAGES, StudyBuilderError, rOptions, studyOf } from './eng
 export { WEBR_VERSION, createConnection } from './engine/r.js';
 export { firstRows } from './shared/csv.js';
 export { columnsOf, growthOf, overviewOf } from './engine/overview.js';
+export { pipelineOf } from './study/pipeline.js';
 export { zipOf } from './engine/zip.js';
 export { COPIED_FROM } from './engine/files.js';
 export { KEYS, RAW_LABELS, RESULT_LABELS, metadataOf } from './engine/metadata.js';

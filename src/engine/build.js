@@ -210,6 +210,29 @@ function tableOf(entry, layer) {
     table.renamed = list(entry.renamed).map((line) => ({ column: line.column, was: line.was }));
   }
   if (entry.domain) table.domain = entry.domain;
+  // The workflow that made it, as it is written: what it says of itself, what
+  // it reads, and its steps.
+  if (entry.definition) {
+    const given = entry.definition;
+    const pairs = (value) =>
+      list(value).map((pair) => ({ key: String(pair.key), value: String(pair.value ?? '') }));
+    table.definition = {
+      meta: pairs(given.meta),
+      spec: list(given.spec).map((one) => ({
+        table: String(one.table),
+        columns: list(one.columns).map((column) => ({
+          name: String(column.name),
+          type: String(column.type || ''),
+          required: Boolean(column.required)
+        }))
+      })),
+      steps: list(given.steps).map((step) => ({
+        output: String(step.output || ''),
+        name: String(step.name || ''),
+        params: pairs(step.params)
+      }))
+    };
+  }
   // The columns that name one row, where the table's workflow says.
   if (entry.keys !== undefined) table.keys = list(entry.keys);
   return table;
