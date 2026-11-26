@@ -724,6 +724,11 @@ describe('the loader on a page', () => {
     ]);
     expect(pick.value).toBe('2012-09-30');
     expect(document.querySelectorAll('.sb-growth tbody tr')).toHaveLength(3);
+    // The growth table has a row of its own and scrolls inside itself, so a
+    // narrow host page (safety.viz's tab is about 1,336 pixels) is not pushed wider.
+    const css = document.getElementById('study-builder-styles').textContent;
+    expect(css).toContain('.sb-growth{grid-column:1/-1}');
+    expect(css).toContain('.sb-over{min-width:0;overflow-x:auto}');
     expect(q('.sb-tile-value').textContent).toBe('2');
     pick.value = '2012-07-31';
     pick.dispatchEvent(new Event('change'));

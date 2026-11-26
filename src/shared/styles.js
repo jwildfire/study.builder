@@ -193,7 +193,8 @@ p.sb-problems{padding-left:.7rem}
 .sb-tile-value{font-size:1.5rem;font-weight:600;line-height:1.1;font-variant-numeric:tabular-nums}
 .sb-tile-label{font-size:.84rem}
 .sb-over-lower{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr));gap:1rem}
-.sb-over{min-width:0}
+.sb-over{min-width:0;overflow-x:auto}
+.sb-growth{grid-column:1/-1}
 .sb-table{border-collapse:collapse;width:100%;font-size:.84rem;background:var(--sb-card);border:1px solid var(--sb-rule);border-radius:10px}
 .sb-table th{text-align:left;padding:.4rem .7rem;border-bottom:1px solid var(--sb-line);font-weight:600}
 .sb-table td{padding:.35rem .7rem;border-bottom:1px solid var(--sb-rule);font-variant-numeric:tabular-nums}
