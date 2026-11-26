@@ -229,11 +229,13 @@ The rest are optional: `VISIT`, `AE`, `LB`, `VS`, `PD`, `STUDCOMP`, `SDRGCOMP`, 
 - Only the study's last monthly snapshot is returned.
 - gsm.datasim makes no lab results (only toxicity grades), no treatment arms and no ECGs. Adverse event terms are its placeholders (`term1`, `soc1`).
 
-Three things are changed in the raw tables after the simulation, and every study says so in `study.notes`:
+Nothing is changed in the raw tables after the simulation: the builder makes no data. gsm.datasim is asked for three things it would otherwise do differently, and every study says so in `study.notes`:
 
-- Columns gsm.datasim names as the source system does are given gsm's names, as gsm.mapping's own specs say.
-- Site ids are written `SITE1234` where gsm.datasim writes `0X1234`, which R would read back from a file as a number.
-- The study table's phase and therapeutic area are what was asked for.
+- Columns under gsm's names, as gsm.mapping's own specs say, where it would name them as the source system does.
+- Site ids that begin `SITE`, where it would write `0X1234`, which R would read back from a file as a number.
+- A study table whose phase and therapeutic area are what was asked for.
+
+Vital signs are gsm.datasim's own too, made in every snapshot: a participant's vital signs at a visit are the same in every snapshot that holds them.
 
 ## Sharing R
 

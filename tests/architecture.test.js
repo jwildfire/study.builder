@@ -89,15 +89,15 @@ describe('the builder makes no data', () => {
     }
   });
 
-  it('the fence lists the pieces it holds, and holds no others', () => {
+  it('the fence is empty: every piece it held is gsm.datasim’s own now', () => {
     const inside = r.slice(r.indexOf(begin), r.indexOf(end));
     const defined = [...inside.matchAll(/^(\.builder_[a-z_]+) <- function/gm)].map((m) => m[1]);
-    expect(defined.sort()).toEqual([
-      '.builder_gsm_names',
-      '.builder_site_id',
-      '.builder_site_ids',
-      '.builder_study',
-      '.builder_vitals'
-    ]);
+    expect(defined).toEqual([]);
+    // Nothing but comments is between the two lines.
+    const code = inside
+      .split('\n')
+      .slice(1)
+      .filter((line) => line.trim() && !line.trim().startsWith('#'));
+    expect(code).toEqual([]);
   });
 });

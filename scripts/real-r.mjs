@@ -48,6 +48,24 @@ check(
   !/"0X[0-9A-F]+"/i.test(first.domains.find((domain) => domain.id === 'SUBJ').text)
 );
 check(
+  'no raw table holds a site id R would read as a number, in any column',
+  first.domains.every((domain) => !/"0X[0-9A-F]+"/i.test(domain.text)),
+  first.domains
+    .filter((domain) => /"0X[0-9A-F]+"/i.test(domain.text))
+    .map((domain) => domain.id)
+    .join(' ')
+);
+check(
+  'a raw table says what gsm.datasim called each column it names as gsm does',
+  first.domains.some((domain) => (domain.renamed || []).length > 0) &&
+    first.domains.every((domain) =>
+      (domain.renamed || []).every(
+        (line) => line.was && domain.columns.some((column) => column.name === line.column)
+      )
+    ),
+  first.domains.map((domain) => `${domain.id}:${(domain.renamed || []).length}`).join(' ')
+);
+check(
   'every domain names its columns and their types',
   first.domains.every(
     (domain) =>
@@ -283,9 +301,49 @@ check(
   everyMonth.manifest.snapshots.length === 3 && everyMonth.manifest.key !== lastOnly.manifest.key
 );
 
+// Vital signs are gsm.datasim's own domain: what a snapshot holds of them is
+// in the next one, unchanged.
+const vitalsKept = (study) =>
+  study.history.slice(0, -1).map((entry, index) => {
+    const rows = (text) => text.trim().split('\n').slice(1);
+    const now = rows(entry.study().table('raw', 'VS').text);
+    const next = new Set(rows(study.history[index + 1].study().table('raw', 'VS').text));
+    return `${now.filter((row) => next.has(row)).length}/${now.length}`;
+  });
+check(
+  'a participant’s vital signs at a visit are the same in every snapshot that holds them',
+  vitalsKept(everyMonth).every((said) => {
+    const [kept, of] = said.split('/').map(Number);
+    return of > 0 && kept === of;
+  }),
+  vitalsKept(everyMonth).join(' ')
+);
+check(
+  'and no note says vital signs differ between snapshots',
+  !everyMonth.notes.some((note) => /vital signs/i.test(note) && /snapshot/i.test(note))
+);
+
 // 2c. An efficacy score, on a protocol.
 const pilotProtocol = JSON.parse(
   readFileSync(path.join(root, 'protocols/cdisc-pilot.protocol.json'), 'utf8')
+);
+const scheduledMonths = await build({
+  name: 'SCHEDULED',
+  participants: 60,
+  sites: 6,
+  months: 5,
+  seed: 11,
+  protocol: pilotProtocol,
+  snapshots: 'all'
+});
+check(
+  'on a protocol’s schedule too, vital signs are the same in every snapshot that holds them',
+  scheduledMonths.history.every((entry) => !entry.problem) &&
+    vitalsKept(scheduledMonths).every((said) => {
+      const [kept, of] = said.split('/').map(Number);
+      return kept === of;
+    }),
+  vitalsKept(scheduledMonths).join(' ')
 );
 const scored = await build({
   name: 'SCORED',
