@@ -28,6 +28,7 @@ study.builder is three things a reader uses, each with its parts. A page takes a
 
 - **A study in layers.** Raw is the root: what gsm.datasim simulates. Every other layer is built off it by workflows, and every table says which workflow made it and what that workflow read.
 - **A plain function.** Settings in, data out, with no page at all. This is how another package loads simulated data.
+- **Assumptions you can set.** How many participants leave early, how adverse events follow the arm, and what an efficacy score does by arm. gsm.datasim makes the data; the settings travel with the study.
 - **A manifest.** A checksum for every table and one key for the whole study. The same tables always give the same key.
 
 ## Layers

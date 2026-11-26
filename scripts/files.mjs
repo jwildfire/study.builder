@@ -46,17 +46,26 @@ export function copyProblems() {
   return problems;
 }
 
-/** study.builder's own workflow files, by layer folder, as R is given them. */
-export function workflowFiles() {
+const inWorkflows = (ending) => {
   const folder = path.join(root, 'workflows');
   return readdirSync(folder)
     .sort()
     .flatMap((layer) =>
       readdirSync(path.join(folder, layer))
-        .filter((file) => file.endsWith('.yaml'))
+        .filter((file) => file.endsWith(ending))
         .sort()
         .map((file) => `workflows/${layer}/${file}`)
     );
+};
+
+/** study.builder's own workflow files, by layer folder, as R is given them. */
+export function workflowFiles() {
+  return inWorkflows('.yaml');
+}
+
+/** The R files beside the workflows: each holds a function a workflow's step calls by name. */
+export function workflowHelpers() {
+  return inWorkflows('.R');
 }
 
 /** The text of src/engine/files.js. */
@@ -82,7 +91,8 @@ export function filesModule() {
     vitals[0],
     ...kri,
     ...reporting,
-    ...workflowFiles()
+    ...workflowFiles(),
+    ...workflowHelpers()
   ]) {
     stamp.update(file).update(readFileSync(path.join(root, file)));
   }
@@ -97,6 +107,8 @@ export function filesModule() {
     `export const GSM_FILES = ${JSON.stringify([...kri, ...reporting], null, 2)};\n\n` +
     '/** study.builder’s own workflows, which build the layers off raw. */\n' +
     `export const WORKFLOW_FILES = ${JSON.stringify(workflowFiles(), null, 2)};\n\n` +
+    '/** The R files beside them: a function a workflow’s step calls by name, where a query cannot do the step. */\n' +
+    `export const WORKFLOW_HELPERS = ${JSON.stringify(workflowHelpers(), null, 2)};\n\n` +
     '/** A stamp of every file R fetches: it changes when any of them does. */\n' +
     `export const FILES_STAMP = ${JSON.stringify(stamp.digest('hex').slice(0, 12))};\n\n` +
     '/** What each copy was copied from. */\n' +

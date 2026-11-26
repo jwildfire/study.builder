@@ -62,7 +62,19 @@ export function settingsOfArgs(args) {
     domains: [...args.domains],
     layers: [...args.layers],
     ...(args.protocol ? { protocol: protocolOfArgs(args) } : {}),
-    ...(args.efficacy ? { efficacy: efficacyOfArgs(args) } : {})
+    ...(args.efficacy ? { efficacy: efficacyOfArgs(args) } : {}),
+    ...(args.assumptions ? { assumptions: assumptionsOfArgs(args) } : {})
+  };
+}
+
+/** What the simulator was told to assume of a study, from what R was asked for. */
+export function assumptionsOfArgs(args) {
+  if (!args || !args.assumptions) return null;
+  const sent = JSON.parse(args.assumptions);
+  return {
+    dropout: sent.dropout ? sent.dropout.rate : 0,
+    ...(sent.dropout && sent.dropout.arms ? { dropoutByArm: { ...sent.dropout.arms } } : {}),
+    ...(sent.events ? { eventRatio: sent.events.ratio } : {})
   };
 }
 

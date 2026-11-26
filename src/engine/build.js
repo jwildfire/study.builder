@@ -8,7 +8,14 @@
 
 import { DOMAINS, LAYERS, STANDARD, readSettings, studySaid } from './core.js';
 import { createConnection } from './r.js';
-import { FILES_STAMP, GSM_FILES, SIMULATOR_FILES, VITALS_FILE, WORKFLOW_FILES } from './files.js';
+import {
+  FILES_STAMP,
+  GSM_FILES,
+  SIMULATOR_FILES,
+  VITALS_FILE,
+  WORKFLOW_FILES,
+  WORKFLOW_HELPERS
+} from './files.js';
 import { metadataOf } from './metadata.js';
 import { readProtocol } from './protocol.js';
 import { manifestOf } from './manifest.js';
@@ -75,7 +82,8 @@ export function rOptions(base, { repository = null } = {}) {
     ...SIMULATOR_FILES,
     VITALS_FILE,
     ...GSM_FILES,
-    ...WORKFLOW_FILES
+    ...WORKFLOW_FILES,
+    ...WORKFLOW_HELPERS
   ].map((file) => ({
     path: `${ROOT}/${file}`,
     // The stamp keeps a page and the files it fetches of one release (files.js).

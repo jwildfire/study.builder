@@ -245,6 +245,7 @@ export const DEFAULTS = Object.freeze({
   snapshots: 'last',
   protocol: null,
   efficacy: null,
+  assumptions: null,
   domains: DEFAULT_DOMAINS,
   layers: DEFAULT_LAYERS
 });
@@ -256,7 +257,9 @@ export const CAVEATS = Object.freeze([
   'Only the study’s last monthly snapshot is kept, unless every month is asked for.',
   'Every table that is not raw is built off raw by a workflow, and says which. The ADaM tables are a light form: enough for charts, not a submission.',
   'The site metrics are gsm’s own, run as gsm runs them. A simulated study’s flags say nothing about any real site.',
-  'Arms, lab results and ECGs are simulated: a few participants on an active arm have a rise in liver tests, creatinine or QTc. A lab’s toxicity grade is not worked out from its result, and adverse events do not follow the arm. Adverse event terms are placeholders.'
+  'Arms, lab results and ECGs are simulated: a few participants on an active arm have a rise in liver tests, creatinine or QTc. A lab’s toxicity grade is not worked out from its result.',
+  'Adverse event terms are a short list of gsm.datasim’s own, not MedDRA. Terms typical of a study drug are more common on an active arm, and a simulated rise usually names one of the participant’s events; how many events a participant has does not follow the arm.',
+  'Nobody leaves the study early unless a share is asked for. When one is, who leaves does not depend on how they are doing, and the participant table’s own days-on-study columns are not shortened.'
 ]);
 
 /**
@@ -297,7 +300,7 @@ function whole(value) {
  * Read settings: every problem with them, each a sentence, and, when there is
  * none, what R is asked for. A setting left out is the default's; numbers may
  * be numbers or the text a form field holds.
- * @param {Object} [settings] `name`, `phase`, `area`, `participants`, `sites`, `months`, `outliers`, `seed`, `snapshots` (`last`, or `all` to keep every monthly snapshot), `domains`, `layers`, `protocol` (a protocol whose schedule the build follows; protocol.js) and `efficacy` (a score to simulate by arm, for a study with a protocol; `readEfficacy`).
+ * @param {Object} [settings] `name`, `phase`, `area`, `participants`, `sites`, `months`, `outliers`, `seed`, `snapshots` (`last`, or `all` to keep every monthly snapshot), `domains`, `layers`, `protocol` (a protocol whose schedule the build follows; protocol.js) `efficacy` (a score to simulate by arm, for a study with a protocol; `readEfficacy`) and `assumptions` (what the simulator assumes of any study: who leaves early, and how adverse events follow the arm; `readAssumptions`).
  * @returns {{problems: string[], args: ?Object, domains: string[]}} The problems; the arguments of `builder_run` less the folders R is told; and every domain the study will hold.
  */
 export function readSettings(settings = {}) {
@@ -399,6 +402,20 @@ export function readSettings(settings = {}) {
     }
   }
   const withEfficacy = efficacy ? withNeeds([...withProtocol, 'QS']) : withProtocol;
+  // What the simulator assumes of the study: who leaves early, and how adverse
+  // events follow the arm. Sent only when it says something of its own.
+  let assumed = null;
+  if (given.assumptions !== null && given.assumptions !== undefined) {
+    const read = readAssumptions(given.assumptions, {
+      arms: protocol ? protocol.arms : DEFAULT_ARMS,
+      // The share that leaves has left by the last planned visit, or the study's end.
+      day: protocol
+        ? Math.max(2, ...protocol.visits.map((visit) => visit.day))
+        : (numbers.months || DEFAULTS.months) * 30
+    });
+    problems.push(...read.problems);
+    assumed = read.sent;
+  }
   if (problems.length) return { problems, args: null, domains };
   return {
     problems,
@@ -420,8 +437,75 @@ export function readSettings(settings = {}) {
       // The protocol goes to R as text, with the plan R follows worked out here.
       ...(protocol ? { protocol: JSON.stringify({ ...protocol, plan: planOf(protocol) }) } : {}),
       // The score goes to R as text too, as gsm.datasim's study results take one.
-      ...(efficacy ? { efficacy: JSON.stringify({ scores: [scoreOf(efficacy)] }) } : {})
+      ...(efficacy ? { efficacy: JSON.stringify({ scores: [scoreOf(efficacy)] }) } : {}),
+      // So do the assumptions, as gsm.datasim's study results take them.
+      ...(assumed ? { assumptions: JSON.stringify(assumed) } : {})
     }
+  };
+}
+
+/** The arms a study has when no protocol names any: gsm.datasim's own. */
+export const DEFAULT_ARMS = Object.freeze(['Placebo', 'Active']);
+
+/** What the simulator assumes unless told: nobody leaves early, and an adverse event typical of a study drug is 1.5 times as common on an active arm. */
+export const ASSUMED = Object.freeze({ dropout: 0, eventRatio: 1.5 });
+
+/**
+ * Read what the simulator is to assume and write it back whole, or say what is wrong with it.
+ * @param {Object} given `dropout` (the share of enrolled participants who leave early, 0 to 0.9), `dropoutByArm` (a share for any arm that differs, by arm name) and `eventRatio` (how many times as common an adverse event typical of a study drug is on an active arm as on placebo, above 0 to 5).
+ * @param {{arms: string[], day: number}} study The study's arms, and the study day by which the share has left.
+ * @returns {{problems: string[], assumptions: ?Object, sent: ?Object}} The problems; the assumptions with every field filled in; and what R is sent, null when they are the simulator's own.
+ */
+export function readAssumptions(given, { arms = DEFAULT_ARMS, day = 180 } = {}) {
+  const problems = [];
+  if (!isRecord(given)) {
+    return { problems: ['The assumptions cannot be read.'], assumptions: null, sent: null };
+  }
+  const share = (value, what) => {
+    const number = value === undefined || value === '' ? 0 : finite(value);
+    if (number === null || number < 0 || number > 0.9) {
+      problems.push(`${what} must be a number from 0 to 0.9.`);
+      return 0;
+    }
+    return number;
+  };
+  const dropout = share(given.dropout, 'The share who leave early');
+  const dropoutByArm = {};
+  const byArm = isRecord(given.dropoutByArm) ? given.dropoutByArm : {};
+  for (const [arm, value] of Object.entries(byArm)) {
+    if (!arms.includes(arm)) problems.push(`${arm} is not an arm of this study.`);
+    else if (value !== '' && value !== null && value !== undefined) {
+      dropoutByArm[arm] = share(value, `The share of ${arm} who leave early`);
+    }
+  }
+  const ratioGiven =
+    given.eventRatio === undefined || given.eventRatio === '' || given.eventRatio === null
+      ? ASSUMED.eventRatio
+      : finite(given.eventRatio);
+  let eventRatio = ASSUMED.eventRatio;
+  if (ratioGiven === null || ratioGiven <= 0 || ratioGiven > 5) {
+    problems.push(
+      'How many times as common drug events are on an active arm must be above 0, to 5.'
+    );
+  } else eventRatio = ratioGiven;
+  if (problems.length) return { problems, assumptions: null, sent: null };
+  const leaves = dropout > 0 || Object.values(dropoutByArm).some((rate) => rate > 0);
+  const sent = {
+    ...(leaves
+      ? {
+          dropout: {
+            rate: dropout,
+            ...(Object.keys(dropoutByArm).length ? { arms: dropoutByArm } : {}),
+            day
+          }
+        }
+      : {}),
+    ...(eventRatio !== ASSUMED.eventRatio ? { events: { ratio: eventRatio } } : {})
+  };
+  return {
+    problems,
+    assumptions: { dropout, dropoutByArm, eventRatio },
+    sent: Object.keys(sent).length ? sent : null
   };
 }
 

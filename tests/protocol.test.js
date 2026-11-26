@@ -19,7 +19,7 @@ import {
   readProtocol,
   readUsdm
 } from '../src/engine/protocol.js';
-import { LIMITS, readEfficacy, readSettings } from '../src/engine/core.js';
+import { LIMITS, readAssumptions, readEfficacy, readSettings } from '../src/engine/core.js';
 import { efficacy as drawEfficacy, efficacyResults } from '../src/study/efficacy.js';
 import { settingsOfArgs } from '../src/engine/saved.js';
 import { createBuilder, studyOf } from '../src/engine/build.js';
@@ -455,6 +455,77 @@ describe('an efficacy score', () => {
     expect(readSettings({ efficacy: PILOT_SCORE }).problems).toEqual([
       'An efficacy score needs a protocol: its arms and the visits it is measured at.'
     ]);
+  });
+
+  it('reads what the simulator is to assume: a share who leave early, by arm where one differs, and how adverse events follow the arm', () => {
+    const study = { arms: ['Placebo', 'Low', 'High'], day: 169 };
+    // Nothing of its own: nothing is sent, and the simulator's own stand.
+    expect(readAssumptions({}, study)).toEqual({
+      problems: [],
+      assumptions: { dropout: 0, dropoutByArm: {}, eventRatio: 1.5 },
+      sent: null
+    });
+    expect(
+      readAssumptions({ dropout: '0.2', dropoutByArm: { High: 0.35 }, eventRatio: 2 }, study).sent
+    ).toEqual({ dropout: { rate: 0.2, arms: { High: 0.35 }, day: 169 }, events: { ratio: 2 } });
+    expect(readAssumptions({ dropout: 1.2 }, study).problems).toEqual([
+      'The share who leave early must be a number from 0 to 0.9.'
+    ]);
+    expect(readAssumptions({ dropoutByArm: { Other: 0.1 } }, study).problems).toEqual([
+      'Other is not an arm of this study.'
+    ]);
+    expect(readAssumptions({ eventRatio: 0 }, study).problems).toHaveLength(1);
+    // In the settings: the day is the protocol's last visit, or the study's months.
+    const withProtocol = readSettings({ protocol: pilot(), assumptions: { dropout: 0.3 } });
+    expect(JSON.parse(withProtocol.args.assumptions)).toEqual({ dropout: { rate: 0.3, day: 183 } });
+    expect(settingsOfArgs(withProtocol.args).assumptions).toEqual({ dropout: 0.3 });
+    const plain = readSettings({ months: 6, assumptions: { eventRatio: 3 } });
+    expect(JSON.parse(plain.args.assumptions)).toEqual({ events: { ratio: 3 } });
+    expect(readSettings({ assumptions: {} }).args.assumptions).toBeUndefined();
+    expect(readSettings({ assumptions: { dropout: 2 } }).args).toBeNull();
+  });
+
+  it('shows the model under the chart when the results hold one: each arm against the reference arm at the last visit', () => {
+    const line = (analysis, arm, statistic, value) =>
+      `"${analysis}","Set","ADAS-Cog (11)","${arm}","Week 24",14,"${statistic}",${value},"Placebo"`;
+    const text = [
+      '"ANALYSIS","ANALYSISSET","PARAM","ARM","VISIT","VISITNUM","STATISTIC","VALUE","REFARM"',
+      line('Change', 'Placebo', 'n', 40),
+      line('Change', 'Placebo', 'mean', 2.4),
+      line('Change', 'Active', 'n', 41),
+      line('Change', 'Active', 'mean', -0.5),
+      line('Change', 'Active', 'difference', -2.9),
+      line('Model', 'Active', 'adjusted difference', -2.75),
+      line('Model', 'Active', 'standard error', 0.9),
+      line('Model', 'Active', 'lower 95% limit', -4.54),
+      line('Model', 'Active', 'upper 95% limit', -0.96),
+      line('Model', 'Active', 'p-value', 0.003),
+      ''
+    ].join('\n');
+    const study = {
+      table: (layer, id) =>
+        layer === 'analysis' && id === 'EfficacySummary' ? { rows: 10, text } : null,
+      args: {}
+    };
+    document.body.innerHTML = '<div id="e"></div>';
+    const box = document.querySelector('#e');
+    drawEfficacy(domOf(document), study, box);
+    const row = box.querySelector('.sb-efficacy-model tr[data-arm="Active"]');
+    expect([...row.children].map((cell) => cell.textContent)).toEqual([
+      'Active',
+      '−2.75',
+      '−4.54 to −0.96',
+      '0.90',
+      '0.0030'
+    ]);
+    // With no model in the results, there is no model table.
+    const bare = {
+      ...study,
+      table: () => ({ rows: 5, text: text.split('\n').slice(0, 6).join('\n') })
+    };
+    box.replaceChildren();
+    drawEfficacy(domOf(document), bare, box);
+    expect(box.querySelector('.sb-efficacy-model')).toBeNull();
   });
 
   it('is drawn from the results table: a line an arm, the numbers by visit, and what the simulator was told', () => {

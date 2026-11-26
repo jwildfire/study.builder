@@ -227,6 +227,61 @@ export function efficacy({ el }, study, box) {
   wrap.append(grid);
   box.append(wrap);
 
+  // The model, when the results hold one: each arm against the reference arm
+  // at the last visit, adjusted for baseline.
+  const lastName = visits.at(-1).name;
+  const modelled = arms.filter(
+    (arm) => arm !== reference && value(arm, lastName, 'adjusted difference') !== null
+  );
+  if (modelled.length) {
+    const model = el('div', 'sb-over');
+    const table = el('table', 'sb-table sb-efficacy-model');
+    const top = el('tr');
+    for (const title of [
+      `At ${lastName}, against ${reference}`,
+      'Adjusted difference',
+      '95% interval',
+      'Standard error',
+      'p-value'
+    ]) {
+      top.append(el('th', null, title));
+    }
+    const tableHead = el('thead');
+    tableHead.append(top);
+    const body = el('tbody');
+    for (const arm of modelled) {
+      const row = el('tr');
+      row.dataset.arm = arm;
+      const p = value(arm, lastName, 'p-value');
+      const lower = value(arm, lastName, 'lower 95% limit');
+      const upper = value(arm, lastName, 'upper 95% limit');
+      const error = value(arm, lastName, 'standard error');
+      row.append(
+        el('td', null, arm),
+        el('td', null, signed(value(arm, lastName, 'adjusted difference'), 2)),
+        el(
+          'td',
+          null,
+          lower === null || upper === null ? '' : `${signed(lower, 2)} to ${signed(upper, 2)}`
+        ),
+        el('td', null, error === null ? '' : error.toFixed(2)),
+        el('td', null, p === null ? '' : p < 0.0001 ? '< 0.0001' : p.toFixed(4))
+      );
+      body.append(row);
+    }
+    table.append(tableHead, body);
+    model.append(
+      el('h4', null, 'Model: analysis of covariance'),
+      table,
+      el(
+        'p',
+        'sb-soft',
+        'Change from baseline at the last visit by arm, with the baseline score as covariate, fitted by the Efficacy summary workflow. No adjustment for more than one comparison, and nothing is assumed of participants who left: they are not in it.'
+      )
+    );
+    box.append(model);
+  }
+
   if (assumed) {
     const told = Object.entries(assumed.effects || {})
       .map(([arm, effect]) => `${arm} ${signed(Number(effect))}`)
@@ -244,7 +299,7 @@ export function efficacy({ el }, study, box) {
     el(
       'p',
       'sb-soft',
-      'A summary only: no model is fitted and nothing is tested. The numbers are the analysis layer’s Efficacy summary table, one row a result.'
+      'The numbers are the analysis layer’s Efficacy summary table, one row a result.'
     )
   );
 }

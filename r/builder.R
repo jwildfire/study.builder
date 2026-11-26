@@ -55,7 +55,7 @@ builder_limits <- list(
 
 # What was changed in the raw tables, one sentence each.
 builder_notes <- c(
-  "Arms, lab results and ECGs are gsm.datasim's study results: a lab's toxicity grade is not worked out from its result, and adverse events do not follow the arm.",
+  "Arms, lab results, ECGs and adverse event terms are gsm.datasim's study results: a lab's toxicity grade is not worked out from its result, and the terms are a short list of its own, not MedDRA.",
   "gsm.datasim is asked for columns under gsm's names, as gsm.mapping's specs say, where it would name them as the source system does.",
   "gsm.datasim is asked for site ids that begin SITE, where it would write 0X1234, which R would read back from a file as a number.",
   "The study table's phase and therapeutic area are what was asked for. gsm.datasim does not shape the data by either."
@@ -458,6 +458,10 @@ builder_layer_needs <- list(analysis = c("raw.rbqm", "adam"), reporting = "analy
 #'   each as gsm.datasim's study results take one (`name`, `visits`,
 #'   `baseline`, `sd`, `change`, `effects` by arm, `day`, `min`, `max`). They
 #'   are gsm.datasim's to make, as the QS domain. `NULL` for none.
+#' @param assumptions What the simulator assumes of the study, as text: a list
+#'   with `dropout` (`rate`, optionally `arms` and `day`) and `events`
+#'   (`ratio`), each as gsm.datasim's study results take it. `NULL` for
+#'   gsm.datasim's own.
 #' @param history `TRUE` to keep every monthly snapshot and not only the last:
 #'   each earlier snapshot is put through the same workflows, and returned
 #'   under `history`.
@@ -489,6 +493,7 @@ builder_run <- function(
   reporting = NULL,
   protocol = NULL,
   efficacy = NULL,
+  assumptions = NULL,
   history = FALSE
 ) {
   participants <- .builder_whole(participants, "Participants", builder_limits$participants)
@@ -552,6 +557,12 @@ builder_run <- function(
   if ("QS" %in% wanted) {
     if (is.null(efficacy)) stop("The scores domain needs the scores to follow (efficacy).", call. = FALSE)
     results$scores <- yaml::yaml.load(as.character(efficacy))$scores
+  }
+  # So are dropout and how adverse events follow the arm: handed on as they are.
+  if (!is.null(assumptions)) {
+    assumed <- yaml::yaml.load(as.character(assumptions))
+    if (!is.null(assumed$dropout)) results$dropout <- assumed$dropout
+    if (!is.null(assumed$events)) results$events <- assumed$events
   }
   started <- Sys.time()
   study <- suppressMessages(create_longitudinal_study(
@@ -657,6 +668,10 @@ builder_run <- function(
           stop("The analysis layer needs gsm.kri's workflows (kri) and study.builder's (workflows).", call. = FALSE)
         }
         metrics <- .builder_metrics(layer, kri, data)
+        # A workflow step may call a function kept beside the workflows.
+        for (file in list.files(file.path(workflows, "analysis"), pattern = "\\.R$", full.names = TRUE)) {
+          sys.source(file, envir = globalenv())
+        }
         own <- .builder_layer(layer, suppressMessages(workr::MakeWorkflowList(
           strPath = file.path(workflows, "analysis"), strPackage = NULL
         )), data)

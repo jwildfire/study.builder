@@ -1,3 +1,15 @@
+# study.builder v0.5.0 (Upcoming)
+
+<!-- goal 3: a trial that behaves like a trial -->
+
+- **Adverse events follow the arm, and have terms.** Adverse events carry a preferred term and a system organ class from a short list of gsm.datasim's own (about 40 terms in 12 classes; it is not MedDRA). A term typical of a study drug is 1.5 times as common on an active arm, or as many times as the study says. A participant with a simulated rise in liver tests, in creatinine or in QTc usually has an event that says so. A serious event is grade 3 or more and one that is not is 3 or less. No event is added, removed or moved: who had an event, when, and whether it was serious are as before, so every site metric is unchanged.
+- **Participants can leave early.** A study may say what share of enrolled participants leave by its last visit (`assumptions.dropout`, and `dropoutByArm` for an arm that differs). After a participant's last day they have no visits, labs, vital signs, ECGs, scores, deviations or new adverse events, and the study completion and treatment completion tables say who left, when and why, and who finished. The form has the field under Assumptions; none leave unless asked.
+- **A model of the efficacy score.** The Efficacy summary workflow gains a model: at the last visit, change from baseline by arm with the baseline score as covariate. Each arm that is not the reference arm gets an adjusted difference, its standard error, a 95% interval and a p-value, as more rows of the same one-row-a-result table, and the Efficacy tab shows them under the chart. The model is fitted by `EfficacyModel()`, in an R file beside the workflow that calls it by name (`workflows/analysis/EfficacyModel.R`), since a query cannot fit it; the builder's own R derives nothing.
+- **Adverse events by arm.** A new analysis table, by workflow: events, serious events and participants with an event, by arm, body system and term, with the arm's share.
+- `readAssumptions`, `ASSUMED`, `DEFAULT_ARMS`; `builder_run(assumptions = )`; gsm.datasim's staging copy: `results$events`, `results$dropout`, and `apply_study_results(snapshot_date = )`.
+
+<!-- end goal 3 -->
+
 # study.builder v0.4.0
 
 Released 26 November 2026.

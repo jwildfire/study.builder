@@ -156,7 +156,7 @@ describe('what R is given', () => {
     expect(options.files.map((file) => file.path)).toContain(
       '/study.builder/vendor/gsm.mapping-vitals/workflow/1_mappings/VS.yaml'
     );
-    expect(options.files.slice(-8).map((file) => file.path)).toEqual([
+    expect(options.files.slice(-10).map((file) => file.path)).toEqual([
       '/study.builder/workflows/adam/ADAE.yaml',
       '/study.builder/workflows/adam/ADEG.yaml',
       '/study.builder/workflows/adam/ADLB.yaml',
@@ -164,7 +164,10 @@ describe('what R is given', () => {
       '/study.builder/workflows/adam/ADSL.yaml',
       '/study.builder/workflows/adam/ADVS.yaml',
       '/study.builder/workflows/analysis/AESummary.yaml',
-      '/study.builder/workflows/analysis/EfficacySummary.yaml'
+      '/study.builder/workflows/analysis/AESummaryByArm.yaml',
+      '/study.builder/workflows/analysis/EfficacySummary.yaml',
+      // The one R file beside them: the function the efficacy workflow's model step calls.
+      '/study.builder/workflows/analysis/EfficacyModel.R'
     ]);
     // gsm's metric and reporting workflows, and the one R file the reporting needs.
     const paths = options.files.map((file) => file.path);
@@ -514,6 +517,7 @@ describe('the loader on a page', () => {
       'The trial',
       'Layers: each is built from the one before it',
       'Raw domains: 12 of 20',
+      'Assumptions: who leaves early, and adverse events by arm',
       'What you will get'
     ]);
     expect(q('[name="participants"]').value).toBe('150');
@@ -645,6 +649,26 @@ describe('the loader on a page', () => {
     q('[data-action="pipeline-open"]').click();
     expect(q('.sv-view[aria-selected="true"]').textContent).toBe('Tables');
     expect(handle.state().viewing).toMatchObject({ view: 'tables', table: 'raw:AE' });
+  });
+
+  it('takes what the simulator is to assume: the share who leave early and how adverse events follow the arm, sent to R only when they say something of their own', async () => {
+    const { r } = mounted();
+    expect(q('[name="assumptions-dropout"]').value).toBe('0');
+    expect(q('[name="assumptions-events"]').value).toBe('1.5');
+    const leave = q('[name="assumptions-dropout"]');
+    leave.value = '0.25';
+    leave.dispatchEvent(new Event('input'));
+    leave.dispatchEvent(new Event('change'));
+    expect(q('.sb-efficacy-form p').textContent).toContain('About 25 in 100 enrolled participants');
+    expect(handle.settings().assumptions).toEqual({ dropout: '0.25' });
+    const study = await handle.build();
+    expect(JSON.parse(r.made[0].runs[0].request.args.assumptions)).toEqual({
+      dropout: { rate: 0.25, day: 270 }
+    });
+    // The study says so in its config, and a saved study's settings carry it.
+    q('.sv-view[data-view="pipeline"]').click();
+    expect(q('.sb-config-facts').textContent).toContain('0.25 of enrolled participants by day 270');
+    expect(savedOf(study).settings.assumptions).toEqual({ dropout: 0.25 });
   });
 
   it('keeps every monthly snapshot when asked, and shows the study as it stood at any', async () => {
