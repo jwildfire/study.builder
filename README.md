@@ -189,7 +189,7 @@ study.protocol.visits; // the schedule the build followed
 
 - **What is read.** The first design's main timeline: each visit's name, epoch, study day and window; the activities; which activity is at which visit; and what an activity collects, where the protocol lists it. Also the phase, planned participants, arms and indication.
 - **What a build does with it.** Visits, vital signs and labs follow the schedule. An activity stands for a domain by its name (`ACTIVITY_DOMAINS`); a page may set `activity.domain` itself.
-- **What it does not do yet.** Treatment arms, branching and sub-timelines, eligibility and endpoints are kept and shown, and simulate nothing. FHIR is not read, and a protocol is not written back as USDM.
+- **What it does not do yet.** Branching and sub-timelines, eligibility, and endpoints other than one efficacy score are kept and shown, and simulate nothing. Arms are simulated. FHIR is not read, and a protocol is not written back as USDM.
 - **Why USDM.** ICH M11's technical specification leaves the schedule of activities as a table, text or image. CDISC's USDM is the model that carries it as data.
 - **The example.** `vendor/cdisc-ddf-ra/` holds CDISC's pilot study as a USDM file, from [DDF-RA](https://github.com/cdisc-org/DDF-RA) under CC-BY-4.0, with its record. `npm run protocols` reads it into `protocols/cdisc-pilot.protocol.json`.
 
@@ -227,8 +227,10 @@ The rest are optional: `VISIT`, `AE`, `LB`, `VS`, `PD`, `STUDCOMP`, `SDRGCOMP`, 
 
 - Every row is synthetic, made by gsm.datasim. No real participant or site is in it.
 - Phase and therapeutic area shape the study results a little, by gsm.datasim's study profile (`?study_profile` in its staging copy lists every number): how often a lab is out of range, which adverse events are commoner, and how many are serious and severe. The sizes are guesses at what is believable, not fitted to data. They do not change how many participants, visits or events a study has.
-- Only the study's last monthly snapshot is returned.
-- gsm.datasim makes no lab results (only toxicity grades), no treatment arms and no ECGs. Adverse event terms are its placeholders (`term1`, `soc1`).
+- Only the study's last monthly snapshot is kept, unless every month is asked for.
+- Arms, lab results and ECGs are simulated: a few participants on an active arm have a rise in liver tests, creatinine or QTc. A lab's toxicity grade is not worked out from its result.
+- Adverse event terms are a short list of gsm.datasim's own, not MedDRA. Terms typical of a study drug are more common on an active arm; how many events a participant has does not follow the arm.
+- Nobody leaves the study early unless a share is asked for.
 
 Nothing is changed in the raw tables after the simulation: the builder makes no data. gsm.datasim is asked for three things it would otherwise do differently, and every study says so in `study.notes`:
 
@@ -287,10 +289,9 @@ The unit tests use a stand-in for R. `npm run test:r` builds studies with real R
 
 - An SDTM layer between raw and ADaM, and more analysis and reporting workflows than the two sets here.
 - Custom column transformers: letting a user edit how a column is made. The workflows' `columns` blocks and the mapping view are where they will live.
-- Opening a ready-made study without starting R.
 - An R wrapper (an htmlwidget).
 - Tests of the widget in a real browser. Real R is tested without one.
-- Lab results, treatment arms and ECGs, which need work in gsm.datasim itself.
+- Moving the staging copy's changes (arms, lab results, ECGs, scores, events, the study profile) into gsm.datasim itself.
 
 ## Licence
 
