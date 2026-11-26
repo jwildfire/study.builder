@@ -36,6 +36,10 @@ describe('the studies feed', () => {
     expect(SCHEMA.properties.format.const).toBe(STUDIES_FORMAT);
     const kinds = new Set(FEED.studies.map((entry) => entry.kind));
     expect([...kinds].sort()).toEqual(SCHEMA.$defs.entry.properties.kind.enum.slice().sort());
+    // Every entry is a configuration; a build is a fact on some of them.
+    expect(FEED.studies.filter((entry) => entry.build).map((entry) => entry.kind)).toEqual(
+      Array(3).fill('settings')
+    );
     const ids = FEED.studies.map((entry) => entry.id);
     expect(new Set(ids).size).toBe(ids.length);
     for (const entry of FEED.studies) {
@@ -43,21 +47,27 @@ describe('the studies feed', () => {
       expect(entry.id).toMatch(new RegExp(SCHEMA.$defs.entry.properties.id.pattern));
       expect(entry.line).toBe(factsLine(entry));
       if (entry.kind === 'settings') expect(entry.settings.participants).toBeGreaterThan(0);
-      else expect(entry.file.sha256).toMatch(/^[0-9a-f]{64}$/);
+      else expect(entry.protocol.sha256).toMatch(/^[0-9a-f]{64}$/);
+      if (entry.build) expect(entry.build.key).toMatch(/^sha256:/);
     }
   });
 
   it('reads back with each file’s address made whole, and leaves out what is not whole', () => {
     const entries = readStudies(FEED, 'https://example.org/sb/studies/index.json');
     expect(entries).toHaveLength(FEED.studies.length);
-    expect(entries.find((entry) => entry.id === 'protocol:cdisc-pilot').file.url).toBe(
+    expect(entries.find((entry) => entry.id === 'protocol:cdisc-pilot').protocol.url).toBe(
       'https://example.org/sb/protocols/cdisc-pilot.protocol.json'
     );
-    expect(entries[0]).toMatchObject({ kind: 'study', mark: 'Data ready' });
+    expect(entries[0]).toMatchObject({ kind: 'settings', mark: 'Data ready' });
+    expect(entries[0].build.url).toBe('https://example.org/sb/presets/phase1-small.study.json.gz');
+    expect(entries.find((entry) => entry.id === 'preset:phase3-large')).toMatchObject({
+      build: null,
+      mark: 'Settings only'
+    });
     expect(
       readStudies({
         format: STUDIES_FORMAT,
-        studies: [{ id: 'a', kind: 'study', name: 'No file' }, { id: 'b', kind: 'other' }, null]
+        studies: [{ id: 'a', kind: 'protocol', name: 'No file' }, { id: 'b', kind: 'other' }, null]
       })
     ).toEqual([]);
     expect(() => readStudies({ format: 'else' })).toThrow(/not a list of studies/);
@@ -69,6 +79,12 @@ describe('the studies feed', () => {
       kinds: ['protocol']
     });
     expect(got.map((entry) => entry.kind)).toEqual(Array(5).fill('protocol'));
+    const built = await listStudies('x', { fetch: async () => answer(FEED), built: true });
+    expect(built.map((entry) => entry.id)).toEqual([
+      'preset:phase1-small',
+      'preset:phase2-oncology',
+      'preset:cdisc-pilot-protocol'
+    ]);
     await expect(
       listStudies('x', { fetch: async () => ({ ok: false, status: 404 }) })
     ).rejects.toThrow(/could not be fetched: the page answered 404/);
@@ -79,7 +95,8 @@ describe('the studies feed', () => {
     expect(describeStudy(entry)).toMatchObject({
       id: 'preset:phase1-small',
       opened: false,
-      kind: 'study',
+      kind: 'settings',
+      built: true,
       line: 'Phase 1 · 40 participants · 4 sites · 6 months',
       mark: 'Data ready'
     });
@@ -93,17 +110,30 @@ describe('the studies feed', () => {
       id: 'protocol:p',
       kind: 'protocol',
       name: 'P',
-      file: { url: 'p.json', sha256: createHash('sha256').update(bytes).digest('hex') }
+      protocol: { url: 'p.json', sha256: createHash('sha256').update(bytes).digest('hex') }
     };
     const options = { fetch: async () => answer(protocol), subtle: webcrypto.subtle };
     expect(await openListed(entry, options)).toEqual({ kind: 'protocol', protocol });
     await expect(
-      openListed({ ...entry, file: { ...entry.file, sha256: 'f'.repeat(64) } }, options)
+      openListed({ ...entry, protocol: { ...entry.protocol, sha256: 'f'.repeat(64) } }, options)
     ).rejects.toThrow(/not the file its list names/);
     await expect(openListed(entry, { ...options, subtle: null })).rejects.toThrow(
       /cannot be checked/
     );
     expect(await openListed({ id: 's', kind: 'settings', settings: { sites: 4 } })).toEqual({
+      kind: 'settings',
+      settings: { sites: 4 }
+    });
+    // A build that is not the file the feed names is refused; its configuration is still had.
+    const built = {
+      id: 'b',
+      kind: 'settings',
+      name: 'B',
+      settings: { sites: 4 },
+      build: { url: 'b.gz', sha256: 'f'.repeat(64) }
+    };
+    await expect(openListed(built, options)).rejects.toThrow(/not the file its list names/);
+    expect(await openListed(built, { ...options, as: 'config' })).toEqual({
       kind: 'settings',
       settings: { sites: 4 }
     });
@@ -165,13 +195,13 @@ describe('the study picker', () => {
     const fetched = vi.fn(async () => answer(FEED));
     const handle = mountPicker('#p', {
       base: 'https://example.org/sb',
-      kinds: ['study'],
+      built: true,
       fetch: fetched
     });
     expect(document.querySelector('[role=status]').textContent).toBe('Fetching the studies…');
     await handle.ready;
     expect(fetched).toHaveBeenCalledWith('https://example.org/sb/studies/index.json');
-    expect(handle.studies().map((entry) => entry.kind)).toEqual(['study', 'study', 'study']);
+    expect(handle.studies().map((entry) => entry.mark)).toEqual(Array(3).fill('Data ready'));
     handle.destroy();
     const none = mountPicker('#p', { fetch: async () => ({ ok: false, status: 500 }) });
     await none.ready;

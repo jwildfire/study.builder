@@ -6,3 +6,4 @@ src/engine/files.js
 dist
 protocols
 .claude
+studies/index.json

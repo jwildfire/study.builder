@@ -96,7 +96,9 @@ export {
   STUDY_KINDS,
   describeStudy,
   factsLine,
+  keptStudies,
   listStudies,
+  markOf,
   openListed,
   readStudies,
   readTable

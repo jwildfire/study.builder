@@ -33,10 +33,9 @@ const fileOf = (folder, name) => {
 const studies = [];
 for (const preset of read('presets/index.json').presets) {
   const settings = preset.settings;
-  const kind = preset.study ? 'study' : 'settings';
   const entry = {
     id: `preset:${preset.id}`,
-    kind,
+    kind: 'settings',
     name: preset.name,
     about: preset.about || '',
     facts: {
@@ -51,8 +50,9 @@ for (const preset of read('presets/index.json').presets) {
     }
   };
   entry.line = factsLine(entry);
-  if (kind === 'study') entry.file = { ...fileOf('presets', preset.study), key: preset.key };
-  else entry.settings = settings;
+  entry.settings = settings;
+  // The study's data, when its build is kept.
+  if (preset.study) entry.build = { ...fileOf('presets', preset.study), key: preset.key };
   studies.push(entry);
 }
 for (const protocol of read('protocols/index.json')) {
@@ -73,7 +73,7 @@ for (const protocol of read('protocols/index.json')) {
     }
   };
   entry.line = factsLine(entry);
-  entry.file = fileOf('protocols', protocol.file);
+  entry.protocol = fileOf('protocols', protocol.file);
   studies.push(entry);
 }
 

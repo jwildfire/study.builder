@@ -8,7 +8,7 @@
 // with `StudyBuilder.openListed(entry)`, say). Its look is the `--sb-`
 // variables, which a page may set on the element it mounts into.
 
-import { listStudies, readStudies } from '../engine/studies.js';
+import { keptStudies, listStudies, readStudies } from '../engine/studies.js';
 import { injectStyles } from '../shared/styles.js';
 import { watchHostTheme } from '../shared/theme.js';
 import { domOf, messageOf, themed } from '../shared/dom.js';
@@ -19,7 +19,8 @@ import { domOf, messageOf, themed } from '../shared/dom.js';
  * @param {Object} [options]
  * @param {string} [options.feed] The feed's address; `studies/index.json` under the base unless told.
  * @param {Object|Object[]} [options.studies] The feed itself, or its entries, when the page has them already: nothing is fetched.
- * @param {string[]} [options.kinds] The kinds to list: `study`, `settings`, `protocol`. All of them unless told.
+ * @param {string[]} [options.kinds] The kinds to list: `settings`, `protocol`. Both unless told.
+ * @param {boolean} [options.built] `true` to list only the studies whose data is ready; `false` only those without.
  * @param {string} [options.picked] The id of the entry that is picked already.
  * @param {(entry: Object) => void} [options.onPick] Called with the entry the reader picks.
  * @param {string} [options.label] What the list is, for a screen reader.
@@ -33,6 +34,7 @@ export function mountPicker(target, options = {}) {
     feed = null,
     studies: given = null,
     kinds = null,
+    built = null,
     picked: opening = null,
     onPick = null,
     label = 'Studies',
@@ -72,11 +74,12 @@ export function mountPicker(target, options = {}) {
       pick.type = 'button';
       pick.dataset.pick = entry.id;
       pick.dataset.kind = entry.kind;
+      pick.dataset.built = String(Boolean(entry.build));
       pick.setAttribute('aria-pressed', String(entry.id === picked));
       const words = el('span', 'sb-pick-words');
       words.append(el('strong', null, entry.name), el('span', 'sb-soft', entry.line));
       const mark = el('span', 'sb-data', entry.mark);
-      mark.dataset.data = entry.kind === 'study' ? 'ready' : entry.kind;
+      mark.dataset.data = entry.build ? 'ready' : entry.kind;
       pick.append(words, mark);
       pick.onclick = () => {
         picked = entry.id;
@@ -99,7 +102,8 @@ export function mountPicker(target, options = {}) {
       else
         entries = await listStudies(feed || `${withSlash}studies/index.json`, {
           fetch: get,
-          kinds
+          kinds,
+          built
         });
       if (!entries.length) said = 'There are no studies to pick from.';
     } catch (error) {

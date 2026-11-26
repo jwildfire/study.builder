@@ -2,12 +2,19 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://jwildfire.github.io/study.builder/studies/studies.schema.json",
   "title": "study.builder studies feed",
-  "description": "One list of every study a reader can have from a study.builder site: studies with their data ready, settings that build one, and protocols a new study can follow. Version 1.",
+  "description": "One list of every study a reader can have from a study.builder site. Every entry is a study's configuration: settings, or a protocol a study can follow. An entry whose build is kept also names the file of its data. Version 1.",
   "type": "object",
   "required": ["format", "studies"],
   "properties": {
-    "format": { "const": "study.builder/studies/1" },
-    "studies": { "type": "array", "items": { "$ref": "#/$defs/entry" } }
+    "format": {
+      "const": "study.builder/studies/1"
+    },
+    "studies": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/entry"
+      }
+    }
   },
   "$defs": {
     "entry": {
@@ -20,68 +27,126 @@
           "description": "Names the entry for good. An id is never used again for another study."
         },
         "kind": {
-          "enum": ["study", "settings", "protocol"],
-          "description": "study: its data is in `file` and opens at once. settings: `settings` build it, with R. protocol: `file` is a protocol a new study can follow."
+          "enum": ["settings", "protocol"],
+          "description": "What the configuration is. settings: `settings` is what StudyBuilder.buildStudy takes. protocol: `protocol` is the file of a protocol a new study can follow."
         },
-        "name": { "type": "string" },
-        "about": { "type": "string", "description": "A sentence or two for a reader." },
+        "name": {
+          "type": "string"
+        },
+        "about": {
+          "type": "string",
+          "description": "A sentence or two for a reader."
+        },
         "line": {
           "type": "string",
-          "description": "The facts in a line, ready to show: Phase 2 · 120 participants · 12 sites · 7 months."
+          "description": "The facts in a line, ready to show: Phase 2 \u00b7 120 participants \u00b7 12 sites \u00b7 7 months."
         },
         "facts": {
           "type": "object",
           "description": "What the line is made of. A fact that does not apply is left out or null.",
           "properties": {
-            "study": { "type": "string", "description": "The study's id in its own tables." },
-            "phase": { "enum": ["P1", "P2", "P3", "P4"] },
-            "area": { "type": "string", "description": "Therapeutic area." },
-            "indication": { "type": ["string", "null"] },
+            "study": {
+              "type": "string",
+              "description": "The study's id in its own tables."
+            },
+            "phase": {
+              "enum": ["P1", "P2", "P3", "P4"]
+            },
+            "area": {
+              "type": "string",
+              "description": "Therapeutic area."
+            },
+            "indication": {
+              "type": ["string", "null"]
+            },
             "participants": {
               "type": ["integer", "null"],
               "description": "Simulated for a study or settings; planned for a protocol."
             },
-            "sites": { "type": "integer" },
-            "months": { "type": "integer" },
+            "sites": {
+              "type": "integer"
+            },
+            "months": {
+              "type": "integer"
+            },
             "snapshots": {
               "type": "integer",
               "description": "How many monthly snapshots the study keeps: 1 is the last only."
             },
-            "arms": { "type": "integer" },
-            "visits": { "type": "integer" },
-            "protocol": { "type": "string", "description": "The protocol the study follows." }
-          }
-        },
-        "file": {
-          "type": "object",
-          "description": "The file to fetch, for a study or a protocol. A study file is gzipped JSON in the format study.builder/study/1; a protocol file is JSON in study.builder/protocol/1.",
-          "required": ["url", "sha256", "bytes"],
-          "properties": {
-            "url": { "type": "string", "description": "Relative to the feed's own address." },
-            "sha256": {
-              "type": "string",
-              "pattern": "^[0-9a-f]{64}$",
-              "description": "Of the file as served."
+            "arms": {
+              "type": "integer"
             },
-            "bytes": { "type": "integer" },
-            "key": {
+            "visits": {
+              "type": "integer"
+            },
+            "protocol": {
               "type": "string",
-              "description": "For a study: the key of its tables, as its manifest gives it."
+              "description": "The protocol the study follows."
             }
           }
         },
         "settings": {
           "type": "object",
-          "description": "For an entry of settings: what StudyBuilder.buildStudy takes."
+          "description": "For kind settings: the configuration itself."
+        },
+        "protocol": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/file"
+            }
+          ],
+          "description": "For kind protocol: the protocol file, JSON in the format study.builder/protocol/1."
+        },
+        "build": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/file"
+            }
+          ],
+          "description": "Present when the study's build is kept: its data, as gzipped JSON in the format study.builder/study/1. It opens with no R.",
+          "properties": {
+            "key": {
+              "type": "string",
+              "description": "The key of the study's tables, as its manifest gives it."
+            }
+          }
         }
       },
       "allOf": [
         {
-          "if": { "properties": { "kind": { "const": "settings" } } },
-          "then": { "required": ["settings"] },
-          "else": { "required": ["file"] }
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "settings"
+              }
+            }
+          },
+          "then": {
+            "required": ["settings"]
+          },
+          "else": {
+            "required": ["protocol"]
+          }
         }
       ]
+    },
+    "file": {
+      "type": "object",
+      "required": ["url", "sha256", "bytes"],
+      "properties": {
+        "url": {
+          "type": "string",
+          "description": "Relative to the feed's own address."
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Of the file as served."
+        },
+        "bytes": {
+          "type": "integer"
+        }
+      }
     }
   }
 }

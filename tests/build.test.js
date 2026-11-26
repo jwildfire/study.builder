@@ -619,10 +619,17 @@ describe('the loader on a page', () => {
     const { r } = mounted({ presets: [SETTINGS_ONLY, hosted], links: { study, builder } });
     q('[data-study="preset:small"] [data-action="open"]').click();
     expect(study).toHaveBeenCalledWith('preset:small');
-    q('[data-settings="preset:big"] [data-action="build-these"]').click();
-    expect(builder).toHaveBeenLastCalledWith('preset:big', { build: true });
-    q('[data-settings="preset:big"] [data-action="edit"]').click();
+    // Every row opens in the builder; only one with data has Overview too.
+    expect(q('[data-settings="preset:big"] [data-action="open"]')).toBeNull();
+    q('[data-settings="preset:big"] [data-action="configure"]').click();
     expect(builder).toHaveBeenLastCalledWith('preset:big', {});
+    q('[data-study="preset:small"] [data-action="configure"]').click();
+    expect(builder).toHaveBeenLastCalledWith('preset:small', {});
+    expect(
+      [...document.querySelectorAll('[data-study="preset:small"] .sb-study-act button')].map(
+        (one) => one.textContent
+      )
+    ).toEqual(['Overview', 'Open in builder']);
     press('new');
     expect(builder).toHaveBeenLastCalledWith(null, {});
     // The page stays on the portfolio, and R was never asked.
@@ -661,7 +668,7 @@ describe('the loader on a page', () => {
     expect(row.querySelector('.sb-data').textContent).toBe('Protocol only');
     expect(row.textContent).toContain('300 participants planned · 3 arms · 16 visits');
     expect(row.textContent).toContain('Phase 2, Alzheimer’s disease. 30 activities scheduled');
-    row.querySelector('[data-action="use-protocol"]').click();
+    row.querySelector('[data-action="configure"]').click();
     expect(builder).toHaveBeenLastCalledWith('protocol:pilot', {});
     // A page with protocols of its own, or none, lists none.
     handle.destroy();
@@ -884,14 +891,14 @@ describe('the loader on a page', () => {
     expect(handle.state().screen).toBe('library');
     expect(
       [...document.querySelectorAll('.sb-studies-table thead th')].map((h) => h.textContent)
-    ).toEqual(['Study', 'Size', 'From', 'Data', '']);
+    ).toEqual(['Study', 'Size', 'From', 'Data', 'Open']);
     expect(q('[data-study="preset:ready"] .sb-data').textContent).toBe('Data ready');
     expect(q('[data-settings="preset:big"] .sb-data').textContent).toBe('Settings only');
     expect(q('[data-study="preset:ready"] .sb-pill').textContent).toBe('Ready-made');
     expect(q('[data-study="preset:ready"]').textContent).toContain(
       '150 participants · 20 sites · 9 months'
     );
-    q('[data-settings="preset:big"] [data-action="edit"]').click();
+    q('[data-settings="preset:big"] [data-action="configure"]').click();
     await settle();
     expect(handle.state().screen).toBe('describe');
     expect(q('[name="participants"]').value).toBe('400');
@@ -904,12 +911,12 @@ describe('the loader on a page', () => {
     expect(q('.sb-title .sb-pill').textContent).toBe('Opened, not built');
     expect(handle.state().said).toBe('Opened Ready study, a ready-made study. Nothing was built.');
     expect(r.connect).not.toHaveBeenCalled();
-    // Build on a settings-only row builds it.
+    // A row with data opens in the builder too, with its settings in the form.
     press('back');
-    q('[data-settings="preset:big"] [data-action="build-these"]').click();
+    q('[data-study="preset:ready"] [data-action="configure"]').click();
     await settle();
-    expect(r.made).toHaveLength(1);
-    expect(r.made[0].runs[0].request.args.participants).toBe(400);
+    expect(handle.state().screen).toBe('describe');
+    expect(r.made).toHaveLength(0);
   });
 
   it('saves a built study in this browser, lists it in the library, opens it again with no R, and removes it', async () => {

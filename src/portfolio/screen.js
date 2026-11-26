@@ -26,7 +26,6 @@ export function portfolioScreen(app) {
     say,
     take,
     show,
-    build,
     attempt,
     saidLine,
     fileButton,
@@ -45,7 +44,7 @@ export function portfolioScreen(app) {
       el(
         'p',
         'sb-lede',
-        'Simulated clinical trials. Open one whose data is ready, build one from its settings, start from a protocol, or describe your own.'
+        'Simulated clinical trials, a row a study’s configuration. Any row opens in the study builder; one with data ready also opens as a study.'
       )
     );
     const actions = el('div', 'sb-row');
@@ -88,6 +87,7 @@ export function portfolioScreen(app) {
           note: `Saved ${String(entry.saved).slice(0, 10)}, in this browser only`,
           open: async () =>
             openDocument(await shelf.open(entry.id), `${entry.name}, saved in this browser`),
+          settings: async () => (await shelf.open(entry.id)).settings,
           remove: forget(entry)
         })),
       ...s.presets
@@ -99,6 +99,7 @@ export function portfolioScreen(app) {
           size: sizeSaid(preset.settings),
           note: preset.about,
           megabytes: preset.megabytes,
+          settings: async () => preset.settings,
           open: async () => {
             take(preset.settings);
             say(`Fetching ${preset.name}…`);
@@ -171,7 +172,7 @@ export function portfolioScreen(app) {
     const wrap = el('div', 'sb-studies');
     const table = el('table', 'sb-table sb-studies-table');
     const headRow = el('tr');
-    for (const title of ['Study', 'Size', 'From', 'Data', '']) {
+    for (const title of ['Study', 'Size', 'From', 'Data', 'Open']) {
       const cell = el('th', null, title);
       cell.scope = 'col';
       headRow.append(cell);
@@ -209,62 +210,42 @@ export function portfolioScreen(app) {
           one.data
             ? `Opens at once${one.megabytes ? `, ${one.megabytes} MB` : ''}`
             : isProtocol
-              ? 'Use it to describe a study, then build'
-              : 'Build makes the data: about half a minute'
+              ? 'A study can follow it; the builder makes the data'
+              : 'The builder makes the data: about half a minute'
         )
       );
       const act = el('td', 'sb-study-act');
       const buttons = el('div', 'sb-row');
+      // Every row is a study's configuration, and opens in the builder. One
+      // whose build is kept (it has data) opens as a study too.
       if (one.data) {
         // A page that shows a study elsewhere is told which; else it is opened here.
         const open = button(
           'sb-primary',
-          'Open',
+          'Overview',
           () => (links.study ? links.study(one.id) : attempt(one.open)),
           'open'
         );
-        open.setAttribute('aria-label', `Open ${one.name}`);
+        open.setAttribute('aria-label', `Open the study ${one.name}`);
         buttons.append(open);
-      } else if (isProtocol) {
-        // The protocol goes into the form: on the builder's page when this
-        // page has one elsewhere, else here.
-        const use = button(
-          'sb-primary',
-          'Use',
-          () =>
-            links.builder
-              ? links.builder(one.id, {})
-              : attempt(async () => openDocument(await one.fetched(), 'from the portfolio')),
-          'use-protocol'
-        );
-        use.setAttribute('aria-label', `Describe a study that follows ${one.name}`);
-        buttons.append(use);
-      } else {
-        const use = (then, how) => () =>
-          links.builder ? links.builder(one.id, how) : useHere(then);
-        const useHere = (then) =>
-          attempt(async () => {
+      }
+      const configure = button(
+        one.data ? '' : 'sb-primary',
+        'Open in builder',
+        () => {
+          if (links.builder) return links.builder(one.id, {});
+          return attempt(async () => {
+            if (isProtocol) return openDocument(await one.fetched(), 'from the portfolio');
             take(await one.settings());
             s.problems = [];
             say('');
-            then();
+            return go('describe');
           });
-        const edit = button(
-          '',
-          'Edit',
-          use(() => go('describe'), {}),
-          'edit'
-        );
-        edit.setAttribute('aria-label', `Edit the settings of ${one.name}`);
-        const run = button(
-          'sb-primary',
-          'Build',
-          use(() => build(), { build: true }),
-          'build-these'
-        );
-        run.setAttribute('aria-label', `Build ${one.name}`);
-        buttons.append(run, edit);
-      }
+        },
+        'configure'
+      );
+      configure.setAttribute('aria-label', `Open ${one.name} in the study builder`);
+      buttons.append(configure);
       if (one.remove) {
         const remove = button('', 'Remove', () => attempt(one.remove), 'remove');
         remove.setAttribute('aria-label', `Remove ${one.name} from this browser`);
