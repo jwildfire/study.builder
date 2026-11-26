@@ -26,6 +26,7 @@
           <a href="./portfolio.html">Portfolio</a>
           <a href="./study.html">Study view</a>
           <a href="./builder.html" aria-current="page">Study builder</a>
+          <a href="./protocols.html">Protocols</a>
           <a href="https://github.com/jwildfire/study.builder">GitHub</a>
         </nav>
       </header>
@@ -57,7 +58,8 @@
     <script src="./study.builder.js"></script>
     <script>
       // The form alone. The address may name whose settings to start from:
-      // `preset:<id>` or `shelf:<id>`, with `&build` to build at once.
+      // `preset:<id>` or `shelf:<id>`, with `&build` to build at once, or a
+      // ready-made protocol to put in the form: `protocol:<id>`.
       (async () => {
         const said = document.getElementById('said');
         const [asked, ...rest] = decodeURIComponent(window.location.hash.slice(1)).split('&');
@@ -83,6 +85,17 @@
           links: { portfolio: () => window.location.assign('./portfolio.html') }
         });
         window.__studyBuilder = handle;
+        // A ready-made protocol named in the address is put in the form.
+        if (asked.startsWith('protocol:')) {
+          try {
+            const name = asked.slice(9).replace(/[^A-Za-z0-9-]/g, '');
+            const response = await fetch('./protocols/' + name + '.protocol.json');
+            if (!response.ok) throw new Error('That protocol could not be fetched from this page.');
+            await handle.open(await response.json());
+          } catch (error) {
+            said.textContent = error && error.message ? error.message : String(error);
+          }
+        }
         if (settings && rest.includes('build')) handle.build();
       })();
     </script>

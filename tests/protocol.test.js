@@ -6,6 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   PROTOCOL_FORMAT,
+  READY_PROTOCOLS,
   daysOf,
   designSaid,
   domainOf,
@@ -123,6 +124,180 @@ describe('reading a USDM study definition', () => {
     );
     expect(createHash('sha256').update(USDM).digest('hex')).toBe(record.files[0].sha256);
     expect(record.license).toContain('CC-BY-4.0');
+  });
+});
+
+describe('every example protocol CDISC publishes', () => {
+  const example = (file) =>
+    JSON.parse(readFileSync(path.join(root, 'vendor/cdisc-ddf-ra', file), 'utf8'));
+  const record = JSON.parse(
+    readFileSync(path.join(root, 'vendor/cdisc-ddf-ra/SOURCE.json'), 'utf8')
+  );
+
+  it('is copied whole with its record, and comes ready-made as the reader makes it', () => {
+    expect(record.files.map((entry) => entry.file).sort()).toEqual([
+      'Alexion_NCT04573309_Wilsons.json',
+      'CDISC_Pilot_Study.json',
+      'EliLilly_NCT03421379_Diabetes.json',
+      'devices.json',
+      'observational.json'
+    ]);
+    for (const entry of record.files) {
+      const bytes = readFileSync(path.join(root, 'vendor/cdisc-ddf-ra', entry.file));
+      expect(createHash('sha256').update(bytes).digest('hex'), entry.file).toBe(entry.sha256);
+    }
+    const list = JSON.parse(readFileSync(path.join(root, 'protocols/index.json'), 'utf8'));
+    expect(list.map((one) => one.id)).toEqual(READY_PROTOCOLS.map((ready) => ready.id));
+    for (const ready of READY_PROTOCOLS) {
+      const made = JSON.parse(
+        readFileSync(path.join(root, `protocols/${ready.id}.protocol.json`), 'utf8')
+      );
+      expect(readDocument(made).kind, ready.id).toBe('protocol');
+    }
+  });
+
+  it('reads, and would build: its visits in day order, its arms, its design counted as the file has it', () => {
+    const came = Object.fromEntries(
+      record.files.map(({ file }) => {
+        const usdm = example(file);
+        const protocol = readUsdm(usdm);
+        const read = readSettings({ ...protocolSettings(protocol, LIMITS).settings, protocol });
+        expect(read.problems, file).toEqual([]);
+        const design = usdm.study.versions[0].studyDesigns[0];
+        expect(designSaid(protocol), file).toEqual({
+          arms: design.arms.length,
+          epochs: design.epochs.length,
+          objectives: design.objectives.length,
+          endpoints: design.objectives.reduce((sum, one) => sum + one.endpoints.length, 0),
+          estimands: (design.estimands || []).length
+        });
+        expect(protocol.design.cells, file).toHaveLength(design.studyCells.length);
+        const days = protocol.visits.map((visit) => visit.day);
+        expect(
+          [...days].sort((a, b) => a - b),
+          file
+        ).toEqual(days);
+        return [
+          file,
+          [
+            protocol.visits.length,
+            days[0],
+            days.at(-1),
+            protocol.arms.length,
+            protocol.participants
+          ]
+        ];
+      })
+    );
+    expect(came).toEqual({
+      'CDISC_Pilot_Study.json': [16, -14, 183, 3, 300],
+      'devices.json': [16, -14, 183, 3, 300],
+      // A single arm, a visit a day for 40 days, and a decision point.
+      'Alexion_NCT04573309_Wilsons.json': [51, -42, 54, 1, 10],
+      // A crossover: two sequences as arms, and several visits on one day.
+      'EliLilly_NCT03421379_Diabetes.json': [15, -29, 34, 2, 75],
+      'observational.json': [6, -2, 43, 2, 120]
+    });
+  });
+
+  it('says what it left out of a file: other timelines, decision points, visits that share a day, activities timed within a visit', () => {
+    const alexion = readUsdm(example('Alexion_NCT04573309_Wilsons.json'));
+    expect(alexion.notes).toEqual([
+      '4 other timelines in the file are not simulated (Adverse Event Timeline, Early Termination Timeline, PKPD Timeline, Unscheduled Timeline): the times within a visit, and what happens off the schedule.',
+      'The schedule has 1 decision point; every visit is read as if each participant has it, whichever way a decision goes.',
+      '1 study day has more than one visit; they are kept apart by name, and simulated on the same day.',
+      '1 activity has a timeline of its own within a visit (sampling at set hours, say); it is simulated once a visit.'
+    ]);
+    // The notes are kept when the protocol is read back, and go to R with it.
+    expect(readProtocol(JSON.parse(JSON.stringify(alexion))).notes).toEqual(alexion.notes);
+    // Visits a file times in minutes are apart by name on one study day.
+    const lilly = readUsdm(example('EliLilly_NCT03421379_Diabetes.json'));
+    expect(lilly.visits.filter((visit) => visit.day === 1).map((visit) => visit.name)).toEqual([
+      'Radomisation',
+      'Pre infusion',
+      'Infusion',
+      'Day 1',
+      'Discharge'
+    ]);
+    expect(new Set(lilly.visits.map((visit) => visit.name)).size).toBe(lilly.visits.length);
+  });
+
+  it('lists what an activity collects from the file’s surrogates too, where it has no concept for a test', () => {
+    const lilly = readUsdm(example('EliLilly_NCT03421379_Diabetes.json'));
+    const labs = lilly.activities.find((activity) => activity.name === 'Clinical Lab Tests');
+    expect(labs.domain).toBe('LB');
+    expect(labs.collects).toContain('Erythrocyte count (RBC)');
+    expect(labs.collects.length).toBeGreaterThan(30);
+    const serology = lilly.activities.find(
+      (activity) => activity.name === 'Clinical Serology Tests'
+    );
+    expect(serology.collects).toEqual(
+      expect.arrayContaining(['Hepatitis B surface antigen', 'HIV'])
+    );
+  });
+
+  it('ties an endpoint to a domain only when it names it outright, and takes only an estimand’s or a primary endpoint as the score', () => {
+    const alexion = readUsdm(example('Alexion_NCT04573309_Wilsons.json'));
+    // A copper balance and a PK parameter are not the labs, though they speak of plasma and urine.
+    expect(
+      endpointLink(alexion, 'PK parameters for plasma total and PUF-molybdenum at steady state')
+    ).toEqual({ activity: null, visits: 0, simulated: false });
+    expect(endpointLink(alexion, 'Copper quantified in food, drink, feces, and urine')).toEqual({
+      activity: null,
+      visits: 0,
+      simulated: false
+    });
+    // Adverse events are simulated, by the activity that collects them or, with none, throughout.
+    expect(endpointLink(alexion, 'Treatment emergent adverse events (TEAEs)')).toMatchObject({
+      activity: 'Adverse events',
+      simulated: true
+    });
+    expect(endpointLink(alexion, 'SAEs and TEAEs')).toEqual({
+      activity: null,
+      visits: 0,
+      simulated: true
+    });
+    // One arm: no arm to differ from, so no score.
+    expect(efficacyOf(alexion)).toBeNull();
+    // An exploratory antibody endpoint is not the trial's efficacy score.
+    expect(efficacyOf(readUsdm(example('EliLilly_NCT03421379_Diabetes.json')))).toBeNull();
+    // With no estimand, a primary endpoint that is scheduled is taken.
+    expect(efficacyOf(readUsdm(example('devices.json')))).toMatchObject({ name: 'ADAS-Cog' });
+  });
+
+  it('refuses an earlier version of the model in a sentence, reads a later one with a note, takes a range’s upper end, and finds the main timeline when none is flagged', () => {
+    const usdm = example('observational.json');
+    expect(() => readUsdm({ ...usdm, usdmVersion: '3.6.0' })).toThrow(
+      'This study definition is USDM version 3.6.0. study.builder reads version 4: export it again as USDM 4.'
+    );
+    expect(readUsdm({ ...usdm, usdmVersion: '5.0.0' }).notes[0]).toBe(
+      'The file is USDM version 5.0.0; it was read as version 4, so anything new in it is left out.'
+    );
+    const changed = JSON.parse(JSON.stringify(usdm));
+    const design = changed.study.versions[0].studyDesigns[0];
+    design.population.plannedEnrollmentNumber = {
+      instanceType: 'Range',
+      minValue: { value: 80 },
+      maxValue: { value: 140 }
+    };
+    for (const timeline of design.scheduleTimelines) timeline.mainTimeline = false;
+    design.scheduleTimelines.unshift({
+      id: 'T0',
+      name: 'A small one',
+      mainTimeline: false,
+      instances: [],
+      timings: []
+    });
+    changed.study.versions[0].studyDesigns.push({ id: 'second' });
+    const read = readUsdm(changed);
+    expect(read.participants).toBe(140);
+    expect(read.visits).toHaveLength(6);
+    expect(read.notes).toEqual(
+      expect.arrayContaining([
+        'The file holds 2 study designs; the first was read.',
+        '1 other timeline in the file is not simulated (A small one): the times within a visit, and what happens off the schedule.'
+      ])
+    );
   });
 });
 

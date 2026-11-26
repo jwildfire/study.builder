@@ -83,6 +83,7 @@ export {
 export {
   ACTIVITY_DOMAINS,
   PROTOCOL_FORMAT,
+  READY_PROTOCOLS,
   ProtocolError,
   daysOf,
   domainOf,

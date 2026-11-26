@@ -58,6 +58,8 @@ export function takeProtocol(app, protocol, from) {
     [
       `The protocol ${protocol.name} is in the form, ${from}: ${protocolSaid(protocol)}.`,
       ...filled.notes,
+      // What the reader left out of the file, as it says it.
+      ...(protocol.notes || []),
       'Build makes a study on its schedule.'
     ].join(' ')
   );

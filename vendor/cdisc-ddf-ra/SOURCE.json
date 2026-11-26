@@ -1,5 +1,5 @@
 {
-  "what": "The CDISC pilot study (LZZT) as a USDM 4.0.0 study definition: the example protocol study.builder's reader is held to",
+  "what": "CDISC's five example study definitions in USDM 4.0.0, from the DDF reference architecture: the protocols study.builder's reader is held to. The CDISC pilot study (LZZT) is the one it was first written on.",
   "repository": "https://github.com/cdisc-org/DDF-RA",
   "ref": "main",
   "commit": "aa303cb32f5d3ceecc68a16803e26720d2c1fc26",
@@ -11,6 +11,30 @@
       "source": "Documents/Examples/CDISC_Pilot/CDISC_Pilot_Study.json",
       "sha256": "67ab5e35cadc9f900d19403341ec7f89d500aaf692aae328dd3037c31d609aa2",
       "bytes": 1057705
+    },
+    {
+      "file": "Alexion_NCT04573309_Wilsons.json",
+      "source": "Documents/Examples/Alexion_NCT04573309_Wilsons/Alexion_NCT04573309_Wilsons.json",
+      "sha256": "872845f631d6ab7b3afa3de420bfc6a5e52da800577a2a5d9dfd858410ac6933",
+      "bytes": 1104550
+    },
+    {
+      "file": "EliLilly_NCT03421379_Diabetes.json",
+      "source": "Documents/Examples/EliLilly_NCT03421379_Diabetes/EliLilly_NCT03421379_Diabetes.json",
+      "sha256": "8301f8ec71d759a578240323ca39db243bbd7253f3e24d022758ab065021f696",
+      "bytes": 1650278
+    },
+    {
+      "file": "observational.json",
+      "source": "Documents/Examples/Observational/observational.json",
+      "sha256": "3f78de1f308b697d01e6a38ae5b80a01b553a24e07d44a672137c2e3c78b9fc2",
+      "bytes": 282223
+    },
+    {
+      "file": "devices.json",
+      "source": "Documents/Examples/Devices/devices.json",
+      "sha256": "bf4af3b587b7512579f21cc65abd397cc1c7b79498515e59e6ee59aee492b6c6",
+      "bytes": 761403
     }
   ]
 }

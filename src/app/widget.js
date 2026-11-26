@@ -19,6 +19,7 @@
 import { DEFAULTS, DOMAINS, LAYERS, readSettings } from '../engine/core.js';
 import { createBuilder } from '../engine/build.js';
 import { createShelf, fetchPresets, openStudy, readDocument } from '../engine/saved.js';
+import { READY_PROTOCOLS } from '../engine/protocol.js';
 import { injectStyles } from '../shared/styles.js';
 import { watchHostTheme } from '../shared/theme.js';
 import { domOf, messageOf, saveFile, themed } from '../shared/dom.js';
@@ -50,7 +51,7 @@ export { saveFile };
  * @param {?string} [options.theme] `light` or `dark`. Unless told, the widget matches the page behind it.
  * @param {string|Object[]|false} [options.presets] Ready-made studies and settings: the address of a list (`presets/index.json` under the base unless told), the presets themselves, or `false` for none.
  * @param {Object|false} [options.shelf] Where the reader's saved studies and settings are kept (`createShelf`); this browser unless told, and `false` for nowhere.
- * @param {Array<{label: string, url: string}>|false} [options.protocols] Ready-made protocols the form offers to try, each a name and the address of a protocol file; the CDISC pilot protocol under the base unless told, and `false` for none.
+ * @param {Array<{label: string, url: string}>|false} [options.protocols] Ready-made protocols the form offers to try, each a name and the address of a protocol file; CDISC's five example protocols under the base unless told, and `false` for none.
  * @param {{study?: (id: string) => void, builder?: (id: ?string, how: {build?: boolean}) => void, portfolio?: () => void}} [options.links] For a page that shows a study, or the form, somewhere else: the portfolio calls `study` with a row's id (`preset:…` or `shelf:…`) where it would open it, `builder` where it would go to the form, with the row whose settings to take (or null for a new study) and whether to build at once; and `portfolio` where the form or the study would go back to the list.
  * @param {Function} [options.createBuilder] Something else to make the builder with; used by the tests.
  * @param {(name: string, bytes: Uint8Array|string, type: string) => void} [options.save] Something else to save a file with; used by the tests.
@@ -92,12 +93,10 @@ export function mount(
       ? []
       : Array.isArray(protocolsGiven)
         ? protocolsGiven
-        : [
-            {
-              label: 'CDISC pilot protocol',
-              url: `${withSlash}protocols/cdisc-pilot.protocol.json`
-            }
-          ];
+        : READY_PROTOCOLS.map((ready) => ({
+            label: ready.label,
+            url: `${withSlash}protocols/${ready.id}.protocol.json`
+          }));
   const shelf = shelfGiven === false ? null : shelfGiven || createShelf();
   const elsewhere = links || {};
 

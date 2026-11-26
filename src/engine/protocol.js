@@ -37,6 +37,19 @@ export const ACTIVITY_DOMAINS = Object.freeze([
   Object.freeze({ id: 'AE', label: 'Adverse events', words: /adverse/i })
 ]);
 
+/**
+ * The protocols that come ready-made: CDISC's five example study definitions,
+ * each as the reader makes it (`protocols/<id>.protocol.json`, written by
+ * `npm run protocols`).
+ */
+export const READY_PROTOCOLS = Object.freeze([
+  Object.freeze({ id: 'cdisc-pilot', label: 'CDISC pilot protocol' }),
+  Object.freeze({ id: 'cdisc-pilot-devices', label: 'CDISC pilot protocol with devices' }),
+  Object.freeze({ id: 'alexion-wilsons', label: 'Alexion Wilson’s disease protocol' }),
+  Object.freeze({ id: 'lilly-nasal-glucagon', label: 'Lilly nasal glucagon protocol' }),
+  Object.freeze({ id: 'observational', label: 'observational study example' })
+]);
+
 const isRecord = (value) => typeof value === 'object' && value !== null && !Array.isArray(value);
 const list = (value) => (Array.isArray(value) ? value : []);
 const text = (value) => (typeof value === 'string' ? value.trim() : '');
@@ -186,6 +199,16 @@ export function designSaid(protocol) {
   };
 }
 
+/** The words by which an endpoint names a domain outright. */
+const ENDPOINT_DOMAINS = Object.freeze([
+  Object.freeze({ id: 'AE', words: /adverse event|\bTEAEs?\b|\bSAEs?\b/i }),
+  Object.freeze({ id: 'VS', words: /vital sign/i }),
+  Object.freeze({
+    id: 'LB',
+    words: /laborator|\blabs?\b|hematolog|haematolog|clinical chemistry|urinalysis/i
+  })
+]);
+
 /**
  * What the schedule and the simulator have for an endpoint. The protocol does
  * not join an endpoint to an activity, so this goes by words: an activity
@@ -196,14 +219,21 @@ export function designSaid(protocol) {
  */
 export function endpointLink(protocol, said) {
   const lower = text(said).toLowerCase();
+  // An endpoint is tied to a domain only when it names it outright. An
+  // activity's looser words (plasma, serum, a sample) would tie a copper
+  // balance or a PK parameter to the labs, which simulate neither.
+  const named = ENDPOINT_DOMAINS.find((one) => one.words.test(said));
   const visitsOf = (id) => Object.values(protocol.schedule).filter((at) => at.includes(id)).length;
   const scheduledOnes = protocol.activities.filter((activity) => visitsOf(activity.id) > 0);
   // The longest name that is in the text is the nearest.
   const byName = scheduledOnes
     .filter((activity) => activity.name.length > 2 && lower.includes(activity.name.toLowerCase()))
     .sort((a, b) => b.name.length - a.name.length)[0];
-  const domain = domainOf(said);
-  const byDomain = !byName && domain ? scheduledOnes.find((one) => one.domain === domain) : null;
+  const domain = named ? named.id : null;
+  const byDomain =
+    !byName && domain && domain !== 'AE'
+      ? scheduledOnes.find((one) => one.domain === domain)
+      : null;
   const found = byName || byDomain || null;
   // Adverse events are collected throughout: no visit schedules them.
   if (!found) return { activity: null, visits: 0, simulated: domain === 'AE' };
@@ -217,8 +247,8 @@ export function endpointLink(protocol, said) {
 
 /**
  * The efficacy score a protocol points at, with plain numbers to start from:
- * the endpoint its first estimand is of, or else its first endpoint, whose
- * activity is on the schedule and is not simulated. The protocol says which
+ * the endpoint its first estimand is of, or else its first primary endpoint,
+ * whose activity is on the schedule and is not simulated. The protocol says which
  * score and where it is measured; it holds no assumed effect, so every
  * difference starts at 0.
  * @param {Object} protocol The protocol.
@@ -231,7 +261,10 @@ export function efficacyOf(protocol) {
   const first = design.estimands
     .map((estimand) => endpoints.find((endpoint) => endpoint.id === estimand.endpoint))
     .filter(Boolean);
-  for (const endpoint of [...first, ...endpoints]) {
+  // After the estimands' endpoints, only a primary endpoint counts: an
+  // exploratory lab or PK endpoint is not the trial's efficacy score.
+  const primary = endpoints.filter((endpoint) => /primary/i.test(endpoint.level));
+  for (const endpoint of [...first, ...primary]) {
     const link = endpointLink(protocol, endpoint.text);
     if (!link.activity || link.simulated) continue;
     const activity = protocol.activities.find((one) => one.name === link.activity);
@@ -313,6 +346,7 @@ export function readProtocol(given) {
     schedule[visit.id] = [...new Set(at.filter((id) => known.has(id)))];
   }
   const design = designOf(given.design);
+  const notes = list(given.notes).map(text).filter(Boolean);
   return {
     format: PROTOCOL_FORMAT,
     name: text(given.name) || 'Protocol',
@@ -327,7 +361,9 @@ export function readProtocol(given) {
     activities,
     schedule,
     // What else the protocol says, kept to be shown. Left out when it says none.
-    ...(design ? { design } : {})
+    ...(design ? { design } : {}),
+    // What the reader left out of the file it read, a sentence each.
+    ...(notes.length ? { notes } : {})
   };
 }
 
@@ -356,15 +392,51 @@ export function readUsdm(given) {
   }
   const study = isRecord(document) && isRecord(document.study) ? document.study : null;
   const version = study && list(study.versions)[0];
-  const design = version && list(version.studyDesigns)[0];
+  // study.builder reads version 4 of the model. An earlier one keeps its
+  // timings and its designs elsewhere, so it is refused and not half read.
+  const said = text(isRecord(document) ? document.usdmVersion : '');
+  const major = Number.parseInt(said, 10);
+  if (said && Number.isFinite(major) && major < 4) {
+    throw new ProtocolError(
+      `This study definition is USDM version ${said}. study.builder reads version 4: export it again as USDM 4.`
+    );
+  }
+  const left = [];
+  if (said && Number.isFinite(major) && major > 4) {
+    left.push(
+      `The file is USDM version ${said}; it was read as version 4, so anything new in it is left out.`
+    );
+  }
+  const designs = version ? list(version.studyDesigns) : [];
+  if (designs.length > 1) {
+    left.push(`The file holds ${designs.length} study designs; the first was read.`);
+  }
+  const design = designs[0];
   if (!design) {
     throw new ProtocolError(
       'This is not a USDM study definition study.builder can read: it has no study design.'
     );
   }
   const timelines = list(design.scheduleTimelines);
-  const main = timelines.find((timeline) => timeline.mainTimeline) || timelines[0];
+  // The main timeline is flagged; where none is, it is the one with the most visits.
+  const main =
+    timelines.find((timeline) => timeline.mainTimeline) ||
+    [...timelines].sort((a, b) => list(b.instances).length - list(a.instances).length)[0];
   if (!main) throw new ProtocolError('The study design has no schedule timeline.');
+  const others = timelines.filter((timeline) => timeline !== main);
+  if (others.length) {
+    left.push(
+      `${others.length} other timeline${others.length === 1 ? '' : 's'} in the file ${others.length === 1 ? 'is' : 'are'} not simulated (${others.map((timeline) => text(timeline.label) || text(timeline.name)).join(', ')}): the times within a visit, and what happens off the schedule.`
+    );
+  }
+  const decisions = list(main.instances).filter(
+    (instance) => instance.instanceType === 'ScheduledDecisionInstance'
+  ).length;
+  if (decisions) {
+    left.push(
+      `The schedule has ${decisions} decision point${decisions === 1 ? '' : 's'}; every visit is read as if each participant has it, whichever way a decision goes.`
+    );
+  }
 
   const instances = list(main.instances).filter(
     (instance) => instance.instanceType === 'ScheduledActivityInstance'
@@ -406,9 +478,13 @@ export function readUsdm(given) {
   const visits = [];
   const schedule = {};
   const used = new Set();
+  const unplaced = [];
   for (const instance of instances) {
     const day = dayOf(instance.id);
-    if (day === null) continue; // a visit with no planned day cannot be scheduled
+    if (day === null) {
+      unplaced.push(text(instance.label) || text(instance.name) || instance.id);
+      continue; // a visit with no planned day cannot be scheduled
+    }
     const encounter = encounters.get(instance.encounterId) || {};
     const timing = timingOf.get(instance.id) || {};
     // Two instances of one encounter are told apart by their timing's name.
@@ -432,29 +508,58 @@ export function readUsdm(given) {
   if (!visits.length) {
     throw new ProtocolError('The main timeline has no visit with a planned time.');
   }
+  if (unplaced.length) {
+    left.push(
+      `${unplaced.length} visit${unplaced.length === 1 ? ' has' : 's have'} no planned time in the file and ${unplaced.length === 1 ? 'is' : 'are'} left out: ${unplaced.join(', ')}.`
+    );
+  }
+  // Visits the file times in hours or minutes land on the same study day.
+  const perDay = new Map();
+  for (const visit of visits) perDay.set(visit.day, (perDay.get(visit.day) || 0) + 1);
+  const shared = [...perDay.values()].filter((count) => count > 1).length;
+  if (shared) {
+    left.push(
+      `${shared} study day${shared === 1 ? ' has' : 's have'} more than one visit; they are kept apart by name, and simulated on the same day.`
+    );
+  }
 
+  // What an activity collects: its biomedical concepts, and the surrogates a
+  // file names where it has no concept for something (a lab test by its name).
   const concepts = new Map(
-    [...list(version.biomedicalConcepts), ...list(design.biomedicalConcepts)].map((concept) => [
-      concept.id,
-      text(concept.label) || text(concept.name)
-    ])
+    [
+      ...list(version.biomedicalConcepts),
+      ...list(design.biomedicalConcepts),
+      ...list(version.bcSurrogates),
+      ...list(design.bcSurrogates)
+    ].map((concept) => [concept.id, text(concept.label) || text(concept.name)])
   );
   const activities = list(design.activities).map((activity) => ({
     id: activity.id,
     name: text(activity.label) || text(activity.name),
     collects: [
       ...new Set(
-        list(activity.biomedicalConceptIds)
+        [...list(activity.biomedicalConceptIds), ...list(activity.bcSurrogateIds)]
           .map((id) => concepts.get(id))
           .filter(Boolean)
       )
     ]
   }));
+  const timed = list(design.activities).filter((activity) => activity.timelineId).length;
+  if (timed) {
+    left.push(
+      `${timed} activit${timed === 1 ? 'y has' : 'ies have'} a timeline of ${timed === 1 ? 'its' : 'their'} own within a visit (sampling at set hours, say); ${timed === 1 ? 'it is' : 'they are'} simulated once a visit.`
+    );
+  }
 
   const population = isRecord(design.population) ? design.population : {};
-  const planned = isRecord(population.plannedEnrollmentNumber)
-    ? population.plannedEnrollmentNumber.value
-    : population.plannedEnrollmentNumber;
+  // A planned number is a quantity, or a range whose upper end is taken.
+  const numberOf = (given) => {
+    if (!isRecord(given)) return given;
+    if (given.value !== undefined && given.value !== null) return given.value;
+    const top = isRecord(given.maxValue) ? given.maxValue.value : given.maxValue;
+    return top === undefined ? null : top;
+  };
+  const planned = numberOf(population.plannedEnrollmentNumber);
   const phase = isRecord(design.studyPhase) ? design.studyPhase.standardCode : null;
   // The design: what each arm gets in each epoch, the objectives with their
   // endpoints, the estimands and the population, as the file says them.
@@ -468,8 +573,8 @@ export function readUsdm(given) {
   const analysisSets = new Map(
     list(design.analysisPopulations).map((one) => [one.id, text(one.text) || called(one)])
   );
-  const count = (quantity) => (isRecord(quantity) ? quantity.value : quantity);
-  const said = {
+  const count = numberOf;
+  const described = {
     model: decode(design.model),
     blinding: decode(isRecord(design.blindingSchema) ? design.blindingSchema.standardCode : null),
     arms: list(design.arms).map((arm) => ({
@@ -535,7 +640,8 @@ export function readUsdm(given) {
     visits,
     activities,
     schedule,
-    design: said
+    design: described,
+    notes: left
   });
 }
 

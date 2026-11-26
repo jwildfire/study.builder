@@ -195,6 +195,17 @@ export function studyScreen(context) {
                   ),
                   scheduleGrid({ el }, study.protocol)
                 );
+                // What the reader left out of the protocol file, as it says it.
+                const left = study.protocol.notes || [];
+                if (left.length) {
+                  const notes = el('details', 'sb-caveats');
+                  notes.dataset.notes = 'protocol';
+                  notes.append(el('summary', null, 'What was left out of the protocol file'));
+                  const lines = el('ul');
+                  for (const line of left) lines.append(el('li', null, line));
+                  notes.append(lines);
+                  box.append(notes);
+                }
               }
             }
           ]

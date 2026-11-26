@@ -1,0 +1,176 @@
+[
+  {
+    "id": "cdisc-pilot",
+    "file": "cdisc-pilot.protocol.json",
+    "name": "CDISC PILOT - LZZT",
+    "title": "LZZT",
+    "phase": "P2",
+    "indication": "Alzheimer's disease",
+    "participants": 300,
+    "arms": [
+      "Placebo",
+      "Xanomeline Low Dose",
+      "Xanomeline High Dose"
+    ],
+    "visits": 16,
+    "days": [
+      -14,
+      183
+    ],
+    "activities": 30,
+    "simulated": 6,
+    "vitals": 12,
+    "labs": 11,
+    "design": {
+      "arms": 3,
+      "epochs": 5,
+      "objectives": 6,
+      "endpoints": 11,
+      "estimands": 1
+    },
+    "notes": [
+      "3 other timelines in the file are not simulated (Adverse Event Timeline, Early Termination Timeline, Vital Sign Blood Pressure Timeline): the times within a visit, and what happens off the schedule.",
+      "2 activities have a timeline of their own within a visit (sampling at set hours, say); they are simulated once a visit."
+    ],
+    "source": "CDISC_Pilot_Study.json"
+  },
+  {
+    "id": "cdisc-pilot-devices",
+    "file": "cdisc-pilot-devices.protocol.json",
+    "name": "CDISC PILOT - LZZT",
+    "title": "H2Q-MC-LZZT",
+    "phase": "P2",
+    "indication": "Indication 1",
+    "participants": 300,
+    "arms": [
+      "Placebo",
+      "Xanomeline Low Dose",
+      "Xanomeline High Dose"
+    ],
+    "visits": 16,
+    "days": [
+      -14,
+      183
+    ],
+    "activities": 30,
+    "simulated": 6,
+    "vitals": 12,
+    "labs": 11,
+    "design": {
+      "arms": 3,
+      "epochs": 5,
+      "objectives": 3,
+      "endpoints": 8,
+      "estimands": 0
+    },
+    "notes": [
+      "3 other timelines in the file are not simulated (Adverse Event Timeline, Early Termination Timeline, Vital Sign Blood Pressure Timeline): the times within a visit, and what happens off the schedule.",
+      "2 activities have a timeline of their own within a visit (sampling at set hours, say); they are simulated once a visit."
+    ],
+    "source": "devices.json"
+  },
+  {
+    "id": "alexion-wilsons",
+    "file": "alexion-wilsons.protocol.json",
+    "name": "ALXN1840-WD-204",
+    "title": "Copper and Molybdenum Balance in Participants with Wilson Disease Treated with ALXN1840",
+    "phase": "P2",
+    "indication": "Wilson's Disease",
+    "participants": 10,
+    "arms": [
+      "Treatment"
+    ],
+    "visits": 51,
+    "days": [
+      -42,
+      54
+    ],
+    "activities": 35,
+    "simulated": 8,
+    "vitals": 8,
+    "labs": 32,
+    "design": {
+      "arms": 1,
+      "epochs": 4,
+      "objectives": 14,
+      "endpoints": 14,
+      "estimands": 0
+    },
+    "notes": [
+      "4 other timelines in the file are not simulated (Adverse Event Timeline, Early Termination Timeline, PKPD Timeline, Unscheduled Timeline): the times within a visit, and what happens off the schedule.",
+      "The schedule has 1 decision point; every visit is read as if each participant has it, whichever way a decision goes.",
+      "1 study day has more than one visit; they are kept apart by name, and simulated on the same day.",
+      "1 activity has a timeline of its own within a visit (sampling at set hours, say); it is simulated once a visit."
+    ],
+    "source": "Alexion_NCT04573309_Wilsons.json"
+  },
+  {
+    "id": "lilly-nasal-glucagon",
+    "file": "lilly-nasal-glucagon.protocol.json",
+    "name": "LY900018",
+    "title": "A Study of Nasal Glucagon (LY900018) in Japanese Participants With Diabetes Mellitus",
+    "phase": "P3",
+    "indication": "T1DM",
+    "participants": 75,
+    "arms": [
+      "LY-G",
+      "G-LY"
+    ],
+    "visits": 15,
+    "days": [
+      -29,
+      34
+    ],
+    "activities": 26,
+    "simulated": 6,
+    "vitals": 2,
+    "labs": 3,
+    "design": {
+      "arms": 2,
+      "epochs": 5,
+      "objectives": 6,
+      "endpoints": 6,
+      "estimands": 0
+    },
+    "notes": [
+      "2 other timelines in the file are not simulated (Hypoinduction, Treatment Phase): the times within a visit, and what happens off the schedule.",
+      "3 study days have more than one visit; they are kept apart by name, and simulated on the same day.",
+      "2 activities have a timeline of their own within a visit (sampling at set hours, say); they are simulated once a visit."
+    ],
+    "source": "EliLilly_NCT03421379_Diabetes.json"
+  },
+  {
+    "id": "observational",
+    "file": "observational.protocol.json",
+    "name": "SCOPE1",
+    "title": "SIMPLE",
+    "phase": "P3",
+    "indication": "Indication 1",
+    "participants": 120,
+    "arms": [
+      "Active Substance",
+      "Placebo"
+    ],
+    "visits": 6,
+    "days": [
+      -2,
+      43
+    ],
+    "activities": 4,
+    "simulated": 3,
+    "vitals": 3,
+    "labs": 0,
+    "design": {
+      "arms": 2,
+      "epochs": 4,
+      "objectives": 2,
+      "endpoints": 3,
+      "estimands": 2
+    },
+    "notes": [
+      "The schedule has 1 decision point; every visit is read as if each participant has it, whichever way a decision goes.",
+      "1 study day has more than one visit; they are kept apart by name, and simulated on the same day."
+    ],
+    "source": "observational.json"
+  }
+]

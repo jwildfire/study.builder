@@ -40,3 +40,4 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run test:r
+      - run: npm run test:r:protocols
