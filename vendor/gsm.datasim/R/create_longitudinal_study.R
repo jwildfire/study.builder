@@ -22,9 +22,10 @@
 #'   visits, labs and vital signs follow in place of the fixed list of visits.
 #'   See [validate_study_design()] for its format. Default `NULL`.
 #' @param results Optional study results: `TRUE`, or a list with `arms`,
-#'   `ecg` and `scores`, adds a treatment arm for each enrolled participant, a
-#'   result, unit and normal range for each lab, an ECG table, and a table of
-#'   any scores asked for (a questionnaire total that moves by arm). See
+#'   `ecg`, `scores`, `events` and `dropout`, adds a treatment arm for each
+#'   enrolled participant, a result, unit and normal range for each lab, an ECG
+#'   table, a table of any scores asked for (a questionnaire total that moves
+#'   by arm), terms for the adverse events, and participants who leave early. See
 #'   [apply_study_results()]. Default `NULL`.
 #' @param verbose Whether to print progress/output messages
 #' @inheritParams create_study_config
@@ -88,7 +89,13 @@ create_longitudinal_study <- function(study_id = "STUDY-001",
   # Study results add treatment arms, lab results and ECGs to every snapshot
   # (see `apply_study_results()`), after the design has set the visits.
   if (!is.null(results)) {
-    raw_data <- lapply(raw_data, apply_study_results, results = results)
+    # Each snapshot is told its own date, for what has happened by then.
+    raw_data <- stats::setNames(
+      lapply(names(raw_data), function(date) {
+        apply_study_results(raw_data[[date]], results = results, snapshot_date = date)
+      }),
+      names(raw_data)
+    )
   }
 
   # Create study object with proper config

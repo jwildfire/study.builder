@@ -364,6 +364,181 @@ check(
     unscored.domains.every((domain) => domain.text === scored.table('raw', domain.id).text)
 );
 
+// 2d. A trial that behaves like one: adverse events that follow the arm,
+// participants who leave early, and a model of the efficacy score.
+const trial = await build({
+  name: 'TRIAL',
+  participants: 500,
+  sites: 30,
+  months: 12,
+  seed: 505,
+  protocol: pilotProtocol,
+  efficacy: {
+    name: 'ADAS-Cog (11)',
+    visits: ['Baseline', 'Week 8', 'Week 16', 'Week 24'],
+    baseline: 24,
+    sd: 6.5,
+    change: 2.5,
+    effects: { 'Xanomeline Low Dose': -1.5, 'Xanomeline High Dose': -3 },
+    min: 0,
+    max: 70
+  },
+  assumptions: { dropout: 0.3, eventRatio: 2 }
+});
+const rowsAs = (study, layer, id) => {
+  const table = study.table(layer, id);
+  if (!table) return [];
+  const { header, rows } = firstRows(table.text, Infinity);
+  return rows.map((row) => Object.fromEntries(header.map((name, index) => [name, row[index]])));
+};
+const day = (value) => String(value || '').slice(0, 10);
+const trialEvents = rowsAs(trial, 'raw', 'AE');
+check(
+  'adverse events have terms: none is a placeholder, and there are at least 25 different ones in 10 classes',
+  trialEvents.length > 0 &&
+    trialEvents.every((row) => !/^(term|soc)\d/.test(row.mdrpt_nsv + row.mdrsoc_nsv)) &&
+    new Set(trialEvents.map((row) => row.mdrpt_nsv)).size >= 25 &&
+    new Set(trialEvents.map((row) => row.mdrsoc_nsv)).size >= 10,
+  `${new Set(trialEvents.map((row) => row.mdrpt_nsv)).size} terms`
+);
+check(
+  'a serious event is grade 3 or more, and one that is not serious is 3 or less',
+  trialEvents.every((row) =>
+    row.aeser === 'Y' ? Number(row.aetoxgr) >= 3 : Number(row.aetoxgr) <= 3
+  )
+);
+// Who has left, and when: the study completion table says. Dropout is of
+// enrolled participants; the simulator's rows for people who never enrolled
+// are kept as they were and are not looked at here.
+const enrolledIds = new Set(rowsAs(trial, 'adam', 'ADSL').map((row) => row.USUBJID));
+const enrolledIn = enrolledIds.size;
+const leftOn = new Map(
+  rowsAs(trial, 'raw', 'STUDCOMP')
+    .filter((row) => row.compyn === 'N' && enrolledIds.has(row.subjid))
+    .map((row) => [row.subjid, day(row.mincreated_dts)])
+);
+const later = [
+  ['VISIT', 'visit_dt'],
+  ['LB', 'lb_dt'],
+  ['VS', 'vs_dt'],
+  ['EG', 'eg_dt'],
+  ['QS', 'qs_dt'],
+  ['PD', 'dvdtm'],
+  ['AE', 'aest_dt']
+].map(([id, column]) => [
+  id,
+  rowsAs(trial, 'raw', id).filter(
+    (row) => leftOn.has(row.subjid) && day(row[column]) > leftOn.get(row.subjid)
+  ).length
+]);
+check(
+  'participants leave early, and one who has left has no later row in any domain',
+  leftOn.size > 0 && later.every(([, count]) => count === 0),
+  `${leftOn.size} left; later rows: ${later.map(([id, count]) => `${id} ${count}`).join(', ')}`
+);
+check(
+  'fewer have left than were asked to by the last visit, since the study is still enrolling: between a third of the share asked for and all of it',
+  leftOn.size / enrolledIn > 0.1 && leftOn.size / enrolledIn <= 0.3 + 0.03,
+  `${leftOn.size} of ${enrolledIn}`
+);
+const stoppedDrug = new Set(
+  rowsAs(trial, 'raw', 'SDRGCOMP')
+    .filter((row) => row.sdrgyn === 'N')
+    .map((row) => row.subjid)
+);
+check(
+  'the treatment completion table agrees: everyone who left the study stopped treatment',
+  [...leftOn.keys()].every((id) => stoppedDrug.has(id))
+);
+const modelOf = (arm, statistic) => {
+  const found = rowsAs(trial, 'analysis', 'EfficacySummary').find(
+    (row) => row.ARM === arm && row.STATISTIC === statistic && /covariance/.test(row.ANALYSIS)
+  );
+  return found ? Number(found.VALUE) : null;
+};
+const summaryOf = (arm, statistic) => {
+  const rows = rowsAs(trial, 'analysis', 'EfficacySummary').filter(
+    (row) => row.ARM === arm && row.STATISTIC === statistic && !/covariance/.test(row.ANALYSIS)
+  );
+  return rows.length ? Number(rows.at(-1).VALUE) : null;
+};
+const high = 'Xanomeline High Dose';
+check(
+  'the efficacy workflow fits a model: an adjusted difference, its standard error, a 95% interval that holds it, and a p-value',
+  modelOf(high, 'adjusted difference') !== null &&
+    modelOf(high, 'standard error') > 0 &&
+    modelOf(high, 'lower 95% limit') < modelOf(high, 'adjusted difference') &&
+    modelOf(high, 'upper 95% limit') > modelOf(high, 'adjusted difference') &&
+    modelOf(high, 'p-value') >= 0 &&
+    modelOf(high, 'p-value') <= 1,
+  `${modelOf(high, 'adjusted difference')} (SE ${modelOf(high, 'standard error')}, p ${modelOf(high, 'p-value')})`
+);
+check(
+  'the model’s difference is within 3 standard errors of the −3.0 asked for, and within 1.5 points of the summary’s',
+  Math.abs(modelOf(high, 'adjusted difference') + 3) <= 3 * modelOf(high, 'standard error') &&
+    Math.abs(modelOf(high, 'adjusted difference') - summaryOf(high, 'difference')) <= 1.5,
+  `model ${modelOf(high, 'adjusted difference')}, summary ${summaryOf(high, 'difference')}`
+);
+const byArm = rowsAs(trial, 'analysis', 'AESummaryByArm');
+check(
+  'adverse events are summarised by arm: a row for each arm, class and term, and no arm’s share above 100',
+  new Set(byArm.map((row) => row.ARM)).size === 3 &&
+    byArm.every(
+      (row) => Number(row.PERCENT) <= 100 && Number(row.PARTICIPANTS) <= Number(row.BIGN)
+    ),
+  `${byArm.length} rows`
+);
+
+// 2e. The same, measured on a study large enough to hold tight: 6,000
+// participants handed straight to gsm.datasim's study results in this R.
+const measured = Object.fromEntries(
+  (await webR.evalRString(readFileSync(path.join(root, 'scripts/real-r-results.R'), 'utf8')))
+    .split(';')
+    .map((pair) => pair.split('='))
+    .map(([name, value]) => [name, Number(value)])
+);
+const within = (value, target, tolerance) => Math.abs(value - target) <= tolerance;
+check(
+  'of 6,000 participants, 0.30 were asked to leave and 0.50 on one arm: the shares that left are within 0.03',
+  within(measured.left_placebo, 0.3, 0.03) &&
+    within(measured.left_low, 0.3, 0.03) &&
+    within(measured.left_high, 0.5, 0.03) &&
+    measured.rows_after_leaving === 0,
+  `${measured.left_placebo}, ${measured.left_low}, ${measured.left_high}`
+);
+check(
+  'drug-type events were asked to be 2.0 times as common on an active arm: the ratio is within 0.2, and 1.5 unless told',
+  within(measured.event_ratio, 2, 0.2) && within(measured.default_event_ratio, 1.5, 0.15),
+  `${measured.event_ratio}, default ${measured.default_event_ratio}`
+);
+check(
+  'a simulated rise names an event the participant has: none on placebo, none added, no placeholder left, every grade agreeing',
+  measured.signal_events > 0 &&
+    measured.signal_on_placebo === 0 &&
+    measured.events_plain === measured.events_before &&
+    measured.placeholder_terms === 0 &&
+    measured.grades_disagree === 0,
+  `${measured.signal_events} of ${measured.events_plain} events`
+);
+check(
+  'the score moves as asked: −1.5 and −3.0 from a placebo change of 2.5 with a spread of 6.5, each within 0.6; the model within 3 standard errors',
+  within(measured.diff_low, -1.5, 0.6) &&
+    within(measured.diff_high, -3, 0.6) &&
+    within(measured.change_placebo, 2.5, 0.6) &&
+    within(measured.sd_change, 6.5, 0.5) &&
+    Math.abs(measured.model_high + 3) <= 3 * measured.model_high_se,
+  `${measured.diff_low}, ${measured.diff_high}; model ${measured.model_high} (SE ${measured.model_high_se})`
+);
+check(
+  'the results are the same applied twice, an earlier snapshot’s events are a later one’s, and whoever had left by then has still left',
+  measured.same_twice === 1 &&
+    measured.early_events_same === 1 &&
+    measured.early_left_within === 1 &&
+    measured.early_left < measured.late_left &&
+    measured.no_dropout_completion_rows === 0,
+  `${measured.early_left} then ${measured.late_left}`
+);
+
 // 3. Every optional domain.
 const every = await build({
   participants: 60,
@@ -516,6 +691,35 @@ const rebuilt = await build(hosted.settings);
 const kept = await openStudy(
   JSON.parse(gunzipSync(readFileSync(path.join(root, 'presets', hosted.study))).toString('utf8'))
 );
+// What changed for a study that asks for none of this: only its adverse events'
+// terms and grades. Every other raw table, and every site metric, is as it was.
+const sameText = (layer, id) =>
+  (rebuilt.table(layer, id) || {}).text === (kept.table(layer, id) || {}).text;
+const changedRaw = rebuilt.domains.filter((domain) => !sameText('raw', domain.id)).map((d) => d.id);
+const eventsNow = rowsAs(rebuilt, 'raw', 'AE');
+const eventsThen = rowsAs(kept, 'raw', 'AE');
+check(
+  'a study that asks for no assumptions changes only in its adverse events: every other raw table is as v0.4.0 built it',
+  changedRaw.every((id) => id === 'AE'),
+  changedRaw.join(' ')
+);
+check(
+  'and its adverse events are the same events: who, when and whether serious are unchanged; only terms and grades differ',
+  eventsNow.length === eventsThen.length &&
+    eventsNow.every(
+      (row, index) =>
+        row.subjid === eventsThen[index].subjid &&
+        row.aest_dt === eventsThen[index].aest_dt &&
+        row.aeen_dt === eventsThen[index].aeen_dt &&
+        row.aeser === eventsThen[index].aeser
+    ),
+  `${eventsNow.length} now, ${eventsThen.length} then`
+);
+const metricsChanged = rebuilt.layers
+  .find((layer) => layer.id === 'analysis')
+  .tables.filter((table) => /^kri/.test(table.id) && !sameText('analysis', table.id))
+  .map((table) => table.id);
+check('so every site metric is as it was', metricsChanged.length === 0, metricsChanged.join(' '));
 check(
   `the hosted preset ${hosted.id} is the study its settings build`,
   rebuilt.manifest.key === hosted.key && kept.manifest.key === hosted.key,

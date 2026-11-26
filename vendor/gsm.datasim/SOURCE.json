@@ -2,7 +2,7 @@
   "source": "gsm.datasim R source",
   "repository": "https://github.com/jwildfire/gsm.datasim",
   "ref": "safety-results-2.1",
-  "commit": "399e2d45c590edd4c75ba9a08aa5a48db5556667",
+  "commit": "b1c72c8d854abe8fc0003494252fe55f2e94772d",
   "version": "2.1.0",
   "license": "Apache License (>= 2)",
   "merged_to_dev": false,
@@ -160,8 +160,8 @@
     {
       "file": "R/create_longitudinal_study.R",
       "source": "R/create_longitudinal_study.R",
-      "sha256": "766ed1dc6c33600c63962de990dd8670e7ed0c7ce557b13ecde8157ac02ab524",
-      "bytes": 31647
+      "sha256": "454f7eb61a8d6174a877c5c4c55cbe9ce7f486b40595d25d308d0a646fa5bb35",
+      "bytes": 31938
     },
     {
       "file": "R/study_design.R",
@@ -172,8 +172,8 @@
     {
       "file": "R/study_results.R",
       "source": "R/study_results.R",
-      "sha256": "5bc54ac7f3fb76f97b4836f6b9fc8e03bf701ed8162e7a865b27286eadb8d03d",
-      "bytes": 19121
+      "sha256": "d719be97c1a111fed9cee1f17e7c295038d8050c299b459d9c8afa047f6e26e7",
+      "bytes": 35223
     },
     {
       "file": "R/create_snapshot_reports.R",

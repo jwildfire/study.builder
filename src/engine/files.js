@@ -80,17 +80,23 @@ export const WORKFLOW_FILES = [
   "workflows/adam/ADSL.yaml",
   "workflows/adam/ADVS.yaml",
   "workflows/analysis/AESummary.yaml",
+  "workflows/analysis/AESummaryByArm.yaml",
   "workflows/analysis/EfficacySummary.yaml"
 ];
 
+/** The R files beside them: a function a workflow’s step calls by name, where a query cannot do the step. */
+export const WORKFLOW_HELPERS = [
+  "workflows/analysis/EfficacyModel.R"
+];
+
 /** A stamp of every file R fetches: it changes when any of them does. */
-export const FILES_STAMP = "c5700e2779cd";
+export const FILES_STAMP = "5fe5418dc5e2";
 
 /** What each copy was copied from. */
 export const COPIED_FROM = {
   "vendor/gsm.datasim": {
     "repository": "https://github.com/jwildfire/gsm.datasim",
-    "commit": "399e2d45c590edd4c75ba9a08aa5a48db5556667"
+    "commit": "b1c72c8d854abe8fc0003494252fe55f2e94772d"
   },
   "vendor/gsm.mapping-vitals": {
     "repository": "https://github.com/Gilead-Public/gsm.mapping",

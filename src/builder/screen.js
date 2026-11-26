@@ -9,7 +9,9 @@ import {
   LIMITS,
   OUTLIERS,
   PHASES,
+  ASSUMED,
   SNAPSHOTS,
+  readAssumptions,
   readEfficacy,
   readSettings,
   referenceArm,
@@ -349,6 +351,72 @@ export function builderScreen(app) {
     return section;
   }
 
+  /**
+   * What the simulator assumes of any study, with or without a protocol: the
+   * share who leave early, and how adverse events follow the arm.
+   */
+  function assumptionsSection() {
+    const section = el('div', 'sb-efficacy-form');
+    const held = s.form.assumptions || {};
+    const set = (change) => {
+      s.form = { ...s.form, assumptions: { ...(s.form.assumptions || {}), ...change } };
+    };
+    const number = (name, value, onInput, { min, max } = {}) => {
+      const control = el('input', 'sb-input');
+      control.type = 'number';
+      control.step = 'any';
+      control.name = name;
+      if (min !== undefined) control.min = String(min);
+      if (max !== undefined) control.max = String(max);
+      control.value = value === null || value === undefined ? '' : String(value);
+      control.disabled = s.phase === 'building';
+      control.oninput = () => onInput(control.value);
+      control.onchange = () => draw();
+      return control;
+    };
+    const fields = el('div', 'sb-fields');
+    fields.append(
+      field(
+        'Share who leave early · 0 to 0.9',
+        number(
+          'assumptions-dropout',
+          held.dropout === undefined ? ASSUMED.dropout : held.dropout,
+          (value) => set({ dropout: value }),
+          { min: 0, max: 0.9 }
+        ),
+        1.6
+      ),
+      field(
+        'Drug-type adverse events on an active arm · times placebo',
+        number(
+          'assumptions-events',
+          held.eventRatio === undefined ? ASSUMED.eventRatio : held.eventRatio,
+          (value) => set({ eventRatio: value }),
+          { min: 0.1, max: 5 }
+        ),
+        2.4
+      )
+    );
+    section.append(fields);
+    const arms = s.form.protocol ? s.form.protocol.arms : undefined;
+    const read = readAssumptions(s.form.assumptions || {}, arms ? { arms } : {});
+    const share = read.assumptions ? read.assumptions.dropout : 0;
+    section.append(
+      el(
+        'p',
+        'sb-soft',
+        read.problems.length
+          ? read.problems.join(' ')
+          : `${
+              share
+                ? `About ${Math.round(share * 100)} in 100 enrolled participants leave by the ${s.form.protocol ? 'last planned visit' : 'end of the study'}, spread evenly over it: nothing of theirs is dated after they go, and the completion tables say why.`
+                : 'Nobody leaves early.'
+            } Adverse event terms are a short list of gsm.datasim’s own, not MedDRA.`
+      )
+    );
+    return section;
+  }
+
   function segmented(name, options, onPick) {
     const group = el('div', 'sb-seg');
     group.setAttribute('role', 'group');
@@ -595,6 +663,10 @@ export function builderScreen(app) {
       chips.append(chip);
     }
     main.append(chips);
+    main.append(
+      el('h3', null, 'Assumptions: who leaves early, and adverse events by arm'),
+      assumptionsSection()
+    );
 
     // What building it will give, and the button.
     const side = el('aside', 'sb-summary');

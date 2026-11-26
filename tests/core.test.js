@@ -297,6 +297,7 @@ describe('study.builder’s workflows, of every layer', () => {
       'ADaM_ADSL',
       'ADaM_ADVS',
       'Analysis_AESummary',
+      'Analysis_AESummaryByArm',
       'Analysis_EfficacySummary'
     ]);
     for (const workflow of ownWorkflows) {

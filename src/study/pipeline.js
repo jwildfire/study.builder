@@ -125,6 +125,25 @@ export function pipeline({ el, button }, study, box, { open = null, save = null 
       `${study.protocol.name}${source.kind === 'usdm' ? `, read from CDISC USDM ${source.version || ''}` : ''}${source.edited ? ', changed in the form' : ''}`
     );
   }
+  if (args.assumptions) {
+    try {
+      const assumed = JSON.parse(args.assumptions);
+      if (assumed.dropout) {
+        const byArm = Object.entries(assumed.dropout.arms || {})
+          .map(([arm, rate]) => `${arm} ${rate}`)
+          .join(', ');
+        fact(
+          'Leave early',
+          `${assumed.dropout.rate} of enrolled participants by day ${assumed.dropout.day}${byArm ? `; by arm: ${byArm}` : ''}`
+        );
+      }
+      if (assumed.events) {
+        fact('Drug-type adverse events', `${assumed.events.ratio} times placebo on an active arm`);
+      }
+    } catch {
+      // Assumptions that cannot be read back are left out.
+    }
+  }
   if (args.efficacy) {
     try {
       const [score] = JSON.parse(args.efficacy).scores;
