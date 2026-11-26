@@ -40,6 +40,7 @@ export { saveFile };
  * @param {Object} [options.study] A built study to open on, as `buildStudy` or `openStudy` gives one.
  * @param {{view: string, table: string}} [options.viewing] Where the study's views open.
  * @param {(at: Object) => void} [options.onView] Called as the reader moves between the study's views and tables.
+ * @param {boolean} [options.operations] `false` to leave the study's RBQM and Safety views out, for a page with charts of its own for them.
  * @param {string} [options.screen] The screen to open on: `library` (the portfolio, unless there is nothing to list) or `describe` (the builder).
  * @param {string} [options.base] The address study.builder's `r/`, `vendor/` and `presets/` folders are served under.
  * @param {{run: Function}} [options.connection] A connection to R the page already has.
@@ -65,6 +66,7 @@ export function mount(
     study: openingStudy = null,
     viewing: openingViewing = null,
     onView = null,
+    operations = true,
     base = './',
     connection = null,
     createConnection: connect = null,
@@ -316,6 +318,7 @@ export function mount(
       el,
       button,
       study: s.study,
+      operations,
       theme,
       save,
       viewing: s.viewing,

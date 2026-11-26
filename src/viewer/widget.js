@@ -53,6 +53,7 @@ const count = (number, noun) =>
  * @param {(table: Object, column: Object) => void} [options.onColumn] Called when the reader presses a column's `todo` button, for a page that maps columns.
  * @param {(table: Object, role: Object, value: string) => void} [options.onRole] Called when the reader sets one of a table's `roles`, for a page that maps columns: the role, and the column or value chosen (empty for none).
  * @param {Array<{id: string, label: string, render: (container: Element) => void}>} [options.views] Views of the page's own, shown before the three: a study overview, say.
+ * @param {Array<{id: string, label: string, views: string[]}>} [options.sections] Views put under headings: a row of sections, and under it the open section's views. A view no section names is a section of its own. With none, every view is one tab in one row.
  * @param {{label: string, open: (id: string) => void}} [options.participantAction] A button on a participant's page, for a page that has more to show of one.
  * @param {(state: Object) => void} [options.onChange] Told the view, the table and the participant when any changes.
  * @returns {{setStudy: Function, open: Function, show: Function, state: Function, destroy: Function}} The handle.
@@ -68,6 +69,7 @@ export function mountViewer(
     onColumn = null,
     onRole = null,
     views: extraGiven = [],
+    sections: sectionsGiven = null,
     participantAction = null,
     onChange = null
   } = {}
@@ -98,6 +100,29 @@ export function mountViewer(
   );
   const allViews = [...extra, ...VIEWS];
   const isExtra = (id) => extra.some((one) => one.id === id);
+  // The sections, when the page asks for them: each holds the views it names
+  // that there are, and a view none names is a section of its own.
+  const sections = (() => {
+    if (!Array.isArray(sectionsGiven) || !sectionsGiven.length) return null;
+    const taken = new Set();
+    const made = [];
+    for (const given of sectionsGiven) {
+      if (!given || !given.id || !Array.isArray(given.views)) continue;
+      const held = given.views
+        .map((id) => allViews.find((one) => one.id === id))
+        .filter((one) => one && !taken.has(one.id));
+      if (!held.length) continue;
+      held.forEach((one) => taken.add(one.id));
+      made.push({ id: given.id, label: given.label || given.id, views: held });
+    }
+    for (const one of allViews) {
+      if (!taken.has(one.id)) made.push({ id: one.id, label: one.label, views: [one] });
+    }
+    return made;
+  })();
+  const sectionOf = (id) =>
+    sections ? sections.find((one) => one.views.some((each) => each.id === id)) || null : null;
+  const lastIn = new Map(); // section id → the view of it last looked at
   let view = allViews.some((one) => one.id === openingView)
     ? openingView
     : extra.length && openingView === undefined
@@ -288,21 +313,55 @@ export function mountViewer(
   }
 
   function viewTabs() {
-    const tabs = el('div', 'sv-views');
-    tabs.setAttribute('role', 'tablist');
-    for (const one of allViews) {
-      const tab = button('sv-view', one.label, () => {
-        view = one.id;
-        adding = false;
-        draw();
-        told();
-      });
-      tab.dataset.view = one.id;
-      tab.setAttribute('role', 'tab');
-      tab.setAttribute('aria-selected', String(view === one.id));
-      tabs.append(tab);
-    }
-    return tabs;
+    const row = (className, list, isOpen, press, mark) => {
+      const tabs = el('div', className);
+      tabs.setAttribute('role', 'tablist');
+      for (const one of list) {
+        const tab = button('sv-view', one.label, () => {
+          press(one);
+          adding = false;
+          draw();
+          told();
+        });
+        mark(tab, one);
+        tab.setAttribute('role', 'tab');
+        tab.setAttribute('aria-selected', String(isOpen(one)));
+        tabs.append(tab);
+      }
+      return tabs;
+    };
+    const views = (className, list) =>
+      row(
+        className,
+        list,
+        (one) => view === one.id,
+        (one) => {
+          view = one.id;
+        },
+        (tab, one) => {
+          tab.dataset.view = one.id;
+        }
+      );
+    if (!sections) return views('sv-views', allViews);
+    const open = sectionOf(view);
+    if (open) lastIn.set(open.id, view);
+    const box = el('div', 'sv-sections');
+    box.append(
+      row(
+        'sv-views',
+        sections,
+        (one) => one === open,
+        (one) => {
+          view = lastIn.get(one.id) || one.views[0].id;
+        },
+        (tab, one) => {
+          tab.dataset.section = one.id;
+        }
+      )
+    );
+    // The open section's views, when it has more than one.
+    if (open && open.views.length > 1) box.append(views('sv-views sv-subviews', open.views));
+    return box;
   }
 
   function filterRow(one, matching) {
@@ -825,7 +884,7 @@ export function mountViewer(
     },
     /** Show a view, and, for One participant, a participant. */
     show(next, id = null) {
-      if (VIEWS.some((one) => one.id === next)) view = next;
+      if (allViews.some((one) => one.id === next)) view = next;
       if (id) person = String(id);
       draw();
       told();
@@ -833,6 +892,7 @@ export function mountViewer(
     /** What is on the page. */
     state: () => ({
       view,
+      section: sectionOf(view) ? sectionOf(view).id : null,
       table: table() ? table().id : null,
       participant: person,
       filters: table() ? [...filtersOf(table())] : [],

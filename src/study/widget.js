@@ -19,11 +19,19 @@ import { studyScreen } from './screen.js';
  * @param {?string} [options.theme] `light` or `dark`. Unless told, the widget matches the page behind it.
  * @param {{view: string, table: string, snapshot: string}} [options.viewing] Where the study's views open, and at which snapshot when the study kept them.
  * @param {(at: Object) => void} [options.onView] Called as the reader moves between views and tables.
+ * @param {boolean} [options.operations] `false` to leave out the RBQM and Safety views, for a page that has charts of its own for them; One participant then stands alone.
  * @param {(name: string, bytes: Uint8Array|string, type: string) => void} [options.save] Something else to save a file with.
  * @returns {{study: Function, state: Function, destroy: Function}} The handle.
  */
 export function mountStudy(target, options = {}) {
-  const { study, theme = null, viewing: opening = null, onView = null, save = saveFile } = options;
+  const {
+    study,
+    theme = null,
+    viewing: opening = null,
+    onView = null,
+    operations = true,
+    save = saveFile
+  } = options;
   if (!study) throw new Error('study.builder: mountStudy needs a study.');
   const root = typeof target === 'string' ? document.querySelector(target) : target;
   if (!root) throw new Error('study.builder: there is no element to mount into.');
@@ -40,6 +48,7 @@ export function mountStudy(target, options = {}) {
     button,
     study,
     studyOnly: true,
+    operations,
     theme,
     save,
     viewing,

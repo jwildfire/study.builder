@@ -9,15 +9,17 @@ import { protocolSaid } from '../engine/protocol.js';
 import { mountViewer } from '../viewer/widget.js';
 import { fromBuilt } from '../viewer/built.js';
 import { count } from '../shared/dom.js';
-import { design } from './design.js';
+import { adverse, eventsByArm } from './adverse.js';
 import { efficacy, efficacyResults } from './efficacy.js';
+import { pooledEvents, rbqm, safety, siteResults } from './operations.js';
 import { overview } from './overview.js';
 import { pipeline } from './pipeline.js';
+import { protocolView } from './protocol.js';
 import { scheduleGrid } from './schedule.js';
 
 /**
  * Draw the study view.
- * @param {Object} context `el` and `button` (from `domOf`), the `study`, and what the page around it allows: `studyOnly`, `theme`, `save`, `viewing`, `onChange`, `shelf`, `keep`, `onStudy`, `useLabel`, `listed`, `go`, `saidLine`.
+ * @param {Object} context `el` and `button` (from `domOf`), the `study`, and what the page around it allows: `studyOnly`, `operations` (false to leave the RBQM and Safety views to the page around it), `theme`, `save`, `viewing`, `onChange`, `shelf`, `keep`, `onStudy`, `useLabel`, `listed`, `go`, `saidLine`.
  * @returns {{page: Element, viewer: Object}} The screen, and the viewer mounted in it.
  */
 export function studyScreen(context) {
@@ -26,6 +28,7 @@ export function studyScreen(context) {
     button,
     study,
     studyOnly = false,
+    operations = true,
     theme = null,
     save,
     viewing = {},
@@ -172,17 +175,33 @@ export function studyScreen(context) {
 
   const holder = el('div', 'sb-viewer');
   page.append(holder);
+  // A table opened from a view of the page's own is shown in the Tables view.
+  const open = (table) => {
+    viewer.show('tables');
+    viewer.open(table);
+  };
+  const results = efficacyResults(study);
+  const sites = operations && siteResults(study);
+  const pooled = operations && pooledEvents(study);
+  // An address kept from before the Design view became Protocol still opens.
+  const openingView = viewing.view === 'design' ? 'protocol' : viewing.view;
   viewer = mountViewer(holder, {
     study: fromBuilt(shown),
     theme,
     save,
-    view: viewing.view,
+    view: openingView,
     table: viewing.table,
     views: [
       { id: 'overview', label: 'Overview', render: (box) => overview({ el }, shown, box, study) },
-      // The protocol the build followed, when it followed one.
+      // The protocol the build followed, when it followed one: all of it, then
+      // its visits by activities.
       ...(study.protocol
         ? [
+            {
+              id: 'protocol',
+              label: 'Protocol',
+              render: (box) => protocolView({ el }, study.protocol, box)
+            },
             {
               id: 'schedule',
               label: 'Schedule',
@@ -195,33 +214,37 @@ export function studyScreen(context) {
                   ),
                   scheduleGrid({ el }, study.protocol)
                 );
-                // What the reader left out of the protocol file, as it says it.
-                const left = study.protocol.notes || [];
-                if (left.length) {
-                  const notes = el('details', 'sb-caveats');
-                  notes.dataset.notes = 'protocol';
-                  notes.append(el('summary', null, 'What was left out of the protocol file'));
-                  const lines = el('ul');
-                  for (const line of left) lines.append(el('li', null, line));
-                  notes.append(lines);
-                  box.append(notes);
-                }
               }
             }
           ]
         : []),
-      // What else the protocol says: arms by epochs, objectives, endpoints, estimands.
-      ...(study.protocol && study.protocol.design
+      // What the study was asked to be, and the workflows that built it.
+      {
+        id: 'pipeline',
+        label: 'Pipeline',
+        render: (box) => pipeline({ el, button }, shown, box, { save, open })
+      },
+      // The study as the people running it watch it: no arm is named.
+      ...(sites
         ? [
             {
-              id: 'design',
-              label: 'Design',
-              render: (box) => design({ el }, study.protocol, box)
+              id: 'rbqm',
+              label: 'RBQM',
+              render: (box) => rbqm({ el, button }, shown, box, { open })
             }
           ]
         : []),
-      // The efficacy score, when the study simulated one.
-      ...(efficacyResults(study)
+      ...(pooled
+        ? [
+            {
+              id: 'safety',
+              label: 'Safety',
+              render: (box) => safety({ el, button }, shown, box, { open })
+            }
+          ]
+        : []),
+      // What the study found, by arm.
+      ...(results
         ? [
             {
               id: 'efficacy',
@@ -230,19 +253,29 @@ export function studyScreen(context) {
             }
           ]
         : []),
-      // What the study was asked to be, and the workflows that built it.
-      {
-        id: 'pipeline',
-        label: 'Pipeline',
-        render: (box) =>
-          pipeline({ el, button }, shown, box, {
-            save,
-            open: (table) => {
-              viewer.show('tables');
-              viewer.open(table);
+      ...(eventsByArm(study)
+        ? [
+            {
+              id: 'adverse',
+              label: 'Adverse events',
+              render: (box) => adverse({ el }, shown, box, results ? results.reference : null)
             }
-          })
-      }
+          ]
+        : [])
+    ],
+    // The sections the views sit under. Reporting here is the study's results
+    // by arm, not the data layer of that name, which is under Data.
+    sections: [
+      { id: 'overview', label: 'Overview', views: ['overview'] },
+      { id: 'design', label: 'Design', views: ['protocol', 'schedule'] },
+      { id: 'data', label: 'Data', views: ['pipeline', 'tables', 'columns'] },
+      {
+        id: 'operations',
+        // With neither of its own views, the section is One participant alone.
+        label: sites || pooled ? 'Operations' : 'One participant',
+        views: ['rbqm', 'safety', 'participant']
+      },
+      { id: 'reporting', label: 'Reporting', views: ['efficacy', 'adverse'] }
     ],
     onChange: (at) => {
       where = at;

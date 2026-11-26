@@ -25,6 +25,8 @@ import {
 // answers with a small study in the shape r/builder.R returns. Real R is held
 // by a run in a browser.
 
+/** The sections of a study with no protocol, no site metrics and no results by arm. */
+const SECTIONS = ['Overview', 'Data', 'One participant'];
 const column = (name, type = 'character') => ({ name, type });
 const ANSWER = {
   study_id: 'BUILT-001',
@@ -586,13 +588,16 @@ describe('the loader on a page', () => {
       'No seed'
     ]);
     // The viewer: the study's layers in its rail, and the overview first.
-    expect([...document.querySelectorAll('.sv-view')].map((tab) => tab.textContent)).toEqual([
-      'Overview',
-      'Pipeline',
-      'Tables',
-      'Columns',
-      'One participant'
-    ]);
+    // The views sit under sections; a section's views show when it is open.
+    expect([...document.querySelectorAll('.sv-view')].map((tab) => tab.textContent)).toEqual(
+      SECTIONS
+    );
+    q('.sv-view[data-section="data"]').click();
+    expect(
+      [...document.querySelectorAll('.sv-subviews .sv-view')].map((tab) => tab.textContent)
+    ).toEqual(['Pipeline', 'Tables', 'Columns']);
+    expect(handle.state().viewing.view).toBe('pipeline');
+    q('.sv-view[data-section="overview"]').click();
     expect([...document.querySelectorAll('.sv-group')].map((group) => group.textContent)).toEqual(
       ANSWER.layers.map((layer) => `${layer.label}${layer.tables.length}`)
     );
@@ -630,6 +635,7 @@ describe('the loader on a page', () => {
     const { saved } = mounted();
     const study = await handle.build();
     expect(study.table('adam', 'ADAE').definition.steps[0].name).toBe('workr::RunQuery');
+    q('.sv-view[data-section="data"]').click();
     q('.sv-view[data-view="pipeline"]').click();
     expect(q('.sb-config-facts').textContent).toContain('BUILT-001');
     expect([...document.querySelectorAll('.sb-lane')].map((lane) => lane.dataset.layer)).toEqual(
@@ -652,7 +658,8 @@ describe('the loader on a page', () => {
     press('pipeline-settings');
     expect(saved.at(-1).name).toBe('BUILT-001.settings.json');
     q('[data-action="pipeline-open"]').click();
-    expect(q('.sv-view[aria-selected="true"]').textContent).toBe('Tables');
+    expect(q('.sv-view[data-section][aria-selected="true"]').textContent).toBe('Data');
+    expect(q('.sv-subviews .sv-view[aria-selected="true"]').textContent).toBe('Tables');
     expect(handle.state().viewing).toMatchObject({ view: 'tables', table: 'raw:AE' });
   });
 
@@ -671,6 +678,7 @@ describe('the loader on a page', () => {
       dropout: { rate: 0.25, day: 270 }
     });
     // The study says so in its config, and a saved study's settings carry it.
+    q('.sv-view[data-section="data"]').click();
     q('.sv-view[data-view="pipeline"]').click();
     expect(q('.sb-config-facts').textContent).toContain('0.25 of enrolled participants by day 270');
     expect(savedOf(study).settings.assumptions).toEqual({ dropout: 0.25 });
@@ -763,8 +771,8 @@ describe('the loader on a page', () => {
     expect([...document.querySelectorAll('.sv-view')].map((tab) => tab.textContent)).toContain(
       'Overview'
     );
-    expect(q('.sv-view[aria-selected="true"]').textContent).toBe('Tables');
-    q('.sv-view[data-view="overview"]').click();
+    expect(q('.sv-subviews .sv-view[aria-selected="true"]').textContent).toBe('Tables');
+    q('.sv-view[data-section="overview"]').click();
     expect(onView).toHaveBeenCalled();
     expect(() => mountStudy('#b', {})).toThrow(/needs a study/);
   });

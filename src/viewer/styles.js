@@ -43,6 +43,8 @@ export const VIEWER_STYLES = `
 .sv-views{display:flex;flex-wrap:wrap;gap:0 1.4rem;border-bottom:1px solid var(--sv-rule)}
 .sv-view{min-height:2.6rem;padding:0 .1rem;border:0;border-bottom:3px solid transparent;background:none;color:var(--sv-soft)!important;font-weight:500}
 .sv-view[aria-selected=true]{border-color:var(--sv-accent);color:var(--sv-ink)!important;font-weight:600}
+.sv .sv-subviews{gap:0 1.1rem;border-bottom:0;margin-top:.15rem}
+.sv .sv-subviews .sv-view{min-height:2.1rem;font-size:.9em;border-bottom-width:2px}
 .sv-body{display:flex;flex-direction:column;gap:.7rem;min-width:0}
 .sv-filters{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem .5rem}
 .sv-chip{min-height:2.1rem;padding:0 .7rem;border:0;border-radius:999px;background:var(--sv-accent-soft);color:var(--sv-accent)!important;font-size:.8rem;font-weight:500}
