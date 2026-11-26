@@ -1,6 +1,6 @@
-# study.builder v0.4.0 (Upcoming)
+# study.builder v0.4.0
 
-Release candidate: v0.4.0-rc.1.
+Released 26 November 2026.
 
 - **A Pipeline view.** The study view has a Pipeline tab. On top is the study's config: what it was asked to be (size, seed, snapshots kept, domains, layers, protocol, efficacy score), what built it and its key, with a Settings file button. Under it is every table in columns by layer, a card for each raw table and for each workflow. Pick a card and what it was built from and what is built from it are marked, however far, and the workflow is shown as it is written: what it says of itself, the columns it needs, and its steps in order with what each is told, queries included. Open the table goes to it in Tables. The layout follows workr's own workflow explorer. R hands each workflow back with the table it made (`table.definition`); nothing is run or changed for it. `pipelineOf`.
 - **A home page with pictures.** The site's home page shows how a study is made as six stages in a row, from what you describe to the page it is handed to, each marked with one hue of the spectrum, and each of the three parts has a small picture of itself.
