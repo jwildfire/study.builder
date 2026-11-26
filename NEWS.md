@@ -1,6 +1,6 @@
-# study.builder v0.3.1 (Upcoming)
+# study.builder v0.3.1
 
-Release candidate: v0.3.1-rc.1.
+Released 25 November 2026.
 
 - **The viewer no longer restyles the page it is in.** Four of study.viewer's style rules were for class names safety.viz also uses (`.sv-rail`, `.sv-main`, `.sv-link`, `.sv-soft`) and were not held under the viewer's own element. Once a study view had been shown in safety.viz, its participant panel was capped at 16rem wide, expanded or not. Each of those rules is now under `.sv`, and a test holds it.
 
