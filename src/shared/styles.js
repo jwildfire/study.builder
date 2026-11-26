@@ -116,6 +116,24 @@ p.sb-problems{padding-left:.7rem}
 .sb-fact{padding:.3rem .65rem;border-radius:999px;background:var(--sb-sink);font-size:.82rem}
 .sb-snapshot{display:inline-flex;align-items:center;gap:.4rem;background:var(--sb-accent-soft);color:var(--sb-accent)}
 .sb-snapshot select{font:inherit;color:var(--sb-ink);background:var(--sb-card);border:1px solid var(--sb-line);border-radius:999px;padding:.1rem .4rem}
+.sb-design-head{margin:1.1rem 0 .4rem}
+.sb-arms td{text-align:left;color:var(--sb-ink)}
+.sb-element{display:block;padding:.3rem .5rem;border-radius:8px;background:var(--sb-accent-soft);font-weight:500}
+.sb-element+.sb-element{margin-top:.25rem}
+.sb-element small{display:block;font-weight:400;color:var(--sb-soft);font-size:.7rem;max-width:14rem}
+.sb-design-people{margin:.6rem 0 0}
+.sb-objectives{display:flex;flex-direction:column;gap:.6rem}
+.sb-objective{display:flex;flex-direction:column;gap:.4rem;padding:.8rem .9rem;background:var(--sb-card);border:1px solid var(--sb-rule);border-radius:10px}
+.sb-objective[data-level=primary]{border-left:3px solid var(--sb-accent)}
+.sb-objective p{margin:0;max-width:75ch}
+.sb-endpoints{margin:0;padding:0 0 0 .9rem;list-style:none;display:flex;flex-direction:column;gap:.35rem;border-left:1px solid var(--sb-rule)}
+.sb-endpoint{display:flex;flex-wrap:wrap;align-items:center;gap:.3rem .5rem;font-size:.88rem}
+.sb-endpoint .sb-pill{align-self:center}
+.sb-pill[data-link=simulated]{background:var(--sb-ok-soft);color:var(--sb-ok)}
+.sb-estimand{margin:0 0 .2rem 1rem;padding:.5rem .7rem;display:grid;grid-template-columns:minmax(8rem,auto) 1fr;gap:.2rem .8rem;background:var(--sb-sink);border-radius:8px;font-size:.84rem}
+.sb-estimand dt{font:600 .64rem/1.5 var(--sb-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--sb-soft)}
+.sb-estimand dd{margin:0}
+@media (max-width:540px){.sb-estimand{grid-template-columns:1fr}}
 .sb-growth tr[aria-current=true] td{font-weight:600;background:var(--sb-accent-soft)}
 .sb-viewer{margin-top:.6rem;min-width:0}
 .sb-viewer .sv{--sv-accent:var(--sb-accent);--sv-accent-soft:var(--sb-accent-soft);--sv-on-accent:var(--sb-on-accent);--sv-card:var(--sb-card);--sv-ink:var(--sb-ink);--sv-soft:var(--sb-soft);--sv-rule:var(--sb-rule);--sv-line:var(--sb-line);--sv-sink:var(--sb-sink)}

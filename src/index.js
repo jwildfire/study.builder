@@ -85,6 +85,8 @@ export {
   domainOf,
   isUsdm,
   planOf,
+  designSaid,
+  endpointLink,
   protocolSaid,
   protocolSettings,
   readProtocol,

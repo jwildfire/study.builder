@@ -9,6 +9,7 @@ import { protocolSaid } from '../engine/protocol.js';
 import { mountViewer } from '../viewer/widget.js';
 import { fromBuilt } from '../viewer/built.js';
 import { count } from '../shared/dom.js';
+import { design } from './design.js';
 import { overview } from './overview.js';
 import { scheduleGrid } from './schedule.js';
 
@@ -193,6 +194,16 @@ export function studyScreen(context) {
                   scheduleGrid({ el }, study.protocol)
                 );
               }
+            }
+          ]
+        : []),
+      // What else the protocol says: arms by epochs, objectives, endpoints, estimands.
+      ...(study.protocol && study.protocol.design
+        ? [
+            {
+              id: 'design',
+              label: 'Design',
+              render: (box) => design({ el }, study.protocol, box)
             }
           ]
         : [])

@@ -2,11 +2,11 @@
 
 ## What a reader uses: three modules
 
-| Module        | Its job                                  | Parts                                                                           | Folder           |
-| ------------- | ---------------------------------------- | ------------------------------------------------------------------------------- | ---------------- |
-| Portfolio     | List the studies there are, and open one | Ready-made, saved, settings only, open a file                                   | `src/portfolio/` |
-| Study view    | Show one study                           | Facts, Overview, Schedule, and the viewer's Tables, Columns and One participant | `src/study/`     |
-| Study builder | Describe a study and build it            | The trial, the schedule grid, layers and domains, the build                     | `src/builder/`   |
+| Module        | Its job                                  | Parts                                                                                   | Folder           |
+| ------------- | ---------------------------------------- | --------------------------------------------------------------------------------------- | ---------------- |
+| Portfolio     | List the studies there are, and open one | Ready-made, saved, settings only, open a file                                           | `src/portfolio/` |
+| Study view    | Show one study                           | Facts, Overview, Schedule, Design, and the viewer's Tables, Columns and One participant | `src/study/`     |
+| Study builder | Describe a study and build it            | The trial, the schedule grid, layers and domains, the build                             | `src/builder/`   |
 
 - `StudyBuilder.mount` is the three together: portfolio, then builder, then study view. It is `src/app/`, which holds what the three share and moves a reader between them.
 - `StudyBuilder.mountStudy` is the study view alone, for a page with its own list of studies (safety.viz's Data tab). It starts no R and reads no saved studies.
@@ -16,15 +16,15 @@
 
 Seven folders under `src/`. Each has one job, and a test (`tests/architecture.test.js`) fails when one reads another it may not, or when a folder appears that is not in this table.
 
-| Folder           | Its job                                                                                                                                        | May read                                  |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
-| `src/portfolio/` | The portfolio's screen: one table of every study a reader can have.                                                                            | shared, engine                            |
-| `src/study/`     | The study view: its screen, the overview, the schedule grid, and `mountStudy`. Never reads the engine's build, so it starts no R.              | shared, engine, viewer                    |
-| `src/builder/`   | The builder's form. It takes the schedule grid from the study view and lets it be changed.                                                     | shared, engine, study                     |
-| `src/app/`       | The three on one page: the form's settings, the open study, what was last said, and when the engine is asked.                                  | shared, engine, portfolio, study, builder |
-| `src/engine/`    | Make a study and keep it: settings, the build in R, layers, metadata, the manifest, saving and opening, presets. No page.                      | shared                                    |
-| `src/viewer/`    | Look through any study's tables: rows, column profiles, one participant, and a page's mapping of columns. Knows nothing of the engine or of R. | shared                                    |
-| `src/shared/`    | Small things two folders need: reading CSV text, light or dark, the makers of elements, the style sheet.                                       | nothing                                   |
+| Folder           | Its job                                                                                                                                            | May read                                  |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| `src/portfolio/` | The portfolio's screen: one table of every study a reader can have.                                                                                | shared, engine                            |
+| `src/study/`     | The study view: its screen, the overview, the schedule grid, the design view, and `mountStudy`. Never reads the engine's build, so it starts no R. | shared, engine, viewer                    |
+| `src/builder/`   | The builder's form. It takes the schedule grid from the study view and lets it be changed.                                                         | shared, engine, study                     |
+| `src/app/`       | The three on one page: the form's settings, the open study, what was last said, and when the engine is asked.                                      | shared, engine, portfolio, study, builder |
+| `src/engine/`    | Make a study and keep it: settings, the build in R, layers, metadata, the manifest, saving and opening, presets. No page.                          | shared                                    |
+| `src/viewer/`    | Look through any study's tables: rows, column profiles, one participant, and a page's mapping of columns. Knows nothing of the engine or of R.     | shared                                    |
+| `src/shared/`    | Small things two folders need: reading CSV text, light or dark, the makers of elements, the style sheet.                                           | nothing                                   |
 
 ```
             ┌───────────────── app ─────────────────┐

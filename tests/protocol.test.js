@@ -7,7 +7,9 @@ import { fileURLToPath } from 'node:url';
 import {
   PROTOCOL_FORMAT,
   daysOf,
+  designSaid,
   domainOf,
+  endpointLink,
   isUsdm,
   planOf,
   protocolSaid,
@@ -19,6 +21,8 @@ import { LIMITS, readSettings } from '../src/engine/core.js';
 import { createBuilder, studyOf } from '../src/engine/build.js';
 import { configOf, protocolOfArgs, readDocument, readPresets } from '../src/engine/saved.js';
 import { mount } from '../src/app/widget.js';
+import { design as drawDesign } from '../src/study/design.js';
+import { domOf } from '../src/shared/dom.js';
 
 // A protocol's schedule of activities: read from CDISC's pilot study as a USDM
 // study definition, the public example study.builder's reader is held to, and
@@ -116,6 +120,97 @@ describe('reading a USDM study definition', () => {
     );
     expect(createHash('sha256').update(USDM).digest('hex')).toBe(record.files[0].sha256);
     expect(record.license).toContain('CC-BY-4.0');
+  });
+});
+
+describe('a protocol’s design', () => {
+  it('keeps what the pilot study says: arms by epochs, objectives with endpoints, the estimand and the population', () => {
+    const protocol = pilot();
+    const { design } = protocol;
+    expect(designSaid(protocol)).toEqual({
+      arms: 3,
+      epochs: 5,
+      objectives: 6,
+      endpoints: 11,
+      estimands: 1
+    });
+    expect(design).toMatchObject({ model: 'Parallel Study', blinding: 'Double Blind Study' });
+    expect(design.arms.map((arm) => [arm.name, arm.type])).toEqual([
+      ['Placebo', 'Placebo Control Arm'],
+      ['Xanomeline Low Dose', 'Active Comparator Arm'],
+      ['Xanomeline High Dose', 'Active Comparator Arm']
+    ]);
+    // A cell for every arm in every epoch.
+    expect(design.cells).toHaveLength(15);
+    expect(
+      design.cells
+        .filter((cell) => cell.arm === 'Xanomeline High Dose')
+        .map((cell) => cell.elements.map((element) => element.name).join())
+    ).toEqual(['Screening', 'High - Start', 'High - Middle', 'High - End', 'Follow up']);
+    expect(design.objectives.map((objective) => objective.level)).toEqual([
+      'Primary Objective',
+      'Primary Objective',
+      'Secondary Objective',
+      'Secondary Objective',
+      'Secondary Objective',
+      'Secondary Objective'
+    ]);
+    const [first] = design.objectives[0].endpoints;
+    expect(first.text).toContain('ADAS-Cog (11)] at Week 24');
+    expect(design.estimands[0]).toMatchObject({
+      endpoint: first.id,
+      summary: 'Group mean changes from baseline in the primary efficacy parameters',
+      events: [{ text: 'Temporary Treatment Interruption' }]
+    });
+    expect(design.population).toMatchObject({ completes: 300, sex: 'Both' });
+    // It is written back whole, and a protocol that says none keeps none.
+    expect(readProtocol(JSON.parse(JSON.stringify(protocol))).design).toEqual(design);
+    const { design: _dropped, ...bare } = protocol;
+    expect(readProtocol(bare).design).toBeUndefined();
+  });
+
+  it('says what the schedule and the simulator have for an endpoint, by name', () => {
+    const protocol = pilot();
+    expect(endpointLink(protocol, 'ADAS-Cog (11) at Week 24')).toEqual({
+      activity: 'ADAS-Cog',
+      visits: 5,
+      simulated: false
+    });
+    expect(endpointLink(protocol, 'Adverse events')).toMatchObject({ simulated: true });
+    expect(endpointLink(protocol, '*** To be determined from protocol ***')).toEqual({
+      activity: null,
+      visits: 0,
+      simulated: false
+    });
+  });
+
+  it('is drawn as a grid of arms by epochs, then objectives with their endpoints and the estimand under its endpoint', () => {
+    const protocol = pilot();
+    document.body.innerHTML = '<div id="d"></div>';
+    const box = document.querySelector('#d');
+    drawDesign(domOf(document), protocol, box);
+    expect([...box.querySelectorAll('.sb-tile-value')].map((tile) => tile.textContent)).toEqual([
+      '3',
+      '300',
+      '6',
+      '11',
+      '1'
+    ]);
+    expect(box.querySelectorAll('.sb-arms thead th[data-epoch]')).toHaveLength(5);
+    expect(box.querySelectorAll('.sb-arms tbody tr')).toHaveLength(3);
+    expect(box.querySelectorAll('.sb-element')).toHaveLength(15);
+    expect(box.querySelector('.sb-arms th[data-epoch="Screening"] small').textContent).toBe(
+      'Day -14 to -2'
+    );
+    expect(box.querySelectorAll('.sb-objective')).toHaveLength(6);
+    expect(box.querySelectorAll('.sb-objective[data-level="primary"]')).toHaveLength(2);
+    expect(box.querySelectorAll('.sb-endpoint')).toHaveLength(11);
+    // The estimand sits right after the endpoint it is of.
+    const estimand = box.querySelector('.sb-estimand-line');
+    expect(estimand.previousElementSibling.textContent).toContain('ADAS-Cog (11)] at Week 24');
+    expect(estimand.textContent).toContain('Treatment Policy');
+    expect(box.querySelectorAll('[data-link="scheduled"]').length).toBeGreaterThan(0);
+    expect(box.querySelectorAll('[data-link="simulated"]').length).toBeGreaterThan(0);
   });
 });
 

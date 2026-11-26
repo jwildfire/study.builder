@@ -13,8 +13,10 @@
 // image, so there is nothing of it to read there.
 //
 // What a build does with it: visits, vital signs and labs are made on the
-// schedule. Everything else a protocol says is kept and shown, and simulates
-// nothing yet: arms, epochs, and activities of no domain the simulator makes.
+// schedule, and its arms are the study's. Everything else a protocol says is
+// kept and shown, and simulates nothing yet: activities of no domain the
+// simulator makes, and its `design`: what each arm gets in each epoch, its
+// objectives with their endpoints, its estimands and its population.
 
 /** The protocol document's format, by name and version. */
 export const PROTOCOL_FORMAT = 'study.builder/protocol/1';
@@ -71,6 +73,146 @@ export function daysOf(value) {
   if (!match || !text(value)) return null;
   const [, years = 0, months = 0, weeks = 0, days = 0] = match;
   return Math.round(Number(years) * 365 + Number(months) * 30 + Number(weeks) * 7 + Number(days));
+}
+
+const words = (value) =>
+  text(value)
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+/**
+ * A protocol's design, read and written back whole: what the protocol says of
+ * arms, epochs, objectives, endpoints, estimands and the population. Nothing
+ * here is simulated; it is kept to be shown.
+ * @param {*} given A design, as `readUsdm` makes one.
+ * @returns {?Object} The design, or null when there is none to keep.
+ */
+function designOf(given) {
+  if (!isRecord(given)) return null;
+  const named = (entry) => ({
+    name: words(entry && entry.name),
+    ...(words(entry && entry.type) ? { type: words(entry.type) } : {}),
+    ...(words(entry && entry.about) ? { about: words(entry.about) } : {})
+  });
+  const arms = list(given.arms)
+    .map(named)
+    .filter((arm) => arm.name);
+  const epochs = list(given.epochs)
+    .map(named)
+    .filter((epoch) => epoch.name);
+  const cells = list(given.cells)
+    .map((cell) => ({
+      arm: words(cell && cell.arm),
+      epoch: words(cell && cell.epoch),
+      elements: list(cell && cell.elements)
+        .map(named)
+        .filter((element) => element.name)
+    }))
+    .filter(
+      (cell) =>
+        arms.some((arm) => arm.name === cell.arm) &&
+        epochs.some((epoch) => epoch.name === cell.epoch)
+    );
+  const endpoint = (entry) => ({
+    id: words(entry && entry.id),
+    level: words(entry && entry.level),
+    text: words(entry && entry.text)
+  });
+  const objectives = list(given.objectives)
+    .map((objective) => ({
+      level: words(objective && objective.level),
+      text: words(objective && objective.text),
+      endpoints: list(objective && objective.endpoints)
+        .map(endpoint)
+        .filter((one) => one.text)
+    }))
+    .filter((objective) => objective.text);
+  const estimands = list(given.estimands).map((estimand) => ({
+    name: words(estimand && estimand.name),
+    summary: words(estimand && estimand.summary),
+    population: words(estimand && estimand.population),
+    // The endpoint the estimand is of, by its id among the objectives' endpoints.
+    endpoint: words(estimand && estimand.endpoint),
+    interventions: list(estimand && estimand.interventions)
+      .map(words)
+      .filter(Boolean),
+    events: list(estimand && estimand.events)
+      .map((event) => ({
+        text: words(event && event.text),
+        strategy: words(event && event.strategy)
+      }))
+      .filter((event) => event.text || event.strategy)
+  }));
+  const population = isRecord(given.population) ? given.population : {};
+  const design = {
+    model: words(given.model),
+    blinding: words(given.blinding),
+    arms,
+    epochs,
+    cells,
+    objectives,
+    estimands,
+    population: {
+      about: words(population.about),
+      completes: whole(population.completes),
+      sex: words(population.sex),
+      analysis: list(population.analysis).map(words).filter(Boolean)
+    }
+  };
+  const holds =
+    cells.length ||
+    objectives.length ||
+    estimands.length ||
+    design.population.about ||
+    design.model;
+  return holds ? design : null;
+}
+
+/**
+ * What a protocol's design comes to, counted.
+ * @param {Object} protocol The protocol.
+ * @returns {?{arms: number, epochs: number, objectives: number, endpoints: number, estimands: number}} The counts, or null when the protocol keeps no design.
+ */
+export function designSaid(protocol) {
+  const design = protocol && protocol.design;
+  if (!design) return null;
+  return {
+    arms: design.arms.length,
+    epochs: design.epochs.length,
+    objectives: design.objectives.length,
+    endpoints: design.objectives.reduce((sum, objective) => sum + objective.endpoints.length, 0),
+    estimands: design.estimands.length
+  };
+}
+
+/**
+ * What the schedule and the simulator have for an endpoint. The protocol does
+ * not join an endpoint to an activity, so this goes by words: an activity
+ * whose name is in the endpoint's text, or a domain the text names.
+ * @param {Object} protocol The protocol.
+ * @param {string} said The endpoint's text.
+ * @returns {{activity: ?string, visits: number, simulated: boolean}} The activity found, the visits it is scheduled at, and whether its data is simulated.
+ */
+export function endpointLink(protocol, said) {
+  const lower = text(said).toLowerCase();
+  const visitsOf = (id) => Object.values(protocol.schedule).filter((at) => at.includes(id)).length;
+  const scheduledOnes = protocol.activities.filter((activity) => visitsOf(activity.id) > 0);
+  // The longest name that is in the text is the nearest.
+  const byName = scheduledOnes
+    .filter((activity) => activity.name.length > 2 && lower.includes(activity.name.toLowerCase()))
+    .sort((a, b) => b.name.length - a.name.length)[0];
+  const domain = domainOf(said);
+  const byDomain = !byName && domain ? scheduledOnes.find((one) => one.domain === domain) : null;
+  const found = byName || byDomain || null;
+  // Adverse events are collected throughout: no visit schedules them.
+  if (!found) return { activity: null, visits: 0, simulated: domain === 'AE' };
+  const visits = byName
+    ? visitsOf(found.id)
+    : Object.values(protocol.schedule).filter((at) =>
+        at.some((id) => scheduledOnes.some((one) => one.id === id && one.domain === domain))
+      ).length;
+  return { activity: byName ? found.name : null, visits, simulated: Boolean(found.domain) };
 }
 
 /**
@@ -131,6 +273,7 @@ export function readProtocol(given) {
     const at = isRecord(given.schedule) ? list(given.schedule[visit.id]) : [];
     schedule[visit.id] = [...new Set(at.filter((id) => known.has(id)))];
   }
+  const design = designOf(given.design);
   return {
     format: PROTOCOL_FORMAT,
     name: text(given.name) || 'Protocol',
@@ -143,7 +286,9 @@ export function readProtocol(given) {
     epochs: list(given.epochs).map(text).filter(Boolean),
     visits,
     activities,
-    schedule
+    schedule,
+    // What else the protocol says, kept to be shown. Left out when it says none.
+    ...(design ? { design } : {})
   };
 }
 
@@ -272,6 +417,67 @@ export function readUsdm(given) {
     ? population.plannedEnrollmentNumber.value
     : population.plannedEnrollmentNumber;
   const phase = isRecord(design.studyPhase) ? design.studyPhase.standardCode : null;
+  // The design: what each arm gets in each epoch, the objectives with their
+  // endpoints, the estimands and the population, as the file says them.
+  const decode = (code) => text(isRecord(code) ? code.decode : '');
+  const called = (entry) => text(entry && entry.label) || text(entry && entry.name);
+  const armNames = new Map(list(design.arms).map((arm) => [arm.id, called(arm)]));
+  const elements = new Map(list(design.elements).map((element) => [element.id, element]));
+  const interventions = new Map(
+    list(version.studyInterventions).map((one) => [one.id, called(one)])
+  );
+  const analysisSets = new Map(
+    list(design.analysisPopulations).map((one) => [one.id, text(one.text) || called(one)])
+  );
+  const count = (quantity) => (isRecord(quantity) ? quantity.value : quantity);
+  const said = {
+    model: decode(design.model),
+    blinding: decode(isRecord(design.blindingSchema) ? design.blindingSchema.standardCode : null),
+    arms: list(design.arms).map((arm) => ({
+      name: called(arm),
+      type: decode(arm.type),
+      about: text(arm.description)
+    })),
+    epochs: list(design.epochs).map((epoch) => ({
+      name: called(epoch),
+      type: decode(epoch.type),
+      about: text(epoch.description)
+    })),
+    cells: list(design.studyCells).map((cell) => ({
+      arm: armNames.get(cell.armId),
+      epoch: called(epochs.get(cell.epochId)),
+      elements: list(cell.elementIds)
+        .map((id) => elements.get(id))
+        .filter(Boolean)
+        .map((element) => ({ name: called(element), about: text(element.description) }))
+    })),
+    objectives: list(design.objectives).map((objective) => ({
+      level: decode(objective.level),
+      text: objective.text,
+      endpoints: list(objective.endpoints).map((endpoint) => ({
+        id: endpoint.id,
+        level: decode(endpoint.level),
+        text: endpoint.text
+      }))
+    })),
+    estimands: list(design.estimands).map((estimand) => ({
+      name: called(estimand),
+      summary: estimand.populationSummary,
+      population: analysisSets.get(estimand.analysisPopulationId),
+      endpoint: estimand.variableOfInterestId,
+      interventions: list(estimand.interventionIds).map((id) => interventions.get(id)),
+      events: list(estimand.intercurrentEvents).map((event) => ({
+        text: event.text,
+        strategy: event.strategy
+      }))
+    })),
+    population: {
+      about: text(population.description),
+      completes: count(population.plannedCompletionNumber),
+      sex: list(population.plannedSex).map(decode).filter(Boolean).join(', '),
+      analysis: [...analysisSets.values()]
+    }
+  };
   const indication = list(design.indications)[0] || {};
   const titles = list(version.titles);
   return readProtocol({
@@ -289,7 +495,8 @@ export function readUsdm(given) {
     epochs: list(design.epochs).map((epoch) => text(epoch.label) || text(epoch.name)),
     visits,
     activities,
-    schedule
+    schedule,
+    design: said
   });
 }
 
