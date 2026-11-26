@@ -26,6 +26,22 @@
 #'   result, unit and normal range for each lab, an ECG table, and a table of
 #'   any scores asked for (a questionnaire total that moves by arm). See
 #'   [apply_study_results()]. Default `NULL`.
+#' @param phase,therapeutic_area Optional. What the study table says of each,
+#'   in place of the value drawn at random. Labels only: neither shapes the
+#'   data. The random draw is still made, so naming one changes nothing else.
+#'   Default `NULL`.
+#' @param specs Optional named list of table specs for domains the installed
+#'   `gsm.mapping` has no mapping workflow for, as `list(Raw_VS = <spec>)`.
+#'   A domain named in `domains` whose spec is here is made like any other, in
+#'   every snapshot, after the rest and on a random stream of its own, so that
+#'   asking for it changes no other table. Default `NULL`.
+#' @param column_names `"source"` (the default) names each column as the
+#'   source system does, as `gsm.mapping`'s specs say (`source_col`). `"gsm"`
+#'   names each as gsm does; see [apply_gsm_names()].
+#' @param site_id_prefix What a site id begins with. The default, `"0X"`,
+#'   makes ids such as `0X1234`, which R reads back from a CSV file as a
+#'   hexadecimal number; a prefix of letters, such as `"SITE"`, makes ids that
+#'   survive a CSV file. The prefix changes no random draw.
 #' @param verbose Whether to print progress/output messages
 #' @inheritParams create_study_config
 #' @return LongitudinalStudy object with generated data
@@ -57,11 +73,19 @@ create_longitudinal_study <- function(study_id = "STUDY-001",
                                       risk_profile = NULL,
                                       design = NULL,
                                       results = NULL,
+                                      phase = NULL,
+                                      therapeutic_area = NULL,
+                                      specs = NULL,
+                                      column_names = c("source", "gsm"),
+                                      site_id_prefix = "0X",
                                       verbose = FALSE) {
   # Validate inputs
   validate_study_inputs(participants, sites, snapshots, domains)
   design <- validate_study_design(design)
   results <- validate_study_results(results)
+  column_names <- match.arg(column_names)
+  specs <- validate_study_specs(specs)
+  site_id_prefix <- validate_site_id_prefix(site_id_prefix)
 
   # Ensure required mappings are included
   mappings <- ensure_core_mappings(domains)
@@ -76,6 +100,10 @@ create_longitudinal_study <- function(study_id = "STUDY-001",
     mappings,
     outlier_intensity = outlier_intensity,
     risk_profile = risk_profile,
+    phase = phase,
+    therapeutic_area = therapeutic_area,
+    specs = specs,
+    site_id_prefix = site_id_prefix,
     verbose = verbose
   )
 
@@ -91,6 +119,12 @@ create_longitudinal_study <- function(study_id = "STUDY-001",
     raw_data <- lapply(raw_data, apply_study_results, results = results)
   }
 
+  # Columns under gsm's names, when asked: last, so the design and the results
+  # read the tables as the generators wrote them.
+  if (identical(column_names, "gsm")) {
+    raw_data <- lapply(raw_data, apply_gsm_names, specs = specs)
+  }
+
   # Create study object with proper config
   config <- list(
     participants = participants,
@@ -104,6 +138,10 @@ create_longitudinal_study <- function(study_id = "STUDY-001",
     risk_profile = risk_profile,
     design = design,
     results = results,
+    phase = phase,
+    therapeutic_area = therapeutic_area,
+    column_names = column_names,
+    site_id_prefix = site_id_prefix,
     verbose = verbose
   )
 

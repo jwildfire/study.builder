@@ -3,6 +3,7 @@
 
 /** gsm.datasim’s own files that R reads, by their path under study.builder’s address. */
 export const SIMULATOR_FILES = [
+  "vendor/gsm.datasim/DESCRIPTION",
   "vendor/gsm.datasim/R/Raw_AE.R",
   "vendor/gsm.datasim/R/Raw_AntiCancer.R",
   "vendor/gsm.datasim/R/Raw_Baseline.R",
@@ -29,8 +30,6 @@ export const SIMULATOR_FILES = [
   "vendor/gsm.datasim/R/Raw_gilda_STUDY.R",
   "vendor/gsm.datasim/R/column_type_generator.R",
   "vendor/gsm.datasim/R/create_longitudinal_study.R",
-  "vendor/gsm.datasim/R/study_design.R",
-  "vendor/gsm.datasim/R/study_results.R",
   "vendor/gsm.datasim/R/create_snapshot_reports.R",
   "vendor/gsm.datasim/R/domain_registry.R",
   "vendor/gsm.datasim/R/endpoints_domains_helper.R",
@@ -43,12 +42,14 @@ export const SIMULATOR_FILES = [
   "vendor/gsm.datasim/R/import-gsm.mapping-CombineSpecs.R",
   "vendor/gsm.datasim/R/raw_data_generator.R",
   "vendor/gsm.datasim/R/study_builder.R",
+  "vendor/gsm.datasim/R/study_design.R",
+  "vendor/gsm.datasim/R/study_options.R",
+  "vendor/gsm.datasim/R/study_results.R",
   "vendor/gsm.datasim/R/util-pipe.R",
   "vendor/gsm.datasim/R/utils-longitudinal.R",
   "vendor/gsm.datasim/R/utils.R",
-  "vendor/gsm.datasim/inst/template.csv",
   "vendor/gsm.datasim/inst/small_template.csv",
-  "vendor/gsm.datasim/DESCRIPTION"
+  "vendor/gsm.datasim/inst/template.csv"
 ];
 
 /** gsm.mapping’s vital signs mapping workflow. */
@@ -84,13 +85,13 @@ export const WORKFLOW_FILES = [
 ];
 
 /** A stamp of every file R fetches: it changes when any of them does. */
-export const FILES_STAMP = "c5700e2779cd";
+export const FILES_STAMP = "f9621c74aaad";
 
 /** What each copy was copied from. */
 export const COPIED_FROM = {
   "vendor/gsm.datasim": {
     "repository": "https://github.com/jwildfire/gsm.datasim",
-    "commit": "399e2d45c590edd4c75ba9a08aa5a48db5556667"
+    "commit": "b0b6b67de0206e0373b6dea69b4d8115cb49f79d"
   },
   "vendor/gsm.mapping-vitals": {
     "repository": "https://github.com/Gilead-Public/gsm.mapping",

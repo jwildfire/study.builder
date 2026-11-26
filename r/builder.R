@@ -12,17 +12,17 @@
 # nowhere else to look.
 #
 # R in the browser and desktop R source this one file. Nothing here makes up a
-# row or derives a column: every raw row is gsm.datasim's, and every table
-# built off raw is a workflow's. This file asks for the study, takes the last
-# snapshot, runs the workflows and writes the tables out.
+# row, changes one or derives a column: every raw row is gsm.datasim's, and
+# every table built off raw is a workflow's. This file asks for the study,
+# takes a snapshot, runs the workflows and writes the tables out.
 #
-# Three things are changed in the raw tables, and `builder_notes` says each:
-# - A column gsm.datasim names as the source system does is given gsm's name
-#   for it, as gsm.mapping's own workflow specs say (`source_col`).
-# - A site id gsm.datasim writes as "0X1234" is written "SITE1234". R reads a
-#   column of such values from a CSV file as hexadecimal numbers.
-# - Raw_STUDY's `phase` and `therapeutic_area` are set to what was asked for.
-#   gsm.datasim draws both at random and neither shapes its data.
+# Three things gsm.datasim is asked for, and `builder_notes` says each:
+# - Columns under gsm's names, as gsm.mapping's own workflow specs say
+#   (`source_col`), where it would name them as the source system does.
+# - Site ids that begin "SITE", where it would write "0X1234". R reads a column
+#   of such values from a CSV file as hexadecimal numbers.
+# - A study table whose `phase` and `therapeutic_area` are what was asked for.
+#   Neither shapes the data.
 
 # The packages gsm.datasim's code calls by bare name, or by package.
 builder_packages <- c(
@@ -56,8 +56,8 @@ builder_limits <- list(
 # What was changed in the raw tables, one sentence each.
 builder_notes <- c(
   "Arms, lab results and ECGs are gsm.datasim's study results: a lab's toxicity grade is not worked out from its result, and adverse events do not follow the arm.",
-  "Columns gsm.datasim names as the source system does are given gsm's names, as gsm.mapping's specs say.",
-  "Site ids are written SITE1234 where gsm.datasim writes 0X1234, which R would read back from a file as a number.",
+  "gsm.datasim is asked for columns under gsm's names, as gsm.mapping's specs say, where it would name them as the source system does.",
+  "gsm.datasim is asked for site ids that begin SITE, where it would write 0X1234, which R would read back from a file as a number.",
   "The study table's phase and therapeutic area are what was asked for. gsm.datasim does not shape the data by either."
 )
 
@@ -138,92 +138,17 @@ builder_load <- function(simulator) {
 
 # ==== TO MOVE TO gsm.datasim: begin ====
 #
-# study.builder makes no data: every row is gsm.datasim's. Everything between
-# this line and the matching "end" breaks that rule today, and is here only
-# until gsm.datasim does it itself. Nothing that makes or changes a table may
-# be written outside this fence (tests/architecture.test.js holds that), and
-# nothing new is added inside it.
+# study.builder makes no data: every row is gsm.datasim's. Nothing that makes
+# or changes a table may be written in this file (tests/architecture.test.js
+# holds that). This fence held what broke the rule, and is empty: each piece is
+# now gsm.datasim's own, asked for in `builder_run`.
 #
-#   Piece               What it does here                         Leaves when gsm.datasim
-#   .builder_gsm_names  renames columns to gsm's names            emits gsm's names
-#   .builder_site_id    rewrites site ids R reads as numbers      makes ids that survive a CSV
-#   .builder_study      writes phase and area over random ones    takes them as arguments
-#   .builder_vitals     calls the vitals generator by hand        makes vitals when asked for a study
-
-# Each raw table under gsm's column names, as the spec of the mapping workflows
-# installed with gsm.mapping says, and the spec handed in for vital signs.
-.builder_gsm_names <- function(tables, more = list()) {
-  folder <- base::system.file("workflow", "1_mappings", package = "gsm.mapping")
-  specs <- lapply(list.files(folder, pattern = "\\.yaml$", full.names = TRUE), function(file) {
-    yaml::read_yaml(file)$spec
-  })
-  for (spec in c(specs, list(more))) {
-    for (table in intersect(names(spec), names(tables))) {
-      for (column in names(spec[[table]])) {
-        source <- spec[[table]][[column]]$source_col
-        if (is.null(source) || identical(source, column)) next
-        have <- names(tables[[table]])
-        if (source %in% have && !(column %in% have)) {
-          names(tables[[table]])[have == source] <- column
-          # Kept, so the table can say what gsm.datasim called the column.
-          was <- attr(tables[[table]], "renamed")
-          attr(tables[[table]], "renamed") <- c(was, stats::setNames(source, column))
-        }
-      }
-    }
-  }
-  tables
-}
-
-# A site id that R would read back from a CSV file as a hexadecimal number
-# ("0X1234"), under a name it reads as text ("SITE1234"). Any other id is left.
-.builder_site_id <- function(id) {
-  id <- as.character(id)
-  hex <- !is.na(id) & grepl("^0[xX][0-9A-Fa-f]+$", id)
-  id[hex] <- sub("^0[xX]", "SITE", id[hex])
-  id
-}
-
-# gsm.datasim's vital signs, by its own generator, for the study as it stands
-# at the last snapshot, so every row is of a participant and a visit it has.
-.builder_vitals <- function(snapshot, spec) {
-  if (is.null(spec$Raw_VS)) stop("The vital signs spec names no Raw_VS table.", call. = FALSE)
-  context <- list(
-    data = snapshot,
-    previous_data = list(),
-    combined_specs = list(Raw_VS = spec$Raw_VS),
-    n = nrow(snapshot$Raw_SUBJ),
-    start_date = NULL,
-    end_date = NULL,
-    snapshot_idx = 1,
-    snapshot_count = 1,
-    snapshot_width = "months",
-    study_id = NULL,
-    risk_profile = NULL,
-    total_site_count = nrow(snapshot$Raw_SITE)
-  )
-  as.data.frame(generate_domain_from_registry("Raw_VS", context))
-}
-
-# The study table says the phase and the area the reader chose: gsm.datasim
-# draws both at random and takes neither as an argument.
-.builder_study <- function(study, phase, therapeutic_area) {
-  if (!is.null(phase) && "phase" %in% names(study)) study$phase <- as.character(phase)
-  if (!is.null(therapeutic_area) && "therapeutic_area" %in% names(study)) {
-    study$therapeutic_area <- as.character(therapeutic_area)
-  }
-  study
-}
-
-# Every table's site ids, under a name R reads as text.
-.builder_site_ids <- function(tables) {
-  lapply(tables, function(table) {
-    table <- as.data.frame(table, stringsAsFactors = FALSE)
-    if ("invid" %in% names(table)) table$invid <- .builder_site_id(table$invid)
-    table
-  })
-}
-
+#   Was here             gsm.datasim does it when asked
+#   .builder_gsm_names   create_longitudinal_study(column_names = "gsm")
+#   .builder_site_id     create_longitudinal_study(site_id_prefix = "SITE")
+#   .builder_study       create_longitudinal_study(phase =, therapeutic_area =)
+#   .builder_vitals      create_longitudinal_study(domains = "VS", specs = list(Raw_VS = ...))
+#
 # ==== TO MOVE TO gsm.datasim: end ====
 
 # ---- The layers built off raw ----
@@ -597,7 +522,13 @@ builder_run <- function(
   for (domain in intersect(names(builder_needs), wanted)) wanted <- union(wanted, builder_needs[[domain]])
   with_vitals <- "VS" %in% wanted
   if (with_vitals && is.null(vitals)) stop("Vital signs need the vital signs spec (vitals).", call. = FALSE)
+  # The spec of the vital signs table is handed to gsm.datasim, which makes
+  # vital signs as it makes any other domain: the installed gsm.mapping has no
+  # workflow of its own to say it.
   vitals_spec <- if (with_vitals) yaml::read_yaml(vitals)$spec else list()
+  if (with_vitals && is.null(vitals_spec$Raw_VS)) {
+    stop("The vital signs spec names no Raw_VS table.", call. = FALSE)
+  }
 
   version <- builder_load(simulator)
   if (!is.null(seed)) set.seed(.builder_whole(seed, "Seed", c(0L, .Machine$integer.max)))
@@ -629,13 +560,20 @@ builder_run <- function(
     sites = sites,
     snapshots = months,
     interval = "1 month",
-    domains = setdiff(wanted, c("VS", "EG", "QS")),
+    domains = setdiff(wanted, c("EG", "QS")),
     run_analytics = FALSE,
     run_reporting = FALSE,
     outlier_intensity = intensity,
     # A protocol's schedule is gsm.datasim's to follow: its `design`.
     design = design,
     results = results,
+    # The study table says the phase and the area asked for.
+    phase = phase,
+    therapeutic_area = therapeutic_area,
+    # Vital signs, by the spec handed in; gsm's column names; ids a CSV keeps.
+    specs = if (with_vitals) vitals_spec["Raw_VS"] else NULL,
+    column_names = "gsm",
+    site_id_prefix = "SITE",
     verbose = FALSE
   ))
   dates <- names(study$raw_data)
@@ -644,23 +582,15 @@ builder_run <- function(
   # snapshot; the same workflows are run on whichever is asked for.
   one <- function(index) {
     snapshot <- study$raw_data[[index]]
-    if (with_vitals) {
-      snapshot$Raw_VS <- .builder_vitals(snapshot, vitals_spec)
-      # The vital signs were made after the study, so they are put on its design here.
-      snapshot <- apply_study_design(snapshot, design)
-      # Putting the labs on the design again leaves their results to be worked out again.
-      snapshot <- apply_study_results(snapshot, results)
-    }
 
     made <- paste0("Raw_", c(builder_core, intersect(builder_optional, wanted)))
     missing <- setdiff(made, names(snapshot))
     if (length(missing)) {
       stop("gsm.datasim did not make ", paste(missing, collapse = ", "), ".", call. = FALSE)
     }
-    snapshot <- .builder_gsm_names(snapshot[made], vitals_spec)
+    snapshot <- snapshot[made]
+    # What gsm.datasim called each column it was asked to name as gsm does.
     renames <- lapply(snapshot, function(table) attr(table, "renamed"))
-    snapshot <- .builder_site_ids(snapshot)
-    snapshot$Raw_STUDY <- .builder_study(snapshot$Raw_STUDY, phase, therapeutic_area)
 
     schedule_note <- if (is.null(design)) {
       NULL
@@ -767,9 +697,6 @@ builder_run <- function(
         }
       )
     })
-    if (with_vitals) {
-      notes <- c(notes, "Vital signs are drawn afresh for each snapshot, so a participant's vital signs differ between snapshots.")
-    }
   }
 
   versions <- c(
