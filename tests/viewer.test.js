@@ -15,6 +15,7 @@ import {
 } from '../src/viewer/core.js';
 import { mountViewer } from '../src/viewer/widget.js';
 import { fromBuilt } from '../src/viewer/built.js';
+import { VIEWER_STYLES } from '../src/viewer/styles.js';
 
 // study.viewer with no study.builder: a study is a name and tables, each CSV
 // text or records. The two tables here are a reader's own files.
@@ -378,5 +379,22 @@ describe('a study study.builder built, for the viewer', () => {
     });
     expect(study.facts.map((fact) => fact.label)).toContain('Therapeutic area');
     expect(viewerStudy(fromBuilt(built, { layers: ['adam'] })).tables).toHaveLength(1);
+  });
+});
+
+describe('the viewer’s styles in a page that is not its own', () => {
+  it('reach nothing of the page for the class names safety.viz also uses: each such rule is under the viewer’s own element', () => {
+    // safety.viz has its own .sv-rail, .sv-main, .sv-link and .sv-soft. A rule
+    // of the viewer's for one of them, not held under `.sv`, restyled the page.
+    const shared = /(^|[^\w-])\.(sv-rail|sv-main|sv-link|sv-soft)(?![\w-])/;
+    const loose = [];
+    for (const line of VIEWER_STYLES.split('\n')) {
+      const brace = line.indexOf('{');
+      if (brace < 0 || line.startsWith('@')) continue;
+      for (const selector of line.slice(0, brace).split(',')) {
+        if (shared.test(selector) && !/^\.sv[ [:>]/.test(selector)) loose.push(selector);
+      }
+    }
+    expect(loose).toEqual([]);
   });
 });
