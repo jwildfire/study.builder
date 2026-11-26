@@ -1,6 +1,6 @@
-# study.builder v0.5.0 (Upcoming)
+# study.builder v0.5.0
 
-Release candidate: v0.5.0-rc.3.
+Released 26 November 2026. The sizes by which phase and therapeutic area shape the data are guesses at what is believable, not fitted to data, and have not been reviewed by a clinician.
 
 - **The study view is in five sections.** Overview; Design (Protocol and Schedule); Data (Pipeline, Tables, Columns); Operations (RBQM, Safety, One participant); Reporting (Efficacy, Adverse events). A section's views are a second row of tabs under it. Protocol takes the place of the Design tab and shows the protocol in full: what it is and where it was read from, arms by epochs, objectives with endpoints and estimands, every scheduled activity with whether it is simulated, and what the reader left out. RBQM is sites by metrics, a cell the flag and score {gsm} gave. Safety is adverse events with no arm named: totals, the commonest terms, and counts by body system. Adverse events, under Reporting, is participants with each term by arm. All four are drawn from tables the workflows made; no chart library is loaded. A page with charts of its own passes `operations: false` to `mountStudy` or `mount`, and RBQM and Safety are left out. study.viewer takes `sections`; with none it is one row of tabs as before. An address that names the view `design` opens Protocol.
 - **Every row of the portfolio is a study's configuration.** The ready-made protocols are rows of the studies list, where they were a page of cards; the Protocols page points there. Every row has Open in builder. A row whose build is kept (it has data) also has Overview. Build, Edit and Use are gone from the list.
