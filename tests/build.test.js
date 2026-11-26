@@ -3,7 +3,8 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { StudyBuilderError, createBuilder, rOptions, studyOf } from '../src/engine/build.js';
 import { createConnection, foldersOf } from '../src/engine/r.js';
 import { FILES_STAMP } from '../src/engine/files.js';
-import { mount, mountStudy } from '../src/loader/widget.js';
+import { mount } from '../src/app/widget.js';
+import { mountStudy } from '../src/study/widget.js';
 import { readSettings } from '../src/engine/core.js';
 import {
   CONFIG_FORMAT,

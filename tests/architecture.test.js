@@ -3,15 +3,20 @@ import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-// The three modules and what each may read (ARCHITECTURE.md). A module that
+// The source folders and what each may read (ARCHITECTURE.md). A folder that
 // reaches into another it may not is caught here, before it becomes a habit.
+// The three modules a reader uses are portfolio, study and builder; app is
+// the page that moves between them.
 
 const src = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../src');
 const MAY_READ = {
   shared: [],
   engine: ['shared'],
   viewer: ['shared'],
-  loader: ['shared', 'engine', 'viewer']
+  study: ['shared', 'engine', 'viewer'],
+  portfolio: ['shared', 'engine'],
+  builder: ['shared', 'engine', 'study'],
+  app: ['shared', 'engine', 'portfolio', 'study', 'builder']
 };
 
 const importsOf = (file) =>
@@ -31,6 +36,20 @@ describe('the modules keep to themselves', () => {
       expect(strays).toEqual([]);
     });
   }
+
+  it('every folder under src is one of them', () => {
+    const folders = readdirSync(src, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name);
+    expect(folders.sort()).toEqual(Object.keys(MAY_READ).sort());
+  });
+
+  it('the study view starts no R: it never reads the engine’s build', () => {
+    for (const name of readdirSync(path.join(src, 'study'))) {
+      const reads = importsOf(path.join(src, 'study', name));
+      expect(reads.filter((from) => /engine\/(build|r)\.js$/.test(from))).toEqual([]);
+    }
+  });
 
   it('the viewer’s bundle is built from the viewer alone', () => {
     const build = readFileSync(path.resolve(src, '../scripts/build.mjs'), 'utf8');

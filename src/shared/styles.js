@@ -1,4 +1,4 @@
-// The loader's look. Every colour and font is a custom property on `.sb`, so a
+// The look of the portfolio, the builder and the study view. Every colour and font is a custom property on `.sb`, so a
 // page that hosts it can set its own: `.sb { --sb-accent: … }`. The defaults
 // are safety.viz's: warm paper, a plum accent, small mono labels, pill buttons.
 
@@ -131,7 +131,7 @@ p.sb-problems{padding-left:.7rem}
 `;
 
 /**
- * Put the loader's styles in a document, once.
+ * Put their styles in a document, once.
  * @param {Document} doc The document.
  * @returns {void}
  */

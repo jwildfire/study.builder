@@ -6,7 +6,8 @@
 //   StudyBuilder.buildStudy(settings, options) a study with no page at all
 //   StudyBuilder.createBuilder(options)        the same, keeping R for more
 
-import { mount as mountAt, mountStudy as mountStudyAt } from './loader/widget.js';
+import { mount as mountAt } from './app/widget.js';
+import { mountStudy as mountStudyAt } from './study/widget.js';
 import { buildStudy as build, createBuilder as create } from './engine/build.js';
 
 /* global __STUDY_BUILDER_VERSION__ */
@@ -28,9 +29,9 @@ const scriptBase = (() => {
 })();
 const withBase = (options = {}) => ({ base: scriptBase, ...options });
 
-/** Mount the builder on a page; see widget.js. */
+/** Mount the portfolio, the builder and the study view on a page; see app/widget.js. */
 export const mount = (target, options) => mountAt(target, withBase(options));
-/** Draw one built study and nothing else; see widget.js. */
+/** Draw one built study and nothing else; see study/widget.js. */
 export const mountStudy = (target, options) => mountStudyAt(target, withBase(options));
 /** Build one study with no page; see build.js. */
 export const buildStudy = (settings, options) => build(settings, withBase(options));

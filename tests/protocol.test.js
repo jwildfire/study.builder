@@ -18,7 +18,7 @@ import {
 import { LIMITS, readSettings } from '../src/engine/core.js';
 import { createBuilder, studyOf } from '../src/engine/build.js';
 import { configOf, protocolOfArgs, readDocument, readPresets } from '../src/engine/saved.js';
-import { mount } from '../src/loader/widget.js';
+import { mount } from '../src/app/widget.js';
 
 // A protocol's schedule of activities: read from CDISC's pilot study as a USDM
 // study definition, the public example study.builder's reader is held to, and

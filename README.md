@@ -20,6 +20,7 @@ study.builder is three things a reader uses, each with its parts. A page takes a
 
 - Planned, not built: a **program builder**, which describes and builds several studies together.
 - Planned, not built: **snapshots** in the study view. gsm.datasim already makes a study as monthly snapshots; the app shows only the last.
+- Each has its own folder under `src/`: `portfolio`, `study` and `builder`.
 - Under all three is one engine (settings, the build in R, layers, metadata, saving and opening) that has no page. [ARCHITECTURE.md](ARCHITECTURE.md) has how the code is laid out.
 
 ## What it gives you
@@ -125,7 +126,7 @@ A build that cannot be made rejects with a `StudyBuilderError` whose message is 
 
 A study takes seconds to build after R has started, and half a minute the first time. A saved study opens with no R at all.
 
-- **In the loader.** It opens on a library: the page's ready-made studies and what the reader saved in this browser, each a press from open, with the form behind New study. Save and Save settings keep the open study or the form's settings in the browser (IndexedDB; nothing is sent anywhere). Study file and Settings file download them, and Open a file reads either back.
+- **On the page.** It opens on the portfolio: the page's ready-made studies and what the reader saved in this browser, each a press from open, with the form behind New study. Save and Save settings keep the open study or the form's settings in the browser (IndexedDB; nothing is sent anywhere). Study file and Settings file download them, and Open a file reads either back.
 - **With no page.**
 
 ```js
@@ -192,7 +193,7 @@ study.protocol.visits; // the schedule the build followed
 
 ## How it is put together
 
-The portfolio, the study view and the study builder are screens over three source modules with boundaries a test holds: the engine makes and keeps a study, the viewer looks through any study, and the loader is the screens. See [ARCHITECTURE.md](ARCHITECTURE.md).
+The portfolio, the study view and the study builder each have a folder, over two more with no screens of their own: the engine makes and keeps a study, and the viewer looks through any study. A test holds what each may read. See [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Settings
 
