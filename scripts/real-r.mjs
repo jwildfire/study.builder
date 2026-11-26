@@ -740,6 +740,131 @@ check(
     JSON.stringify(reopened.metadata) === JSON.stringify(first.metadata) &&
     JSON.stringify(reopened.files()) === JSON.stringify(first.files())
 );
+// Phase and therapeutic area shape the study results: gsm.datasim's study
+// profile. Measured on 12,000 participants handed straight to its study
+// results in this R, then seen through four studies built as a page builds one.
+const profiled = Object.fromEntries(
+  (await webR.evalRString(readFileSync(path.join(root, 'scripts/real-r-profile.R'), 'utf8')))
+    .split(';')
+    .map((pair) => pair.split('='))
+    .map(([name, value]) => [name, Number(value)])
+);
+check(
+  'Phase 2 with no area is neutral: the study results are the same with its profile, with none, and with the profile turned off',
+  profiled.neutral_same === 1
+);
+check(
+  'a phase changes how often a lab is out of range: on sodium about 0.9% at Phase 1, 2.5% at Phase 2 and 4.3% at Phase 3, each within a third',
+  within(profiled.out_p1, 0.009, 0.003) &&
+    within(profiled.out_p2, 0.025, 0.008) &&
+    within(profiled.out_p3, 0.043, 0.014),
+  `${profiled.out_p1}, ${profiled.out_p2}, ${profiled.out_p3}`
+);
+check(
+  'at Phase 1, 30% of serious events are not serious and events are milder; at Phase 3 the events are as at Phase 2',
+  within(profiled.serious_p1 / profiled.serious_p2, 0.7, 0.04) &&
+    profiled.grade_p1 < profiled.grade_p2 - 0.05 &&
+    profiled.serious_same_p3 === 1,
+  `serious ${profiled.serious_p1} against ${profiled.serious_p2}; grade ${profiled.grade_p1} against ${profiled.grade_p2}`
+);
+check(
+  'in Oncology, 8% of events that are not serious become serious, events are more severe, labs spread wider and liver rises on a drug are about 1.5 times as common',
+  within((profiled.serious_onc - profiled.serious_p2) / (1 - profiled.serious_p2), 0.08, 0.02) &&
+    profiled.grade_onc > profiled.grade_p2 + 0.05 &&
+    profiled.out_onc > profiled.out_p2 * 1.3 &&
+    within(profiled.liver_onc / profiled.liver_p2, 1.5, 0.35),
+  `serious ${profiled.serious_onc} against ${profiled.serious_p2}; liver ${profiled.liver_onc} against ${profiled.liver_p2}; out of range ${profiled.out_onc}`
+);
+check(
+  'an area makes its classes of event commoner: gastrointestinal in Oncology, musculoskeletal in Inflammation, infections in Virology, each at least 1.15 times its share',
+  profiled.gi_onc > 1.15 * profiled.gi_p2 &&
+    profiled.msk_inf > 1.15 * profiled.msk_p2 &&
+    profiled.inf_vir > 1.15 * profiled.inf_p2,
+  `${profiled.gi_onc}/${profiled.gi_p2}, ${profiled.msk_inf}/${profiled.msk_p2}, ${profiled.inf_vir}/${profiled.inf_p2}`
+);
+check(
+  'in Virology, about twice as many participants have raised liver tests from the start; Inflammation leaves the labs as they are',
+  within(profiled.start_vir / profiled.start_p2, 2, 0.4) && profiled.labs_same_inf === 1,
+  `${profiled.start_vir} against ${profiled.start_p2}`
+);
+check(
+  'a profile adds, removes and moves no event, and every grade still agrees with whether the event is serious',
+  profiled.same_events === 1 && profiled.disagree === 0
+);
+const { PROFILE_SAID } = await import('../src/engine/core.js');
+const shaped = async (phase, area) =>
+  build({
+    name: 'SHAPED',
+    participants: 200,
+    sites: 10,
+    months: 6,
+    seed: 77,
+    phase,
+    area,
+    layers: []
+  });
+const early = await shaped('P1', 'Inflammation');
+const late = await shaped('P3', 'Inflammation');
+const tumours = await shaped('P2', 'Oncology');
+const joints = await shaped('P2', 'Inflammation');
+// The columns in which two studies' tables differ, table by table.
+const differ = (one, other) =>
+  Object.fromEntries(
+    one.domains
+      .map((domain) => {
+        const mine = rowsAs(one, 'raw', domain.id);
+        const theirs = rowsAs(other, 'raw', domain.id);
+        if (mine.length !== theirs.length) return [domain.id, ['rows']];
+        const columns = new Set();
+        mine.forEach((row, index) => {
+          for (const name of Object.keys(row))
+            if (row[name] !== theirs[index][name]) columns.add(name);
+        });
+        return [domain.id, [...columns].sort()];
+      })
+      .filter(([, columns]) => columns.length)
+  );
+const byPhase = differ(early, late);
+const byArea = differ(tumours, joints);
+const only = (found, allowed) =>
+  Object.entries(found).every(
+    ([table, columns]) => allowed[table] && columns.every((name) => allowed[table].includes(name))
+  );
+check(
+  'two studies of one seed that differ in phase differ only in the study table’s phase, lab results, and which events are serious and how severe',
+  only(byPhase, { STUDY: ['phase'], LB: ['lbresn'], AE: ['aeser', 'aetoxgr'] }) &&
+    Boolean(byPhase.LB && byPhase.AE),
+  JSON.stringify(byPhase)
+);
+check(
+  'two that differ in area differ only in the study table’s area and indication, lab results, and the events’ terms, classes, seriousness, grades and whether related',
+  only(byArea, {
+    STUDY: ['therapeutic_area', 'protocol_indication'],
+    LB: ['lbresn'],
+    AE: ['aeser', 'aetoxgr', 'mdrpt_nsv', 'mdrsoc_nsv', 'aerel']
+  }) && Boolean(byArea.LB && byArea.AE && byArea.STUDY),
+  JSON.stringify(byArea)
+);
+const indicationOf = (study) => rowsAs(study, 'raw', 'STUDY')[0].protocol_indication;
+check(
+  'the study table says an indication that fits the area, and a protocol’s own when there is one',
+  indicationOf(tumours) === 'Advanced solid tumours' &&
+    indicationOf(joints) === 'Rheumatoid arthritis' &&
+    Boolean(protocol.indication) &&
+    indicationOf(scheduled) === protocol.indication,
+  `${indicationOf(tumours)}; ${indicationOf(joints)}; ${indicationOf(scheduled)} for ${protocol.indication}`
+);
+check(
+  'a study’s notes say what its phase and area changed, in the words the form uses',
+  early.notes.some(
+    (note) =>
+      note.includes(PROFILE_SAID.phases.P1) && note.includes(PROFILE_SAID.areas.Inflammation)
+  ) &&
+    tumours.notes.some((note) => note.includes(PROFILE_SAID.areas.Oncology)) &&
+    late.notes.some((note) => note.includes(PROFILE_SAID.phases.P3)),
+  early.notes.find((note) => note.includes('study profile')) || 'no such note'
+);
+
 // A hosted preset is the study its settings build today.
 const { gunzipSync } = await import('node:zlib');
 const hosted = JSON.parse(readFileSync(path.join(root, 'presets/index.json'), 'utf8')).presets.find(
@@ -757,7 +882,7 @@ const changedRaw = rebuilt.domains.filter((domain) => !sameText('raw', domain.id
 const eventsNow = rowsAs(rebuilt, 'raw', 'AE');
 const eventsThen = rowsAs(kept, 'raw', 'AE');
 check(
-  'a study that asks for no assumptions changes only in its adverse events: every other raw table is as v0.4.0 built it',
+  'a hosted study’s raw tables are what its settings build today, every one',
   changedRaw.every((id) => id === 'AE'),
   changedRaw.join(' ')
 );

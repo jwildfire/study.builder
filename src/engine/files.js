@@ -44,6 +44,7 @@ export const SIMULATOR_FILES = [
   "vendor/gsm.datasim/R/study_builder.R",
   "vendor/gsm.datasim/R/study_design.R",
   "vendor/gsm.datasim/R/study_options.R",
+  "vendor/gsm.datasim/R/study_profile.R",
   "vendor/gsm.datasim/R/study_results.R",
   "vendor/gsm.datasim/R/util-pipe.R",
   "vendor/gsm.datasim/R/utils-longitudinal.R",
@@ -91,13 +92,13 @@ export const WORKFLOW_HELPERS = [
 ];
 
 /** A stamp of every file R fetches: it changes when any of them does. */
-export const FILES_STAMP = "1626e0a41c81";
+export const FILES_STAMP = "5e81852f6526";
 
 /** What each copy was copied from. */
 export const COPIED_FROM = {
   "vendor/gsm.datasim": {
     "repository": "https://github.com/jwildfire/gsm.datasim",
-    "commit": "3896e9de745508d2674146c147542f4557c6f31c"
+    "commit": "51412df637293ac87019853bbfde2bed63ebfcb4"
   },
   "vendor/gsm.mapping-vitals": {
     "repository": "https://github.com/Gilead-Public/gsm.mapping",

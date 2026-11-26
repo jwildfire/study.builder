@@ -226,7 +226,7 @@ The rest are optional: `VISIT`, `AE`, `LB`, `VS`, `PD`, `STUDCOMP`, `SDRGCOMP`, 
 ## What a study built here is, and is not
 
 - Every row is synthetic, made by gsm.datasim. No real participant or site is in it.
-- Phase and therapeutic area are labels. gsm.datasim does not shape the data by either, so a phase only fills in a typical size.
+- Phase and therapeutic area shape the study results a little, by gsm.datasim's study profile (`?study_profile` in its staging copy lists every number): how often a lab is out of range, which adverse events are commoner, and how many are serious and severe. The sizes are guesses at what is believable, not fitted to data. They do not change how many participants, visits or events a study has.
 - Only the study's last monthly snapshot is returned.
 - gsm.datasim makes no lab results (only toxicity grades), no treatment arms and no ECGs. Adverse event terms are its placeholders (`term1`, `soc1`).
 

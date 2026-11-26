@@ -151,7 +151,7 @@ describe('what R is given', () => {
       url: `https://example.org/sb/r/builder.R?v=${FILES_STAMP}`
     });
     expect(options.files.filter((file) => /gsm\.datasim\/R\/.+\.R$/.test(file.path))).toHaveLength(
-      44
+      45
     );
     expect(options.files.map((file) => file.path)).toContain(
       '/study.builder/vendor/gsm.mapping-vitals/workflow/1_mappings/VS.yaml'
@@ -532,8 +532,13 @@ describe('the loader on a page', () => {
 
   it('a phase fills in a typical size; a layer another is built from stays in; a domain another needs stays in', () => {
     mounted();
+    // The form says what the phase and the area change: Oncology as it opens, Phase 1 once pressed.
+    expect(q('.sb-summary').textContent).toContain('Oncology: more gastrointestinal');
+    expect(q('.sb-summary').textContent).not.toContain('Phase 1:');
     q('[data-phase="P1"]').click();
     expect(q('[name="participants"]').value).toBe('40');
+    expect(q('.sb-summary').textContent).toContain('Phase 1: labs are out of range less often');
+    expect(q('.sb-summary').textContent).not.toContain('are labels');
     // Reporting is built from Analysis, which is built from Raw.RBQM and ADaM.
     expect(q('[data-layer="analysis"]').disabled).toBe(true);
     q('[data-layer="reporting"]').click();

@@ -2,7 +2,7 @@
   "source": "gsm.datasim R source",
   "repository": "https://github.com/jwildfire/gsm.datasim",
   "ref": "safety-results-2.1",
-  "commit": "3896e9de745508d2674146c147542f4557c6f31c",
+  "commit": "51412df637293ac87019853bbfde2bed63ebfcb4",
   "version": "2.1.0",
   "license": "Apache License (>= 2)",
   "merged_to_dev": false,
@@ -172,8 +172,8 @@
     {
       "file": "R/create_longitudinal_study.R",
       "source": "R/create_longitudinal_study.R",
-      "sha256": "85ce2eb023c7a6a6b9975106770029c6b4214e4b8f268448f571eb69eb876b67",
-      "bytes": 33979
+      "sha256": "0348cc50d2006e827c91412f50463958ffd6851204ea61fc2d62d9e049c26c69",
+      "bytes": 34804
     },
     {
       "file": "R/create_snapshot_reports.R",
@@ -226,8 +226,8 @@
     {
       "file": "R/gsm_utils.R",
       "source": "R/gsm_utils.R",
-      "sha256": "f82be4df0f78d5fdbadf3fac9a50446e8118bfb42e0169dbaf60dbe4ef4ded73",
-      "bytes": 36242
+      "sha256": "cce646b90eecb1709801abc09dbe92e9a2db3d76f3e39dbbd6ef08f1520fa183",
+      "bytes": 36317
     },
     {
       "file": "R/import-gsm.mapping-CombineSpecs.R",
@@ -256,14 +256,20 @@
     {
       "file": "R/study_options.R",
       "source": "R/study_options.R",
-      "sha256": "e9ae51aa81dcfe486e7ed0c1642099e16d4e0c66225f64c1feecac4fb3655139",
-      "bytes": 4746
+      "sha256": "74c7765880cbc6d171956d8b7a0b560090eb35fb5c8d0504debbeff9ac86cb94",
+      "bytes": 4785
+    },
+    {
+      "file": "R/study_profile.R",
+      "source": "R/study_profile.R",
+      "sha256": "d26e0cbaaf9e5a04eebadea9b62f8ce439ee19d394d6bcae8484dfd6dd89618c",
+      "bytes": 9291
     },
     {
       "file": "R/study_results.R",
       "source": "R/study_results.R",
-      "sha256": "d719be97c1a111fed9cee1f17e7c295038d8050c299b459d9c8afa047f6e26e7",
-      "bytes": 35223
+      "sha256": "a74d5e379b4f8a19c93d36aaa3e3bf28ec081c41282a5db17f7841862171e291",
+      "bytes": 37713
     },
     {
       "file": "R/util-pipe.R",

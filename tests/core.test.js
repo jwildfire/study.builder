@@ -16,7 +16,10 @@ import {
   readSettings,
   withLayerNeeds,
   withNeeds,
-  withPhase
+  withPhase,
+  CAVEATS,
+  PROFILE_SAID,
+  profileSaid
 } from '../src/engine/core.js';
 import { PACKAGES } from '../src/engine/build.js';
 import { firstRows } from '../src/shared/csv.js';
@@ -446,5 +449,23 @@ describe('a study’s overview', () => {
       { name: 'enrollyn', type: 'character', filled: 1, distinct: 2, says: 'Y, N' }
     ]);
     expect(columnsOf(table, 2)).toMatchObject({ read: 2, of: 4 });
+  });
+});
+
+describe('what a phase and an area change', () => {
+  it('is said for every phase and area the form offers, and Phase 2 says nothing of its own', () => {
+    expect(Object.keys(PROFILE_SAID.phases)).toEqual(PHASES.map((phase) => phase.id));
+    expect(Object.keys(PROFILE_SAID.areas)).toEqual([...AREAS]);
+    expect(PROFILE_SAID.phases.P2).toBe('');
+    expect(profileSaid('P2', 'Inflammation')).toBe(PROFILE_SAID.areas.Inflammation);
+    expect(profileSaid('P1', 'Oncology')).toBe(
+      `${PROFILE_SAID.phases.P1} ${PROFILE_SAID.areas.Oncology}`
+    );
+    expect(profileSaid('P2', 'Nowhere')).toContain('nothing is changed');
+  });
+
+  it('is no longer called a label in what every study is said to be', () => {
+    expect(CAVEATS.join(' ')).not.toContain('are labels');
+    expect(CAVEATS.join(' ')).toContain('study profile');
   });
 });

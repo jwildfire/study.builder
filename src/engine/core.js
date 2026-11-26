@@ -2,10 +2,10 @@
 // asked to hold, the domains gsm.datasim can make, and what R is asked for.
 //
 // What can be asked is what gsm.datasim can take. Participants, sites and
-// months shape the data, and so does the outlier dial. Phase and therapeutic
-// area do not: gsm.datasim draws both at random and neither changes a row, so
-// here a phase fills in a typical size, which may be changed, and both are
-// written into the study table as chosen.
+// months shape the data, and so does the outlier dial. A phase fills in a
+// typical size, which may be changed. Phase and therapeutic area are written
+// into the study table as chosen, and shape the study results a little:
+// gsm.datasim's study profile (`PROFILE_SAID` says what each changes).
 
 import { planOf, readProtocol } from './protocol.js';
 
@@ -29,6 +29,39 @@ export const PHASES = Object.freeze([
 
 /** The therapeutic areas gsm.datasim names. */
 export const AREAS = Object.freeze(['Oncology', 'Virology', 'Inflammation']);
+
+/**
+ * What a phase and a therapeutic area change in the study results, a sentence
+ * each, as gsm.datasim's study profile says it (`study_profile()` holds the
+ * numbers). Phase 2 is the plain one. A study's own notes say the same, from
+ * R; a check with real R holds the two together.
+ */
+export const PROFILE_SAID = Object.freeze({
+  phases: Object.freeze({
+    P1: 'Phase 1: labs are out of range less often, fewer adverse events are serious and they are milder.',
+    P2: '',
+    P3: 'Phase 3: labs are out of range a little more often.',
+    P4: 'Phase 4: labs are out of range a little more often.'
+  }),
+  areas: Object.freeze({
+    Oncology:
+      'Oncology: more gastrointestinal, general and nutrition events, more serious and severe ones, and more liver and kidney rises.',
+    Virology:
+      'Virology: more infections, and more participants with raised liver tests from the start.',
+    Inflammation: 'Inflammation: more musculoskeletal, infection and skin events.'
+  })
+});
+
+/**
+ * What a study's phase and area change, in a line.
+ * @param {string} phase A phase's id.
+ * @param {string} area A therapeutic area.
+ * @returns {string} The sentences, or a line saying nothing is changed.
+ */
+export function profileSaid(phase, area) {
+  const said = [PROFILE_SAID.phases[phase], PROFILE_SAID.areas[area]].filter(Boolean);
+  return said.length ? said.join(' ') : 'Phase 2 with no therapeutic area: nothing is changed.';
+}
 
 /** gsm.datasim's outlier dial, as three settings. */
 export const OUTLIERS = Object.freeze([
@@ -253,7 +286,7 @@ export const DEFAULTS = Object.freeze({
 /** What every study built here is, and is not: one sentence each. */
 export const CAVEATS = Object.freeze([
   'Every row is synthetic, made by gsm.datasim. No real participant or site is in it.',
-  'Phase and therapeutic area are labels. gsm.datasim does not shape the data by either, so a phase only fills in a typical size.',
+  'Phase and therapeutic area shape the study results a little, by gsm.datasim’s study profile: how often a lab is out of range, which adverse events are commoner, and how many are serious and severe. The sizes are guesses at what is believable, not fitted to data. They do not change how many participants, visits or events a study has.',
   'Only the study’s last monthly snapshot is kept, unless every month is asked for.',
   'Every table that is not raw is built off raw by a workflow, and says which. The ADaM tables are a light form: enough for charts, not a submission.',
   'The site metrics are gsm’s own, run as gsm runs them. A simulated study’s flags say nothing about any real site.',

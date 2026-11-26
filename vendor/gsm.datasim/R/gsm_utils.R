@@ -421,7 +421,7 @@ ensure_core_mappings <- function(domains) {
 generate_study_snapshots <- function(study_id, participants, sites, snapshots, interval, mappings,
                                      base_date = NULL, outlier_intensity = 1,
                                      risk_profile = NULL, phase = NULL, therapeutic_area = NULL,
-                                     specs = NULL, site_id_prefix = "0X", verbose = FALSE) {
+                                     indication = NULL, specs = NULL, site_id_prefix = "0X", verbose = FALSE) {
   snapshot_width <- parse_interval_to_snapshot_width(interval)
 
   # Calculate start dates for each snapshot
@@ -462,6 +462,7 @@ generate_study_snapshots <- function(study_id, participants, sites, snapshots, i
   # begins (see `create_longitudinal_study()`).
   config$study_params$phase <- phase
   config$study_params$therapeutic_area <- therapeutic_area
+  config$study_params$protocol_indication <- indication
   config$study_params$site_id_prefix <- site_id_prefix
   config$extra_specs <- specs
 

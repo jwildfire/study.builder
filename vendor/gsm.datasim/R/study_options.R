@@ -86,10 +86,10 @@ validate_site_id_prefix <- function(prefix) {
   prefix
 }
 
-# The study table saying the phase and the area asked for. The column is the
+# The study table saying the phase, the area and the indication asked for. The column is the
 # one the spec names for each, under the source's name or gsm's.
 .set_study_labels <- function(study, spec, params) {
-  for (label in c("phase", "therapeutic_area")) {
+  for (label in c("phase", "therapeutic_area", "protocol_indication")) {
     value <- params[[label]]
     if (is.null(value)) next
     source <- if (is.list(spec) && is.list(spec[[label]])) spec[[label]]$source_col else NULL
