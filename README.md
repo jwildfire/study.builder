@@ -6,7 +6,7 @@ You describe a trial: its phase, therapeutic area, participants, sites, months a
 
 Try it: https://jwildfire.github.io/study.builder/
 
-Status: experimental, v0.3.0 in release candidates (v0.1.0 is the latest release). Every row is synthetic.
+Status: experimental. v0.3.0 is the latest release. Every row is synthetic.
 
 ## Three modules
 
