@@ -8,7 +8,7 @@ The simulator is not Gilead's release. It is their v2.1.0 with study designs, st
 
 Try it: https://jwildfire.github.io/study.builder/
 
-Status: experimental. v0.5.1 is the latest release. Every row is synthetic.
+Status: experimental. v0.5.2 is the latest release. Every row is synthetic.
 
 ## Three modules
 

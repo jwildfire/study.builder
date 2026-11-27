@@ -577,6 +577,19 @@ export function builderScreen(app) {
         ask.append(tryIt);
       }
       main.append(ask);
+      // Whose the ready-made protocols are, said where they are listed.
+      const credits = [...new Set(readyProtocols.map((ready) => ready.attribution))].filter(
+        Boolean
+      );
+      if (credits.length) {
+        const credit = el(
+          'p',
+          'sb-soft sb-attribution',
+          `The ready-made protocols are examples, cut down to what is simulated. ${credits.join(' ')}`
+        );
+        credit.dataset.attribution = 'ready-protocols';
+        main.append(credit);
+      }
     }
     if (s.form.protocol) {
       const section = efficacySection();

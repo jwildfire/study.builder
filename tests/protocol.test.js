@@ -741,6 +741,28 @@ describe('a protocol in the loader', () => {
     expect(q('[data-action="try-protocol"]')).toBeNull();
   });
 
+  it('says whose the ready-made protocols are where they are listed, and under a schedule', async () => {
+    // The page's own list is CDISC's examples: the attribution is on screen with it.
+    mounted();
+    expect(q('[data-attribution="ready-protocols"]').textContent).toContain(
+      'Content based on DDF-RA (GitHub), https://github.com/cdisc-org/DDF-RA, used under the CC-BY-4.0 licence.'
+    );
+    // A host's own list says nothing it was not given.
+    mounted({ protocols: [{ label: 'my protocol', url: './p.json' }] });
+    expect(q('[data-attribution="ready-protocols"]')).toBeNull();
+    // A protocol that carries an attribution shows it under its schedule grid.
+    const credited = pilot();
+    credited.source = { ...credited.source, attribution: 'Content based on a test.' };
+    vi.stubGlobal('fetch', async () => ({ ok: true, json: async () => credited }));
+    q('[data-action="try-protocol"]').click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(q('.sb-schedule [data-attribution="protocol"]').textContent).toBe(
+      'Content based on a test.'
+    );
+    vi.unstubAllGlobals();
+  });
+
   it('a visit’s day is changed, a visit removed and added, and an activity ticked off; Build sends R the plan as changed', async () => {
     const { runs, saved } = mounted();
     await handle.open(USDM);

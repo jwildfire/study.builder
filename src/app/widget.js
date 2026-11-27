@@ -26,6 +26,7 @@ import { domOf, messageOf, saveFile, themed } from '../shared/dom.js';
 import { portfolioScreen } from '../portfolio/screen.js';
 import { builderScreen, takeProtocol } from '../builder/screen.js';
 import { studyScreen } from '../study/screen.js';
+import { CDISC_ATTRIBUTION } from '../study/schedule.js';
 
 export { STAGES, downloadsSaid } from '../builder/screen.js';
 export { sizeSaid } from '../portfolio/screen.js';
@@ -97,7 +98,8 @@ export function mount(
         ? protocolsGiven
         : READY_PROTOCOLS.map((ready) => ({
             label: ready.label,
-            url: `${withSlash}protocols/${ready.id}.protocol.json`
+            url: `${withSlash}protocols/${ready.id}.protocol.json`,
+            attribution: CDISC_ATTRIBUTION
           }));
   const shelf = shelfGiven === false ? null : shelfGiven || createShelf();
   const elsewhere = links || {};

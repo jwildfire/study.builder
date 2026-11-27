@@ -1,3 +1,25 @@
+# study.builder v0.5.2
+
+Wording again: v0.5.1 left the simulator's plain name in every study's own notes. No table changes.
+
+- **A study's notes name the simulator for what it is.** Five sentences that every built study carries in `notes`, and shows in the Overview under "What a study built here is, and is not", credited gsm.datasim with the study results, the study profile, the study design and the two things it is asked to do differently. Those are additions of the modified copy, not in Gilead's gsm.datasim 2.1.0, and the sentences now say so.
+- **Who made a raw table.** A raw table's `made.workflow`, in a study file and in a downloaded study's manifest, is `gsm.datasim (modified copy)` where it was `gsm.datasim`.
+- **CDISC's attribution where a protocol's schedule is shown.** The schedule grid, in the builder's form and in the study view's Schedule, ends with the attribution its protocol carries. The builder's list of ready-made protocols says whose they are. Both are in the widget itself, so a page that mounts it shows them with no footer of its own. A list of protocols a host passes in shows an attribution only where an entry has one (`attribution`).
+- **A changed file says it is changed.** `vendor/gsm.reporting/workflow/3_reporting/Results.yaml` differs from gsm.reporting v1.1.7 by one name; it now carries a notice of change at its top (Apache License 2.0, section 4(b)). `SOURCE.json` had the change already.
+
+## For a page that copied v0.5.1
+
+- Copy `dist/` again, `r/builder.R`, and `vendor/gsm.reporting/` (one file changed, a comment only) with `src/engine/files.js` or its built form.
+- Copy the three ready-made study files with `presets/index.json` and `studies/index.json`: the files are new bytes with new checksums, since their notes changed. Each keeps the key it had in v0.5.0 and v0.5.1: no table changed.
+- A page that reads a raw table's `made.workflow` will find `gsm.datasim (modified copy)`.
+- Nothing changed in `protocols/` or `vendor/gsm.datasim/`.
+
+## Not fixed here
+
+- A study built from an example protocol takes the real trial's identifier as its name, and real arm names; nothing on a host's chart tabs says it is simulated. A default name that starts `SIM-` would change every such study's tables and key, so it waits for a version that is not wording only.
+- The copy of gsm.datasim's `DESCRIPTION` carries its three authors' email addresses, as Gilead published them. Removing them would leave the copy with no maintainer address, which R requires of a package; it waits on Jeremy's answer about the author list.
+- The three from v0.5.1's list: the build form losing its place, the pilot labelled "Inflammation", and the builder saying R must be downloaded after a host has started R.
+
 # study.builder v0.5.1
 
 Notices and wording. No change to what a study holds: the same settings give the same tables and the same key as v0.5.0.

@@ -6,6 +6,7 @@
 import { PHASES } from '../engine/core.js';
 import { protocolSaid } from '../engine/protocol.js';
 import { design } from './design.js';
+import { attributionOf } from './schedule.js';
 
 /**
  * The Protocol view, for a study that followed a protocol.
@@ -54,13 +55,7 @@ export function protocolView({ el }, protocol, box) {
     [source.license, source.license_url].filter(Boolean).join(' · ') ||
       (cdisc ? 'CC-BY-4.0 · https://creativecommons.org/licenses/by/4.0/' : '')
   );
-  fact(
-    'Attribution',
-    source.attribution ||
-      (cdisc
-        ? 'Content based on DDF-RA (GitHub), https://github.com/cdisc-org/DDF-RA, used under the CC-BY-4.0 licence.'
-        : '')
-  );
+  fact('Attribution', attributionOf(protocol));
   fact(
     'Changes',
     source.changes ||

@@ -102,5 +102,29 @@ export function scheduleGrid({ el }, protocol, edit = null) {
   }
   grid.append(top, body);
   wrap.append(grid);
+  // Whose protocol this is: said wherever its visits and activities are shown.
+  const credit = attributionOf(protocol);
+  if (credit) {
+    const line = el('p', 'sb-soft sb-attribution', credit);
+    line.dataset.attribution = 'protocol';
+    wrap.append(line);
+  }
   return wrap;
+}
+
+/** CDISC's attribution sentence, as the DDF-RA repository asks for it. */
+export const CDISC_ATTRIBUTION =
+  'Content based on DDF-RA (GitHub), https://github.com/cdisc-org/DDF-RA, used under the CC-BY-4.0 licence.';
+
+/**
+ * The attribution a protocol's source asks for, in a sentence, or '' when it
+ * asks for none. A file of CDISC's made before the attribution travelled with
+ * it is still given CDISC's.
+ * @param {Object} protocol A protocol as read.
+ * @returns {string} The sentence to show.
+ */
+export function attributionOf(protocol) {
+  const source = (protocol && protocol.source) || {};
+  if (source.attribution) return source.attribution;
+  return String(source.file || '').includes('cdisc-org/DDF-RA') ? CDISC_ATTRIBUTION : '';
 }

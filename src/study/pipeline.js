@@ -30,7 +30,7 @@ export function pipelineOf(study) {
           id,
           layer: layer.id,
           name: layer.id === 'raw' ? table.label || table.id : workflow.replace(/^[A-Za-z]+_/, ''),
-          workflow: layer.id === 'raw' ? 'gsm.datasim' : workflow,
+          workflow: layer.id === 'raw' ? 'gsm.datasim (modified copy)' : workflow,
           about: '',
           tables: [],
           from: [],
