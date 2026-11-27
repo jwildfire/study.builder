@@ -32,7 +32,11 @@
       "3 other timelines in the file are not simulated (Adverse Event Timeline, Early Termination Timeline, Vital Sign Blood Pressure Timeline): the times within a visit, and what happens off the schedule.",
       "2 activities have a timeline of their own within a visit (sampling at set hours, say); they are simulated once a visit."
     ],
-    "source": "CDISC_Pilot_Study.json"
+    "source": "CDISC_Pilot_Study.json",
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "Content based on DDF-RA (GitHub), https://github.com/cdisc-org/DDF-RA, used under the CC-BY-4.0 licence.",
+    "changes": "Changed from CDISC’s file: read by study.builder’s reader and cut down to what a simulated study follows (visits, arms, epochs, objectives, endpoints and activities). Not CDISC’s own form of the protocol, and not endorsed by CDISC or by any sponsor it names."
   },
   {
     "id": "cdisc-pilot-devices",
@@ -67,7 +71,11 @@
       "3 other timelines in the file are not simulated (Adverse Event Timeline, Early Termination Timeline, Vital Sign Blood Pressure Timeline): the times within a visit, and what happens off the schedule.",
       "2 activities have a timeline of their own within a visit (sampling at set hours, say); they are simulated once a visit."
     ],
-    "source": "devices.json"
+    "source": "devices.json",
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "Content based on DDF-RA (GitHub), https://github.com/cdisc-org/DDF-RA, used under the CC-BY-4.0 licence.",
+    "changes": "Changed from CDISC’s file: read by study.builder’s reader and cut down to what a simulated study follows (visits, arms, epochs, objectives, endpoints and activities). Not CDISC’s own form of the protocol, and not endorsed by CDISC or by any sponsor it names."
   },
   {
     "id": "alexion-wilsons",
@@ -102,7 +110,11 @@
       "1 study day has more than one visit; they are kept apart by name, and simulated on the same day.",
       "1 activity has a timeline of its own within a visit (sampling at set hours, say); it is simulated once a visit."
     ],
-    "source": "Alexion_NCT04573309_Wilsons.json"
+    "source": "Alexion_NCT04573309_Wilsons.json",
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "Content based on DDF-RA (GitHub), https://github.com/cdisc-org/DDF-RA, used under the CC-BY-4.0 licence.",
+    "changes": "Changed from CDISC’s file: read by study.builder’s reader and cut down to what a simulated study follows (visits, arms, epochs, objectives, endpoints and activities). Not CDISC’s own form of the protocol, and not endorsed by CDISC or by any sponsor it names."
   },
   {
     "id": "lilly-nasal-glucagon",
@@ -137,7 +149,11 @@
       "3 study days have more than one visit; they are kept apart by name, and simulated on the same day.",
       "2 activities have a timeline of their own within a visit (sampling at set hours, say); they are simulated once a visit."
     ],
-    "source": "EliLilly_NCT03421379_Diabetes.json"
+    "source": "EliLilly_NCT03421379_Diabetes.json",
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "Content based on DDF-RA (GitHub), https://github.com/cdisc-org/DDF-RA, used under the CC-BY-4.0 licence.",
+    "changes": "Changed from CDISC’s file: read by study.builder’s reader and cut down to what a simulated study follows (visits, arms, epochs, objectives, endpoints and activities). Not CDISC’s own form of the protocol, and not endorsed by CDISC or by any sponsor it names."
   },
   {
     "id": "observational",
@@ -171,6 +187,10 @@
       "The schedule has 1 decision point; every visit is read as if each participant has it, whichever way a decision goes.",
       "1 study day has more than one visit; they are kept apart by name, and simulated on the same day."
     ],
-    "source": "observational.json"
+    "source": "observational.json",
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "Content based on DDF-RA (GitHub), https://github.com/cdisc-org/DDF-RA, used under the CC-BY-4.0 licence.",
+    "changes": "Changed from CDISC’s file: read by study.builder’s reader and cut down to what a simulated study follows (visits, arms, epochs, objectives, endpoints and activities). Not CDISC’s own form of the protocol, and not endorsed by CDISC or by any sponsor it names."
   }
 ]

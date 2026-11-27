@@ -45,7 +45,11 @@ export const PUBLIC_INDEX = 'https://repo.r-wasm.org';
 export const DOWNLOADS = Object.freeze([
   Object.freeze({ what: 'R itself', host: 'webr.r-wasm.org', megabytes: 13 }),
   Object.freeze({ what: 'its packages', host: 'repo.r-wasm.org', megabytes: 40 }),
-  Object.freeze({ what: 'gsm’s packages and gsm.datasim', host: null, megabytes: 2 })
+  Object.freeze({
+    what: 'gsm’s packages and the modified copy of gsm.datasim',
+    host: null,
+    megabytes: 2
+  })
 ]);
 
 /** Where R keeps study.builder's files. */

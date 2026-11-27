@@ -1,3 +1,29 @@
+# study.builder v0.5.1
+
+Notices and wording. No change to what a study holds: the same settings give the same tables and the same key as v0.5.0.
+
+- **The simulator is named for what it is.** The app, the site and these notes said studies were made by gsm.datasim 2.1.0. What is copied in is a modified copy: Gilead's v2.1.0 with a study design, study options, a study profile and study results added, about 2,050 lines in 13 files, kept at jwildfire/gsm.datasim (branch `safety-results-2.1`). The additions have not been raised with, reviewed by or endorsed by gsm.datasim's maintainers. The study view, the builder, the pipeline, every page's footer and the README now say "a modified copy of gsm.datasim". Where the notes below say gsm.datasim made something new, they mean that copy.
+- **The copy says so itself.** Its `DESCRIPTION` says it is modified and by whom, each changed file carries a notice of change and each added file a notice that it is not part of gsm.datasim 2.1.0 (Apache License 2.0, section 4(b)). Comments and package metadata only: no code changed. `vendor/gsm.datasim/SOURCE.json` records the new commit and says the copy is modified.
+- **CDISC's attribution travels with the protocols.** Each of the five example protocols (`protocols/*.protocol.json`) now carries in its `source` the attribution CDISC's DDF-RA asks for, the licence (CC-BY-4.0) and its address, the repository, commit and path it was read from, and a statement that it is changed from CDISC's file. `protocols/index.json` and the studies feed carry the attribution for each protocol too (`license`, `attribution`), the study view's Protocol view shows it, and every page's footer has it. The record in `vendor/cdisc-ddf-ra/SOURCE.json` names the licence plainly.
+- **What is sent.** The pages said "Nothing is sent anywhere." A build downloads R and its packages from webr.r-wasm.org and repo.r-wasm.org. They now say no study data is sent, and name the two hosts.
+- **How long.** A first build is "about a minute", not "about half a minute": it was measured at 61 to 78 seconds.
+- **Adverse event terms.** They are a short hand-written list, not coded with MedDRA or taken from its files; the notes now say the body-system names are the familiar ones MedDRA also uses.
+- **Licence text.** The copies of gsm.kri, gsm.reporting and the gsm.mapping vital signs workflow have the Apache License's text beside them.
+- **README.** Its status line named v0.4.0 as the latest release at the v0.5.0 tag. Fixed.
+
+## For a page that copied v0.5.0
+
+- Copy `dist/` again, and `vendor/gsm.datasim/` (eight files changed, comments only, so their checksums changed) with `src/engine/files.js` or its built form.
+- Copy `protocols/` and `studies/index.json` again: every protocol file has a new checksum, and the feed names them.
+- A ready-made study has the same key as in v0.5.0. The three study files were built again and are new bytes (their checksums in `presets/index.json` and the feed changed; the files now say "a modified copy" in their own description), so a page that checks a study file against a checksum should copy the file and the list together.
+- New, optional: `license` and `attribution` on a feed entry and on what `listStudies` and `describeStudy` return. Show the attribution wherever a protocol's content is shown.
+
+## Not fixed here
+
+- The build form redraws when a field changes and can lose the reader's place.
+- The ready-made CDISC pilot study says its therapeutic area is Inflammation; the protocol is Alzheimer's disease. The simulator names three areas and that is the nearest.
+- After a host page has started R for its own use, the builder still says R must be downloaded.
+
 # study.builder v0.5.0
 
 Released 26 November 2026. The sizes by which phase and therapeutic area shape the data are guesses at what is believable, not fitted to data, and have not been reviewed by a clinician.

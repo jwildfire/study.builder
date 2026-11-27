@@ -29,6 +29,9 @@ const MADE = [
   { from: 'observational.json', to: 'protocols/observational.protocol.json' }
 ];
 
+/** What was done to CDISC's file to make a protocol here: CC-BY asks that changes are said. */
+const CHANGES =
+  'Changed from CDISC’s file: read by study.builder’s reader and cut down to what a simulated study follows (visits, arms, epochs, objectives, endpoints and activities). Not CDISC’s own form of the protocol, and not endorsed by CDISC or by any sponsor it names.';
 const problems = [];
 for (const entry of record.files) {
   const sum = createHash('sha256')
@@ -44,7 +47,13 @@ for (const { from, to } of MADE) {
   protocol.source = {
     ...protocol.source,
     file: `${record.repository} · ${from}`,
-    license: record.license
+    repository: record.repository,
+    commit: record.commit,
+    path: record.files.find((entry) => entry.file === from).source,
+    license: record.license,
+    license_url: record.license_url,
+    attribution: record.attribution,
+    changes: CHANGES
   };
   const text = `${JSON.stringify(protocol, null, 2)}\n`;
   const plan = planOf(protocol);
@@ -67,7 +76,11 @@ for (const { from, to } of MADE) {
     labs: plan.filter((visit) => visit.lb.length).length,
     design: designSaid(protocol),
     notes: protocol.notes || [],
-    source: from
+    source: from,
+    license: record.license,
+    license_url: record.license_url,
+    attribution: record.attribution,
+    changes: CHANGES
   });
   if (checking) {
     let current = '';

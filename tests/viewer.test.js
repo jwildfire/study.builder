@@ -369,7 +369,7 @@ describe('a study study.builder built, for the viewer', () => {
     };
     const study = viewerStudy(fromBuilt(built));
     expect(study.tables.map((table) => [table.id, table.group, table.made])).toEqual([
-      ['raw:SUBJ', 'Raw', 'simulated by gsm.datasim'],
+      ['raw:SUBJ', 'Raw', 'simulated by a modified copy of gsm.datasim'],
       ['adam:ADSL', 'ADaM', 'built from Raw_SUBJ by the ADSL workflow']
     ]);
     expect(study.tables[1].columns[0]).toMatchObject({

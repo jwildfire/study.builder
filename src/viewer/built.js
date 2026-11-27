@@ -38,7 +38,7 @@ export function fromBuilt(study, { layers = null } = {}) {
           about: table.about || table.grain || table.description || '',
           made:
             layer.id === 'raw'
-              ? 'simulated by gsm.datasim'
+              ? 'simulated by a modified copy of gsm.datasim'
               : table.made.from.length
                 ? `built from ${table.made.from.join(' and ')} by the ${table.made.workflow} workflow`
                 : `built by the ${table.made.workflow} workflow`,

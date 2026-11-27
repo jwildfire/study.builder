@@ -92,13 +92,13 @@ export const WORKFLOW_HELPERS = [
 ];
 
 /** A stamp of every file R fetches: it changes when any of them does. */
-export const FILES_STAMP = "5e81852f6526";
+export const FILES_STAMP = "3008b76f3598";
 
 /** What each copy was copied from. */
 export const COPIED_FROM = {
   "vendor/gsm.datasim": {
     "repository": "https://github.com/jwildfire/gsm.datasim",
-    "commit": "51412df637293ac87019853bbfde2bed63ebfcb4"
+    "commit": "afb474536680204565272f3f01ccea57630bbbbe"
   },
   "vendor/gsm.mapping-vitals": {
     "repository": "https://github.com/Gilead-Public/gsm.mapping",

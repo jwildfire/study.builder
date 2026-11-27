@@ -36,14 +36,14 @@ import { count, messageOf } from '../shared/dom.js';
 export const STAGES = Object.freeze([
   Object.freeze({ id: 'runtime', label: 'Start R in this browser' }),
   Object.freeze({ id: 'packages', label: 'Install R’s packages' }),
-  Object.freeze({ id: 'files', label: 'Fetch gsm.datasim' }),
+  Object.freeze({ id: 'files', label: 'Fetch the simulator (a modified copy of gsm.datasim)' }),
   Object.freeze({ id: 'simulate', label: 'Simulate the study and build its layers' })
 ]);
 
 /** What pressing Build downloads the first time, in a sentence. */
 export function downloadsSaid(downloads = DOWNLOADS) {
   const total = Math.round(downloads.reduce((sum, entry) => sum + entry.megabytes, 0));
-  return `First build in this browser: about half a minute and ${total} MB, to start R. Later builds take seconds. Nothing is sent anywhere.`;
+  return `First build in this browser: about a minute and ${total} MB, to start R. Later builds take seconds. No study data is sent anywhere: R and its packages are downloaded from webr.r-wasm.org and repo.r-wasm.org.`;
 }
 
 /** Take a protocol: the form is filled from it, and its schedule is the form's. */
@@ -414,7 +414,7 @@ export function builderScreen(app) {
               share
                 ? `About ${Math.round(share * 100)} in 100 enrolled participants leave by the ${s.form.protocol ? 'last planned visit' : 'end of the study'}, spread evenly over it: nothing of theirs is dated after they go, and the completion tables say why.`
                 : 'Nobody leaves early.'
-            } Adverse event terms are a short list of gsm.datasim’s own, not MedDRA.`
+            } Adverse event terms are a short hand-written list in the modified copy of gsm.datasim, not coded with MedDRA.`
       )
     );
     return section;

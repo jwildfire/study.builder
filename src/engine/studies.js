@@ -104,7 +104,10 @@ export function readStudies(document, from = '') {
       facts: isRecord(given.facts) ? { ...given.facts } : {},
       settings: given.kind === 'settings' ? { ...given.settings } : null,
       protocol,
-      build: fileOf(given.build, true)
+      build: fileOf(given.build, true),
+      // Another party's content: its licence, and the attribution it asks for.
+      license: text(given.license) || null,
+      attribution: text(given.attribution) || null
     };
     entry.mark = markOf(entry);
     entry.line = text(given.line) || factsLine(entry);
@@ -195,7 +198,9 @@ export function describeStudy(given) {
     line: given.line || factsLine(given),
     mark: markOf(given),
     built: Boolean(given.build),
-    build: given.build ? { bytes: given.build.bytes, sha256: given.build.sha256 } : null
+    build: given.build ? { bytes: given.build.bytes, sha256: given.build.sha256 } : null,
+    license: given.license || null,
+    attribution: given.attribution || null
   };
 }
 

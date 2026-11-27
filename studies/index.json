@@ -28,8 +28,8 @@
       },
       "build": {
         "url": "../presets/phase1-small.study.json.gz",
-        "sha256": "6eb32e43638bad289fcf205409da2157d100e3641ccf6ffd09de13a0632b3543",
-        "bytes": 1162846,
+        "sha256": "fd76d5a62bbced04d87a2c06bb6410d9f2b1f4fd4be21247689bc466d9e51c6e",
+        "bytes": 1162835,
         "key": "sha256:45b7142bb06f5fee9d81a90e1b34668a87653a29ba13eeedc08f1d2af2838dca"
       }
     },
@@ -59,8 +59,8 @@
       },
       "build": {
         "url": "../presets/phase2-oncology.study.json.gz",
-        "sha256": "5eec799e3a82fb1db156749833f2d66488ae2f7d3f2fbb94c8619303d266a20a",
-        "bytes": 1346638,
+        "sha256": "98112911acf17d7024359b8f010a545ebdca3b27cde017fe5e60eb8f03a1da5c",
+        "bytes": 1346639,
         "key": "sha256:001a419ded7a107c6f2ee8b932fb70578550b5830f67a134e0321f4682f488e9"
       }
     },
@@ -177,7 +177,13 @@
             "version": "4.0.0",
             "timeline": "Main Timeline",
             "file": "https://github.com/cdisc-org/DDF-RA · CDISC_Pilot_Study.json",
-            "license": "CC-BY-4.0 (the repository's content licence)"
+            "repository": "https://github.com/cdisc-org/DDF-RA",
+            "commit": "aa303cb32f5d3ceecc68a16803e26720d2c1fc26",
+            "path": "Documents/Examples/CDISC_Pilot/CDISC_Pilot_Study.json",
+            "license": "CC-BY-4.0",
+            "license_url": "https://creativecommons.org/licenses/by/4.0/",
+            "attribution": "Content based on DDF-RA (GitHub), https://github.com/cdisc-org/DDF-RA, used under the CC-BY-4.0 licence.",
+            "changes": "Changed from CDISC’s file: read by study.builder’s reader and cut down to what a simulated study follows (visits, arms, epochs, objectives, endpoints and activities). Not CDISC’s own form of the protocol, and not endorsed by CDISC or by any sponsor it names."
           },
           "phase": "P2",
           "indication": "Alzheimer's disease",
@@ -1053,8 +1059,8 @@
       },
       "build": {
         "url": "../presets/cdisc-pilot-protocol.study.json.gz",
-        "sha256": "d685afa9434d5fbc02a5e10aa6c7fd48927a6aa21924bb5f8aac77c8742c53b2",
-        "bytes": 2312936,
+        "sha256": "726d0a3ecfe48629175925961742045fedf0505ff8653c5f0913e01154cf1bfd",
+        "bytes": 2313135,
         "key": "sha256:9e41ba70f50756281cc1d75663231303257bf61c7dcb1eed6bfc0297c5923cd1"
       }
     },
@@ -1073,9 +1079,11 @@
       "line": "Phase 2 · 300 participants planned · 3 arms · 16 visits",
       "protocol": {
         "url": "../protocols/cdisc-pilot.protocol.json",
-        "sha256": "addd057e74d03da8a7e91ff60da72467f13a97a216921cf5d65e9f549d33ac7c",
-        "bytes": 21061
-      }
+        "sha256": "2a2534f203de2b45ef1eccf379afe2743d3d763f364c2e6e66cbab0ecca2261b",
+        "bytes": 21687
+      },
+      "license": "CC-BY-4.0",
+      "attribution": "Content based on DDF-RA (GitHub), https://github.com/cdisc-org/DDF-RA, used under the CC-BY-4.0 licence. Changed from CDISC’s file: read by study.builder’s reader and cut down to what a simulated study follows (visits, arms, epochs, objectives, endpoints and activities). Not CDISC’s own form of the protocol, and not endorsed by CDISC or by any sponsor it names."
     },
     {
       "id": "protocol:cdisc-pilot-devices",
@@ -1092,9 +1100,11 @@
       "line": "Phase 2 · 300 participants planned · 3 arms · 16 visits",
       "protocol": {
         "url": "../protocols/cdisc-pilot-devices.protocol.json",
-        "sha256": "eb3a9f00d81e66c2b763c7d98edde61ea8dabada965558416fbc2aaed9083a00",
-        "bytes": 18932
-      }
+        "sha256": "134342038941d20f6cfb4f58ca1d1d1a9153176550a2593e66b9cccc93c59495",
+        "bytes": 19544
+      },
+      "license": "CC-BY-4.0",
+      "attribution": "Content based on DDF-RA (GitHub), https://github.com/cdisc-org/DDF-RA, used under the CC-BY-4.0 licence. Changed from CDISC’s file: read by study.builder’s reader and cut down to what a simulated study follows (visits, arms, epochs, objectives, endpoints and activities). Not CDISC’s own form of the protocol, and not endorsed by CDISC or by any sponsor it names."
     },
     {
       "id": "protocol:alexion-wilsons",
@@ -1111,9 +1121,11 @@
       "line": "Phase 2 · 10 participants planned · 1 arm · 51 visits",
       "protocol": {
         "url": "../protocols/alexion-wilsons.protocol.json",
-        "sha256": "752da07890946060eab0a5f9d8f361fb5246f8ffd53db7f769b8dcbed2e19be3",
-        "bytes": 34382
-      }
+        "sha256": "caf501792b4f70e62326ba827869c2290cf73a2aa6c372fc4f11be0214b72164",
+        "bytes": 35034
+      },
+      "license": "CC-BY-4.0",
+      "attribution": "Content based on DDF-RA (GitHub), https://github.com/cdisc-org/DDF-RA, used under the CC-BY-4.0 licence. Changed from CDISC’s file: read by study.builder’s reader and cut down to what a simulated study follows (visits, arms, epochs, objectives, endpoints and activities). Not CDISC’s own form of the protocol, and not endorsed by CDISC or by any sponsor it names."
     },
     {
       "id": "protocol:lilly-nasal-glucagon",
@@ -1130,9 +1142,11 @@
       "line": "Phase 3 · 75 participants planned · 2 arms · 15 visits",
       "protocol": {
         "url": "../protocols/lilly-nasal-glucagon.protocol.json",
-        "sha256": "4ec0c9287f69ad34856c568e634b685d8effaea8e64ff167f582c6483cbc0f96",
-        "bytes": 17327
-      }
+        "sha256": "56d13dc4c1940be076e2c4ce8fdaa349ab6c5372ffbacbb94593eccdadd5adb5",
+        "bytes": 17983
+      },
+      "license": "CC-BY-4.0",
+      "attribution": "Content based on DDF-RA (GitHub), https://github.com/cdisc-org/DDF-RA, used under the CC-BY-4.0 licence. Changed from CDISC’s file: read by study.builder’s reader and cut down to what a simulated study follows (visits, arms, epochs, objectives, endpoints and activities). Not CDISC’s own form of the protocol, and not endorsed by CDISC or by any sponsor it names."
     },
     {
       "id": "protocol:observational",
@@ -1149,9 +1163,11 @@
       "line": "Phase 3 · 120 participants planned · 2 arms · 6 visits",
       "protocol": {
         "url": "../protocols/observational.protocol.json",
-        "sha256": "990022a6a8a84759a733e21f920f8d791e9e8bc9e27f1e3e8988385c2075b63a",
-        "bytes": 7882
-      }
+        "sha256": "ccd83d65375bbc04bb530272eef80e361e551f203dfe4c47eb6590997485f61a",
+        "bytes": 8506
+      },
+      "license": "CC-BY-4.0",
+      "attribution": "Content based on DDF-RA (GitHub), https://github.com/cdisc-org/DDF-RA, used under the CC-BY-4.0 licence. Changed from CDISC’s file: read by study.builder’s reader and cut down to what a simulated study follows (visits, arms, epochs, objectives, endpoints and activities). Not CDISC’s own form of the protocol, and not endorsed by CDISC or by any sponsor it names."
     }
   ]
 }

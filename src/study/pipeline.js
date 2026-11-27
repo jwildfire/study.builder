@@ -159,7 +159,9 @@ export function pipeline({ el, button }, study, box, { open = null, save = null 
     }
   }
   const versions = Object.entries(study.packages || {})
-    .map(([name, version]) => `${name} ${version}`)
+    .map(
+      ([name, version]) => `${name} ${version}${name === 'gsm.datasim' ? ' (a modified copy)' : ''}`
+    )
     .join(', ');
   fact('Built with', versions);
   if (study.manifest) fact('Key', study.manifest.key);
@@ -191,7 +193,7 @@ export function pipeline({ el, button }, study, box, { open = null, save = null 
     el(
       'p',
       'sb-soft',
-      `Raw is simulated by gsm.datasim. ${count} workflow${count === 1 ? '' : 's'} built the rest, each from the tables before it. Pick one to see what it read, what reads it, and its steps.`
+      `Raw is simulated by a modified copy of gsm.datasim. ${count} workflow${count === 1 ? '' : 's'} built the rest, each from the tables before it. Pick one to see what it read, what reads it, and its steps.`
     )
   );
 
@@ -246,7 +248,7 @@ export function pipeline({ el, button }, study, box, { open = null, save = null 
         el(
           'p',
           'sb-soft',
-          'Simulated by gsm.datasim from the study config above. No workflow: raw is the root every other layer is built from.'
+          'Simulated by a modified copy of gsm.datasim (Gilead’s 2.1.0 with study designs and study results added for study.builder) from the study config above. No workflow: raw is the root every other layer is built from.'
         )
       );
     } else {

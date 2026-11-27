@@ -123,7 +123,25 @@ describe('reading a USDM study definition', () => {
       readFileSync(path.join(root, 'vendor/cdisc-ddf-ra/SOURCE.json'), 'utf8')
     );
     expect(createHash('sha256').update(USDM).digest('hex')).toBe(record.files[0].sha256);
-    expect(record.license).toContain('CC-BY-4.0');
+    expect(record.license).toBe('CC-BY-4.0');
+    expect(record.attribution).toContain('Content based on DDF-RA (GitHub)');
+  });
+
+  it('every protocol made from CDISC’s files carries the attribution, the commit and what was changed', () => {
+    const record = JSON.parse(
+      readFileSync(path.join(root, 'vendor/cdisc-ddf-ra/SOURCE.json'), 'utf8')
+    );
+    const listed = JSON.parse(readFileSync(path.join(root, 'protocols/index.json'), 'utf8'));
+    expect(listed).toHaveLength(5);
+    for (const entry of listed) {
+      expect(entry.attribution).toBe(record.attribution);
+      const { source } = JSON.parse(readFileSync(path.join(root, 'protocols', entry.file), 'utf8'));
+      expect(source.attribution).toBe(record.attribution);
+      expect(source.license).toBe('CC-BY-4.0');
+      expect(source.license_url).toBe('https://creativecommons.org/licenses/by/4.0/');
+      expect(source.commit).toBe(record.commit);
+      expect(source.changes).toContain('Changed from CDISC’s file');
+    }
   });
 });
 

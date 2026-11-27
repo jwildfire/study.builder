@@ -179,7 +179,8 @@ export const LAYERS = Object.freeze([
   Object.freeze({
     id: 'raw',
     label: 'Raw',
-    about: 'What gsm.datasim simulates: one table per domain, as a study database gives them.',
+    about:
+      'What the simulator (a modified copy of gsm.datasim) makes: one table per domain, as a study database gives them.',
     optional: false
   }),
   Object.freeze({
@@ -285,13 +286,13 @@ export const DEFAULTS = Object.freeze({
 
 /** What every study built here is, and is not: one sentence each. */
 export const CAVEATS = Object.freeze([
-  'Every row is synthetic, made by gsm.datasim. No real participant or site is in it.',
-  'Phase and therapeutic area shape the study results a little, by gsm.datasim’s study profile: how often a lab is out of range, which adverse events are commoner, and how many are serious and severe. The sizes are guesses at what is believable, not fitted to data. They do not change how many participants, visits or events a study has.',
+  'Every row is synthetic, made by a modified copy of gsm.datasim 2.1.0: Gilead’s simulator with study designs, study results and a study profile added for study.builder. The additions are not Gilead’s and have not been reviewed by the simulator’s authors. No real participant or site is in it.',
+  'Phase and therapeutic area shape the study results a little, by the modified copy’s study profile: how often a lab is out of range, which adverse events are commoner, and how many are serious and severe. The sizes are guesses at what is believable, not fitted to data. They do not change how many participants, visits or events a study has.',
   'Only the study’s last monthly snapshot is kept, unless every month is asked for.',
   'Every table that is not raw is built off raw by a workflow, and says which. The ADaM tables are a light form: enough for charts, not a submission.',
   'The site metrics are gsm’s own, run as gsm runs them. A simulated study’s flags say nothing about any real site.',
   'Arms, lab results and ECGs are simulated: a few participants on an active arm have a rise in liver tests, creatinine or QTc. A lab’s toxicity grade is not worked out from its result.',
-  'Adverse event terms are a short list of gsm.datasim’s own, not MedDRA. Terms typical of a study drug are more common on an active arm, and a simulated rise usually names one of the participant’s events; how many events a participant has does not follow the arm.',
+  'Adverse event terms are a short list written by hand for the modified copy of gsm.datasim. They are not coded with MedDRA or taken from its files; the body-system names are the familiar ones MedDRA also uses. Terms typical of a study drug are more common on an active arm, and a simulated rise usually names one of the participant’s events; how many events a participant has does not follow the arm.',
   'Nobody leaves the study early unless a share is asked for. When one is, who leaves does not depend on how they are doing, and the participant table’s own days-on-study columns are not shortened.'
 ]);
 
@@ -641,6 +642,6 @@ export function studySaid(study) {
     `${count(args.participants, 'participant')} at ${count(args.sites, 'site')} over ` +
     `${count(args.months, 'month')}, in ${count(study.domains.length, 'domain')} and ` +
     `${count(study.layers.length, 'layer')}, made by ` +
-    `gsm.datasim${version} in this browser${seconds}. Every row is synthetic.`
+    `a modified copy of gsm.datasim${version} in this browser${seconds}. Every row is synthetic.`
   );
 }

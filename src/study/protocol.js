@@ -46,7 +46,28 @@ export function protocolView({ el }, protocol, box) {
       .join(' · ')
   );
   fact('Timeline', source.timeline);
-  fact('Licence', source.license);
+  // CDISC's examples are shown with the attribution CDISC asks for, a file
+  // made before the attribution travelled with it included.
+  const cdisc = String(source.file || '').includes('cdisc-org/DDF-RA');
+  fact(
+    'Licence',
+    [source.license, source.license_url].filter(Boolean).join(' · ') ||
+      (cdisc ? 'CC-BY-4.0 · https://creativecommons.org/licenses/by/4.0/' : '')
+  );
+  fact(
+    'Attribution',
+    source.attribution ||
+      (cdisc
+        ? 'Content based on DDF-RA (GitHub), https://github.com/cdisc-org/DDF-RA, used under the CC-BY-4.0 licence.'
+        : '')
+  );
+  fact(
+    'Changes',
+    source.changes ||
+      (cdisc
+        ? 'Changed from CDISC’s file: read by study.builder’s reader and cut down to what a simulated study follows.'
+        : '')
+  );
   box.append(facts);
 
   // Arms by epochs, the population, and the objectives with their endpoints.

@@ -6,7 +6,7 @@
     <title>study.builder</title>
     <meta
       name="description"
-      content="Simulate a clinical trial in the browser with gsm.datasim, look at every domain, and hand the data to any page."
+      content="Simulate a clinical trial in the browser with a modified copy of gsm.datasim, look at every domain, and hand the data to any page."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -35,8 +35,8 @@
         <p>
           study.builder makes a whole synthetic study, from raw data to ADaM tables, site metrics
           and reports, and lets you look through all of it. R runs in the page, so nothing is
-          installed and nothing is sent anywhere. Every row is made up: no real participant or site
-          is in it.
+          installed and no study data is sent anywhere (R itself is downloaded the first time).
+          Every row is made up: no real participant or site is in it.
         </p>
         <figure class="flow" aria-labelledby="flow-title">
           <figcaption id="flow-title">How a study is made</figcaption>
@@ -60,7 +60,7 @@
                   <polygon points="12,2 21,7 21,17 12,22 3,17 3,7" /></svg
                 ><span class="stage-label">Raw</span></span
               >
-              <strong>gsm.datasim simulates it</strong>
+              <strong>A modified copy of gsm.datasim simulates it</strong>
               <p>Up to 20 domains, as a study database would give them, a snapshot a month.</p>
               <span class="chips"
                 ><span>Participants</span><span>Visits</span><span>Labs</span
@@ -213,7 +213,7 @@
             </svg>
             <strong>Study builder</strong>
             Describe your own study: its size, a CDISC protocol to follow, the layers and domains to
-            make. The first build takes about half a minute.
+            make. The first build takes about a minute.
             <br /><a href="./builder.html">Try the study builder →</a>
           </li>
         </ol>
@@ -257,8 +257,16 @@
       </section>
 
       <footer>
-        Everything runs in this browser. Nothing is sent anywhere. Data is simulated by
-        <a href="https://github.com/Gilead-Public/gsm.datasim">gsm.datasim</a>.
+        Everything runs in this browser, and no study data is sent anywhere; building a study
+        downloads R and its packages from webr.r-wasm.org and repo.r-wasm.org. Data is simulated by
+        <a href="https://github.com/jwildfire/gsm.datasim/tree/safety-results-2.1"
+          >a modified copy</a
+        >
+        of <a href="https://github.com/Gilead-Public/gsm.datasim">gsm.datasim</a> 2.1.0: the
+        additions are not Gilead's. Example protocols: content based on
+        <a href="https://github.com/cdisc-org/DDF-RA">DDF-RA (GitHub)</a>, used under the
+        <a href="https://creativecommons.org/licenses/by/4.0/">CC-BY-4.0</a> licence, read and cut
+        down here.
       </footer>
     </main>
   </body>

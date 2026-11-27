@@ -211,7 +211,7 @@ export function portfolioScreen(app) {
             ? `Opens at once${one.megabytes ? `, ${one.megabytes} MB` : ''}`
             : isProtocol
               ? 'A study can follow it; the builder makes the data'
-              : 'The builder makes the data: about half a minute'
+              : 'The builder makes the data: about a minute the first time'
         )
       );
       const act = el('td', 'sb-study-act');

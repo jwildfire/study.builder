@@ -2,11 +2,13 @@
 
 Simulate a clinical trial in the browser, look at every domain, and hand the data to any page.
 
-You describe a trial: its phase, therapeutic area, participants, sites, months and the domains you want. [gsm.datasim](https://github.com/Gilead-Public/gsm.datasim) simulates it with R running in your browser. Nothing is installed and nothing is sent anywhere.
+You describe a trial: its phase, therapeutic area, participants, sites, months and the domains you want. A modified copy of [gsm.datasim](https://github.com/Gilead-Public/gsm.datasim) 2.1.0 simulates it with R running in your browser. Nothing is installed and no study data is sent anywhere; R and its packages are downloaded from webr.r-wasm.org and repo.r-wasm.org when a study is built.
+
+The simulator is not Gilead's release. It is their v2.1.0 with study designs, study options, a study profile and study results added, about 2,050 lines in 13 files, kept at [jwildfire/gsm.datasim](https://github.com/jwildfire/gsm.datasim/tree/safety-results-2.1). The additions have not been raised with, reviewed by or endorsed by gsm.datasim's maintainers. Where this page says gsm.datasim, it means that copy.
 
 Try it: https://jwildfire.github.io/study.builder/
 
-Status: experimental. v0.4.0 is the latest release; v0.5.0 is in release candidates. Every row is synthetic.
+Status: experimental. v0.5.1 is the latest release. Every row is synthetic.
 
 ## Three modules
 
@@ -26,7 +28,7 @@ study.builder is three things a reader uses, each with its parts. A page takes a
 
 ## What it gives you
 
-- **A study in layers.** Raw is the root: what gsm.datasim simulates. Every other layer is built off it by workflows, and every table says which workflow made it and what that workflow read.
+- **A study in layers.** Raw is the root: what the modified copy of gsm.datasim simulates. Every other layer is built off it by workflows, and every table says which workflow made it and what that workflow read.
 - **A plain function.** Settings in, data out, with no page at all. This is how another package loads simulated data.
 - **Assumptions you can set.** How many participants leave early, how adverse events follow the arm, and what an efficacy score does by arm. gsm.datasim makes the data; the settings travel with the study.
 - **A manifest.** A checksum for every table and one key for the whole study. The same tables always give the same key.
@@ -35,7 +37,7 @@ study.builder is three things a reader uses, each with its parts. A page takes a
 
 | Layer     | Id          | What it is                                                                                                              | Built by                                        |
 | --------- | ----------- | ----------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
-| Raw       | `raw`       | One table per domain, as a study database gives them                                                                    | gsm.datasim                                     |
+| Raw       | `raw`       | One table per domain, as a study database gives them                                                                    | A modified copy of gsm.datasim 2.1.0            |
 | Raw.RBQM  | `raw.rbqm`  | The mapped tables that differ from raw; a copy of a raw table is dropped and the metrics read raw                       | gsm.mapping's own workflows                     |
 | ADaM      | `adam`      | Analysis-ready tables for charts of participants: ADSL, ADAE, ADVS                                                      | study.builder's workflows, in `workflows/adam/` |
 | Analysis  | `analysis`  | Statistics worked out from a data layer: gsm's eight site metrics from Raw.RBQM, and an adverse event summary from ADaM | gsm.kri's workflows, and `workflows/analysis/`  |
@@ -126,7 +128,7 @@ A build that cannot be made rejects with a `StudyBuilderError` whose message is 
 
 ## Saving, opening and presets
 
-A study takes seconds to build after R has started, and half a minute the first time. A saved study opens with no R at all.
+A study takes seconds to build after R has started, and about a minute the first time. A saved study opens with no R at all.
 
 - **On the page.** It opens on the portfolio: the page's ready-made studies and what the reader saved in this browser, each a press from open, with the form behind New study. Save and Save settings keep the open study or the form's settings in the browser (IndexedDB; nothing is sent anywhere). Study file and Settings file download them, and Open a file reads either back.
 - **With no page.**
@@ -225,11 +227,11 @@ The rest are optional: `VISIT`, `AE`, `LB`, `VS`, `PD`, `STUDCOMP`, `SDRGCOMP`, 
 
 ## What a study built here is, and is not
 
-- Every row is synthetic, made by gsm.datasim. No real participant or site is in it.
-- Phase and therapeutic area shape the study results a little, by gsm.datasim's study profile (`?study_profile` in its staging copy lists every number): how often a lab is out of range, which adverse events are commoner, and how many are serious and severe. The sizes are guesses at what is believable, not fitted to data. They do not change how many participants, visits or events a study has.
+- Every row is synthetic, made by a modified copy of gsm.datasim 2.1.0: Gilead's simulator with study designs, study results and a study profile added for study.builder. The additions are not Gilead's and have not been reviewed by the simulator's authors. No real participant or site is in it.
+- Phase and therapeutic area shape the study results a little, by the modified copy's study profile (`?study_profile` there lists every number): how often a lab is out of range, which adverse events are commoner, and how many are serious and severe. The sizes are guesses at what is believable, not fitted to data. They do not change how many participants, visits or events a study has.
 - Only the study's last monthly snapshot is kept, unless every month is asked for.
 - Arms, lab results and ECGs are simulated: a few participants on an active arm have a rise in liver tests, creatinine or QTc. A lab's toxicity grade is not worked out from its result.
-- Adverse event terms are a short list of gsm.datasim's own, not MedDRA. Terms typical of a study drug are more common on an active arm; how many events a participant has does not follow the arm.
+- Adverse event terms are a short list written by hand for the modified copy of gsm.datasim. They are not coded with MedDRA or taken from its files; the body-system names are the familiar ones MedDRA also uses. Terms typical of a study drug are more common on an active arm; how many events a participant has does not follow the arm.
 - Nobody leaves the study early unless a share is asked for.
 
 Nothing is changed in the raw tables after the simulation: the builder makes no data. gsm.datasim is asked for three things it would otherwise do differently, and every study says so in `study.notes`:
@@ -295,4 +297,7 @@ The unit tests use a stand-in for R. `npm run test:r` builds studies with real R
 
 ## Licence
 
-Apache-2.0. gsm.datasim, gsm.mapping, gsm.core, gsm.reporting and workr are Gilead Sciences' work under the Apache License; each copy carries its own record.
+Apache-2.0 for study.builder's own code.
+
+- **Gilead's packages.** gsm.datasim, gsm.mapping, gsm.kri, gsm.core, gsm.reporting and workr are Gilead Sciences' work under the Apache License 2.0. Each copy in `vendor/` carries a record of where it came from and, for the R source, the licence's text. The gsm.datasim copy is modified, as said at the top; its changed files carry a notice.
+- **CDISC's example protocols.** Content based on [DDF-RA (GitHub)](https://github.com/cdisc-org/DDF-RA), used under the [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/) licence. `vendor/cdisc-ddf-ra/` holds CDISC's five files unchanged, at commit `aa303cb`. The files in `protocols/` are changed from them: read by study.builder's reader and cut down to what a simulated study follows. Each carries this attribution in its `source`, and so do `protocols/index.json` and the studies feed. Two of the five name a sponsor's study (Alexion, Eli Lilly); neither CDISC nor either sponsor endorses what is made from them here. A page that copies a protocol should show the attribution with it.

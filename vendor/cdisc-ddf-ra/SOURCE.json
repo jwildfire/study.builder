@@ -3,8 +3,11 @@
   "repository": "https://github.com/cdisc-org/DDF-RA",
   "ref": "main",
   "commit": "aa303cb32f5d3ceecc68a16803e26720d2c1fc26",
-  "license": "CC-BY-4.0 (the repository's content licence)",
+  "license": "CC-BY-4.0",
+  "license_url": "https://creativecommons.org/licenses/by/4.0/",
+  "license_note": "DDF-RA's README gives two licences: MIT for code and scripts, CC-BY-4.0 for content files, and says neither gives trademark permission. The example study definitions are data, and are treated here as content. No code or script of DDF-RA's is copied.",
   "attribution": "Content based on DDF-RA (GitHub), https://github.com/cdisc-org/DDF-RA, used under the CC-BY-4.0 licence.",
+  "changes": "The five files here are CDISC's, unchanged, each held to its checksum. The protocols made from them (protocols/*.protocol.json) are changed: read by study.builder's reader and cut down to what a simulated study follows.",
   "files": [
     {
       "file": "CDISC_Pilot_Study.json",

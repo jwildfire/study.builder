@@ -220,6 +220,29 @@ describe('the Operations and Reporting views', () => {
     const facts = box.querySelector('.sb-protocol-facts').textContent;
     expect(facts).toContain('Phase 2');
     expect(facts).toContain('pilot.json · USDM 4.0.0');
+    // A file that is not CDISC's is given no attribution of CDISC's.
+    expect(facts).not.toContain('DDF-RA');
+    // One of CDISC's is, whether or not the file carries it.
+    const cdisc = boxed();
+    protocolView(
+      dom(),
+      {
+        name: 'CDISC PILOT',
+        phase: 'P2',
+        source: {
+          kind: 'usdm',
+          file: 'https://github.com/cdisc-org/DDF-RA · CDISC_Pilot_Study.json'
+        },
+        visits: [],
+        activities: [],
+        schedule: {}
+      },
+      cdisc
+    );
+    const said = cdisc.querySelector('.sb-protocol-facts').textContent;
+    expect(said).toContain('Content based on DDF-RA (GitHub)');
+    expect(said).toContain('CC-BY-4.0');
+    expect(said).toContain('Changed from CDISC’s file');
     expect([...box.querySelectorAll('.sb-activity')].map((line) => line.textContent)).toEqual([
       'VSVital signs',
       'Not simulatedInformed consent'

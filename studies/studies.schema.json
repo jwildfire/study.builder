@@ -110,6 +110,14 @@
               "description": "The key of the study's tables, as its manifest gives it."
             }
           }
+        },
+        "license": {
+          "type": "string",
+          "description": "The licence of the content the entry is made from, when it is another party's: CC-BY-4.0 for CDISC's example protocols."
+        },
+        "attribution": {
+          "type": "string",
+          "description": "The attribution that licence asks for, and what was changed. Show it wherever the entry's content is shown or copied."
         }
       },
       "allOf": [

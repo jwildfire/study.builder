@@ -47,7 +47,13 @@ describe('the studies feed', () => {
       expect(entry.id).toMatch(new RegExp(SCHEMA.$defs.entry.properties.id.pattern));
       expect(entry.line).toBe(factsLine(entry));
       if (entry.kind === 'settings') expect(entry.settings.participants).toBeGreaterThan(0);
-      else expect(entry.protocol.sha256).toMatch(/^[0-9a-f]{64}$/);
+      else {
+        expect(entry.protocol.sha256).toMatch(/^[0-9a-f]{64}$/);
+        // CDISC's attribution travels with every protocol the feed names.
+        expect(entry.license).toBe('CC-BY-4.0');
+        expect(entry.attribution).toContain('Content based on DDF-RA (GitHub)');
+        expect(entry.attribution).toContain('Changed from CDISC’s file');
+      }
       if (entry.build) expect(entry.build.key).toMatch(/^sha256:/);
     }
   });

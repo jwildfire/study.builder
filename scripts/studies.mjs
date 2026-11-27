@@ -74,6 +74,9 @@ for (const protocol of read('protocols/index.json')) {
   };
   entry.line = factsLine(entry);
   entry.protocol = fileOf('protocols', protocol.file);
+  // CDISC's attribution travels with the entry, for a host that copies the feed alone.
+  entry.license = protocol.license;
+  entry.attribution = `${protocol.attribution} ${protocol.changes}`;
   studies.push(entry);
 }
 

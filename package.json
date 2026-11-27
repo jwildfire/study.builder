@@ -1,7 +1,7 @@
 {
   "name": "study.builder",
-  "version": "0.5.0",
-  "description": "Simulate a clinical trial in the browser with gsm.datasim and hand its data to any page.",
+  "version": "0.5.1",
+  "description": "Simulate a clinical trial in the browser with a modified copy of gsm.datasim and hand its data to any page.",
   "license": "Apache-2.0",
   "private": true,
   "type": "module",
