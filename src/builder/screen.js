@@ -85,6 +85,7 @@ export function builderScreen(app) {
     save,
     go,
     draw,
+    drawSoon,
     say,
     build,
     current,
@@ -245,7 +246,7 @@ export function builderScreen(app) {
       control.disabled = busy;
       if (label) control.setAttribute('aria-label', label);
       control.oninput = () => onInput(control.value);
-      control.onchange = () => draw();
+      control.onchange = () => drawSoon();
       return control;
     };
     const title = el('input', 'sb-input');
@@ -374,7 +375,7 @@ export function builderScreen(app) {
       control.value = value === null || value === undefined ? '' : String(value);
       control.disabled = s.phase === 'building';
       control.oninput = () => onInput(control.value);
-      control.onchange = () => draw();
+      control.onchange = () => drawSoon();
       return control;
     };
     const fields = el('div', 'sb-fields');
@@ -462,7 +463,7 @@ export function builderScreen(app) {
     control.oninput = () => {
       s.form = { ...s.form, [name]: control.value };
     };
-    control.onchange = () => draw();
+    control.onchange = () => drawSoon();
     return control;
   }
 

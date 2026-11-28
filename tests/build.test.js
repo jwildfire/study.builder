@@ -717,6 +717,8 @@ describe('the loader on a page', () => {
     leave.value = '0.25';
     leave.dispatchEvent(new Event('input'));
     leave.dispatchEvent(new Event('change'));
+    // The form is drawn again once focus has settled, not in the middle of the change.
+    await new Promise((resolve) => setTimeout(resolve, 0));
     expect(q('.sb-efficacy-form p').textContent).toContain('About 25 in 100 enrolled participants');
     expect(handle.settings().assumptions).toEqual({ dropout: '0.25' });
     const study = await handle.build();
@@ -728,6 +730,27 @@ describe('the loader on a page', () => {
     q('.sv-view[data-view="pipeline"]').click();
     expect(q('.sb-config-facts').textContent).toContain('0.25 of enrolled participants by day 270');
     expect(savedOf(study).settings.assumptions).toEqual({ dropout: 0.25 });
+  });
+
+  it('a changed field does not cost the reader the next one: the form is drawn again after focus lands, and focus is kept', async () => {
+    mounted();
+    const participants = q('[name="participants"]');
+    participants.focus();
+    participants.value = '30';
+    participants.dispatchEvent(new Event('input', { bubbles: true }));
+    // Leaving the field: the change is told first, then focus goes to the next field.
+    participants.dispatchEvent(new Event('change', { bubbles: true }));
+    const sites = q('[name="sites"]');
+    sites.focus();
+    // The field the reader moved to is still the one on the page, so typing reaches it.
+    expect(sites.isConnected).toBe(true);
+    sites.value = '7';
+    sites.dispatchEvent(new Event('input', { bubbles: true }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    // Drawn again: both values held, and focus on the same field of the new form.
+    expect(q('[name="sites"]')).not.toBe(sites);
+    expect(document.activeElement).toBe(q('[name="sites"]'));
+    expect(handle.settings()).toMatchObject({ participants: '30', sites: '7' });
   });
 
   it('keeps every monthly snapshot when asked, and shows the study as it stood at any', async () => {

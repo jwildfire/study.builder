@@ -301,6 +301,7 @@ export function mount(
     save,
     go,
     draw,
+    drawSoon,
     say,
     take,
     show,
@@ -371,8 +372,35 @@ export function mount(
     root.append(shell);
     if (focused) {
       const again = root.querySelector(`[name="${focused}"]`);
-      if (again && !again.disabled) again.focus();
+      if (again && !again.disabled) {
+        again.focus();
+        return again;
+      }
     }
+    return null;
+  }
+
+  // A field that changed asks for a redraw as the reader leaves it, by Tab or
+  // by a click on the next field. Drawing at once would replace the field they
+  // are moving to before focus reaches it, and what they type next would go
+  // nowhere. So the draw waits until focus has landed, then puts it back on
+  // the same field in the new form, its text selected as Tab would leave it.
+  let soon = null;
+  function drawSoon() {
+    if (soon !== null) return;
+    soon = setTimeout(() => {
+      soon = null;
+      const before = doc.activeElement;
+      const typed = before && root.contains(before) && before.tagName === 'INPUT';
+      const again = draw();
+      if (again && typed && typeof again.select === 'function') {
+        try {
+          again.select();
+        } catch {
+          // A field with nothing to select.
+        }
+      }
+    }, 0);
   }
 
   draw();

@@ -709,6 +709,8 @@ describe('a protocol in the loader', () => {
     q('[name="efficacy-sd"]').value = '6.5';
     q('[name="efficacy-sd"]').dispatchEvent(new Event('input'));
     q('[name="efficacy-sd"]').dispatchEvent(new Event('change'));
+    // The form is drawn again once focus has settled, not in the middle of the change.
+    await new Promise((resolve) => setTimeout(resolve, 0));
     expect(handle.settings().efficacy.effects['Xanomeline High Dose']).toBe('-3');
     // 300 participants in three arms: the protocol's own 90% power.
     expect(
