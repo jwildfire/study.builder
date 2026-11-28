@@ -1,0 +1,129 @@
+{
+  "builds": [
+    {
+      "id": "cdisc-pilot",
+      "study": "cdisc-pilot.study.json.gz",
+      "key": "sha256:d59cca8611e0f69beb11c210a845451b0f5960c41e36cf725c69f5d26744426d",
+      "megabytes": 2.4,
+      "settings": {
+        "name": "SIM-CDISC-PILOT-LZZT",
+        "phase": "P2",
+        "participants": 120,
+        "months": 7,
+        "domains": [
+          "VISIT",
+          "AE",
+          "LB",
+          "VS",
+          "EG",
+          "PD",
+          "STUDCOMP",
+          "SDRGCOMP"
+        ],
+        "sites": 12,
+        "seed": 601,
+        "snapshots": "all"
+      }
+    },
+    {
+      "id": "cdisc-pilot-devices",
+      "study": "cdisc-pilot-devices.study.json.gz",
+      "key": "sha256:74b0cc16be10f6e4403c3d16693655ae0ebf90de6ea34cacc4aa7960954f414f",
+      "megabytes": 2.4,
+      "settings": {
+        "name": "SIM-LZZT-DEVICES",
+        "phase": "P2",
+        "participants": 120,
+        "months": 7,
+        "domains": [
+          "VISIT",
+          "AE",
+          "LB",
+          "VS",
+          "EG",
+          "PD",
+          "STUDCOMP",
+          "SDRGCOMP"
+        ],
+        "sites": 12,
+        "seed": 602,
+        "snapshots": "all"
+      }
+    },
+    {
+      "id": "alexion-wilsons",
+      "study": "alexion-wilsons.study.json.gz",
+      "key": "sha256:a5fe1b0a728d8a815b20bc54fd33729a7e66cf6565eeb3a9ebe0c2209e3d08d4",
+      "megabytes": 0.3,
+      "settings": {
+        "name": "SIM-ALXN1840-WD-204",
+        "phase": "P2",
+        "participants": 20,
+        "months": 3,
+        "domains": [
+          "VISIT",
+          "AE",
+          "LB",
+          "VS",
+          "EG",
+          "PD",
+          "STUDCOMP",
+          "SDRGCOMP"
+        ],
+        "sites": 2,
+        "seed": 603,
+        "snapshots": "all"
+      }
+    },
+    {
+      "id": "lilly-nasal-glucagon",
+      "study": "lilly-nasal-glucagon.study.json.gz",
+      "key": "sha256:9037295622718e01e1a8e9943942f5666b254d4b1680525ffed2afbe7d520231",
+      "megabytes": 0.7,
+      "settings": {
+        "name": "SIM-LY900018",
+        "phase": "P3",
+        "participants": 75,
+        "months": 3,
+        "domains": [
+          "VISIT",
+          "AE",
+          "LB",
+          "VS",
+          "EG",
+          "PD",
+          "STUDCOMP",
+          "SDRGCOMP"
+        ],
+        "sites": 8,
+        "seed": 604,
+        "snapshots": "all"
+      }
+    },
+    {
+      "id": "observational",
+      "study": "observational.study.json.gz",
+      "key": "sha256:c0d7d26f5432973ed6e6620c67d8a2c955db1943081878b87eb910dc4b58e5a0",
+      "megabytes": 0.6,
+      "settings": {
+        "name": "SIM-SCOPE1",
+        "phase": "P3",
+        "participants": 120,
+        "months": 3,
+        "domains": [
+          "VISIT",
+          "AE",
+          "LB",
+          "VS",
+          "EG",
+          "PD",
+          "STUDCOMP",
+          "SDRGCOMP"
+        ],
+        "sites": 12,
+        "seed": 605,
+        "snapshots": "all"
+      }
+    }
+  ]
+}

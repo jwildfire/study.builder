@@ -34,8 +34,8 @@
     {
       "id": "phase2-many-outliers",
       "name": "Phase 2 virology, many outliers: 200 participants at 25 sites",
-      "about": "Settings only. More sites stand out, for trying site metrics and flags.",
-      "hosted": false,
+      "about": "More sites stand out, for trying site metrics and flags. Every monthly snapshot is kept.",
+      "hosted": true,
       "settings": {
         "name": "OUTLIERS-P2",
         "phase": "P2",
@@ -44,14 +44,15 @@
         "sites": 25,
         "months": 9,
         "outliers": "many",
-        "seed": 303
+        "seed": 303,
+        "snapshots": "all"
       }
     },
     {
       "id": "phase3-large",
       "name": "Phase 3, large: 500 participants at 60 sites",
-      "about": "Settings only: the largest study the builder makes, over 12 months. Too large to host, so Build makes it.",
-      "hosted": false,
+      "about": "The largest study the builder makes, over 12 months. Only its last monthly snapshot is kept: every month would be too large to fetch.",
+      "hosted": true,
       "settings": {
         "name": "LARGE-P3",
         "phase": "P3",

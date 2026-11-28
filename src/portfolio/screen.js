@@ -161,13 +161,42 @@ export function portfolioScreen(app) {
           const response = await fetch(one.url);
           if (!response.ok) throw new Error(`The protocol ${one.name} could not be fetched.`);
           return response.json();
-        }
+        },
+        // The study kept for the protocol, when the page has one.
+        ...(one.study
+          ? {
+              megabytes: one.megabytes,
+              saved: [
+                one.built && one.built.name,
+                one.built && one.built.participants
+                  ? `${count(Number(one.built.participants), 'participant')} simulated`
+                  : ''
+              ]
+                .filter(Boolean)
+                .join(', '),
+              open: async () => {
+                say(`Fetching the study saved for ${one.name}…`);
+                draw();
+                const opened = await openPreset({
+                  name: one.name,
+                  study: one.study,
+                  key: one.key,
+                  settings: null
+                });
+                s.builds += 1;
+                show(
+                  opened.study,
+                  `Opened the study saved for the protocol ${one.name}. Every row is simulated. Nothing was built.`
+                );
+              }
+            }
+          : {})
       };
     });
     const rows = [
       ...ready.map((one) => ({ ...one, data: true })),
       ...plain.map((one) => ({ ...one, data: false })),
-      ...protocols.map((one) => ({ ...one, data: false }))
+      ...protocols.map((one) => ({ ...one, data: Boolean(one.open) }))
     ];
     const wrap = el('div', 'sb-studies');
     const table = el('table', 'sb-table sb-studies-table');
@@ -184,8 +213,8 @@ export function portfolioScreen(app) {
       const row = el('tr', 'sb-study');
       const isProtocol = one.kind === 'protocol';
       if (one.data) row.dataset.study = one.id;
-      else if (isProtocol) row.dataset.protocol = one.id;
-      else row.dataset.settings = one.id;
+      if (isProtocol) row.dataset.protocol = one.id;
+      else if (!one.data) row.dataset.settings = one.id;
       row.dataset.data = one.data ? 'ready' : isProtocol ? 'protocol' : 'settings';
       const name = el('th', 'sb-study-name');
       name.scope = 'row';
@@ -208,7 +237,7 @@ export function portfolioScreen(app) {
           'span',
           'sb-soft',
           one.data
-            ? `Opens at once${one.megabytes ? `, ${one.megabytes} MB` : ''}`
+            ? `Opens at once${one.megabytes ? `, ${one.megabytes} MB` : ''}${one.saved ? `: ${one.saved}` : ''}`
             : isProtocol
               ? 'A study can follow it; the builder makes the data'
               : 'The builder makes the data: about a minute the first time'

@@ -1,0 +1,25 @@
+{
+  "about": "Written by hand: the study kept for each ready-made protocol. `npm run protocols:build` builds each with real R from the settings the builder's form takes from the protocol, with these laid over them, and writes `<id>.study.json.gz` and `built.json` beside this file. Every name starts SIM-, so no table carries a real trial's identifier alone.",
+  "builds": [
+    {
+      "id": "cdisc-pilot",
+      "settings": { "name": "SIM-CDISC-PILOT-LZZT", "participants": 120, "sites": 12, "seed": 601, "snapshots": "all" }
+    },
+    {
+      "id": "cdisc-pilot-devices",
+      "settings": { "name": "SIM-LZZT-DEVICES", "participants": 120, "sites": 12, "seed": 602, "snapshots": "all" }
+    },
+    {
+      "id": "alexion-wilsons",
+      "settings": { "name": "SIM-ALXN1840-WD-204", "participants": 20, "sites": 2, "seed": 603, "snapshots": "all" }
+    },
+    {
+      "id": "lilly-nasal-glucagon",
+      "settings": { "name": "SIM-LY900018", "participants": 75, "sites": 8, "seed": 604, "snapshots": "all" }
+    },
+    {
+      "id": "observational",
+      "settings": { "name": "SIM-SCOPE1", "participants": 120, "sites": 12, "seed": 605, "snapshots": "all" }
+    }
+  ]
+}

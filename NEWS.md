@@ -1,3 +1,36 @@
+# study.builder v0.6.0
+
+Every ready-made study now has its data saved: all five example protocols, and the two presets that were settings only. Nothing changed in how a study is built, and the three studies saved before keep their files, checksums and keys.
+
+- **A saved study for each example protocol.** Each of CDISC's five example protocols has a study built on its schedule and kept beside it (`protocols/<id>.study.json.gz`), so its row in the portfolio says "Data ready" and opens at once, as well as opening in the builder. Each is what the builder's form builds after it takes the protocol, at a size chosen to fetch quickly, with every monthly snapshot:
+
+  | Protocol                         | Saved study            | Simulated                            | File   |
+  | -------------------------------- | ---------------------- | ------------------------------------ | ------ |
+  | CDISC pilot (LZZT)               | `SIM-CDISC-PILOT-LZZT` | 120 participants, 12 sites, 7 months | 2.4 MB |
+  | CDISC pilot with devices         | `SIM-LZZT-DEVICES`     | 120 participants, 12 sites, 7 months | 2.4 MB |
+  | Wilson disease (ALXN1840-WD-204) | `SIM-ALXN1840-WD-204`  | 20 participants, 2 sites, 3 months   | 0.3 MB |
+  | Nasal glucagon (LY900018)        | `SIM-LY900018`         | 75 participants, 8 sites, 3 months   | 0.7 MB |
+  | Observational (SCOPE1)           | `SIM-SCOPE1`           | 120 participants, 12 sites, 3 months | 0.6 MB |
+
+- **Their names start SIM-.** A saved protocol study's id, in its tables and its downloads, starts `SIM-`, so no file carries a real trial's identifier alone. A study a reader builds from a protocol in the form still takes the protocol's own name (see the known faults).
+- **The two presets that were settings only.** "Phase 2 virology, many outliers" is saved with every monthly snapshot (8.1 MB) and "Phase 3, large" with its last snapshot only (4.3 MB; every month would be several times that).
+- **The feed.** Each protocol's entry in `studies/index.json` has a `build` (file, checksum, key), `facts.study` names the saved study, and `about` says what was simulated. All ten entries now have a build.
+- **The study page** opens a protocol's saved study at `study.html#protocol:<id>`.
+- **How they are made.** `protocols/builds.json` is the hand-written list; `npm run protocols:build` builds each with real R and writes `protocols/built.json`; `npm run protocols:build:check` holds the files to it, and runs in CI. `npm run presets -- <id>` builds only the presets named and keeps the others' files as they are.
+
+## For a page that copied v0.5.2
+
+- Copy `dist/` again, `studies/index.json`, `presets/index.json` with the two new study files, and `protocols/` (five new study files, `builds.json`, `built.json`; the protocol files are unchanged).
+- **`openListed` on a protocol entry now opens its saved study**, since the entry has a build. A page that wants the protocol itself, to build on, asks for `openListed(entry, { as: 'config' })`.
+- A list kept to `built: true` now holds all ten entries; one kept to `built: false` holds none.
+- A page that mounts the portfolio and serves `protocols/built.json` gets an Overview button on each protocol's row; without that file nothing changes.
+
+## Not right in the saved studies
+
+- Each protocol study says "Oncology": the simulator names three therapeutic areas and none fits these protocols, so the builder's usual one is used and it shapes the results a little.
+- Three schedules end within two months (day 54, 34 and 43); the simulator follows a study for 3 months at least, so those studies run 3.
+- The other known faults are listed in the repository's issue "Known faults in v0.5.2".
+
 # study.builder v0.5.2
 
 Wording again: v0.5.1 left the simulator's plain name in every study's own notes. No table changes.

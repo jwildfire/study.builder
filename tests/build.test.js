@@ -670,11 +670,60 @@ describe('the loader on a page', () => {
     expect(row.textContent).toContain('Phase 2, Alzheimer’s disease. 30 activities scheduled');
     row.querySelector('[data-action="configure"]').click();
     expect(builder).toHaveBeenLastCalledWith('protocol:pilot', {});
+    // No study is kept for it on this page, so it has no Overview.
+    expect(row.querySelector('[data-action="open"]')).toBeNull();
     // A page with protocols of its own, or none, lists none.
     handle.destroy();
     mounted({ presets: [SETTINGS_ONLY], protocols: false });
     await settle();
     expect(q('[data-protocol]')).toBeNull();
+  });
+
+  it('a protocol whose study is kept opens as a study too: Data ready, with what was simulated', async () => {
+    const listed = [
+      {
+        id: 'pilot',
+        file: 'pilot.protocol.json',
+        name: 'CDISC PILOT',
+        title: 'LZZT',
+        phase: 'P2',
+        participants: 300,
+        arms: ['A', 'B'],
+        visits: 16,
+        activities: 30,
+        simulated: 6
+      }
+    ];
+    const built = {
+      builds: [
+        {
+          id: 'pilot',
+          study: 'pilot.study.json.gz',
+          key: 'sha256:abc',
+          megabytes: 2.4,
+          settings: { name: 'SIM-PILOT', participants: 120, sites: 12 }
+        }
+      ]
+    };
+    const fetched = vi.fn(async (url) => ({
+      ok: true,
+      json: async () => (String(url).endsWith('built.json') ? built : listed)
+    }));
+    vi.stubGlobal('fetch', fetched);
+    const study = vi.fn();
+    mounted({ presets: [SETTINGS_ONLY], links: { study } });
+    await settle();
+    await settle();
+    vi.unstubAllGlobals();
+    expect(fetched).toHaveBeenCalledWith(expect.stringMatching(/protocols\/built\.json$/));
+    const row = q('[data-protocol="protocol:pilot"]');
+    expect(row.dataset.data).toBe('ready');
+    expect(row.querySelector('.sb-data').textContent).toBe('Data ready');
+    expect(row.textContent).toContain('2.4 MB: SIM-PILOT, 120 participants simulated');
+    row.querySelector('[data-action="open"]').click();
+    expect(study).toHaveBeenLastCalledWith('protocol:pilot');
+    // It still opens in the builder, as its protocol.
+    expect(row.querySelector('[data-action="configure"]')).not.toBeNull();
   });
 
   it('shows the pipeline: what the study was asked to be, a card for every workflow by layer, and a workflow as it is written', async () => {

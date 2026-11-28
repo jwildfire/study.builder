@@ -68,7 +68,7 @@
       "id": "preset:phase2-many-outliers",
       "kind": "settings",
       "name": "Phase 2 virology, many outliers: 200 participants at 25 sites",
-      "about": "Settings only. More sites stand out, for trying site metrics and flags.",
+      "about": "More sites stand out, for trying site metrics and flags. Every monthly snapshot is kept.",
       "facts": {
         "study": "OUTLIERS-P2",
         "phase": "P2",
@@ -76,7 +76,7 @@
         "participants": 200,
         "sites": 25,
         "months": 9,
-        "snapshots": 1
+        "snapshots": 9
       },
       "line": "Phase 2 · 200 participants · 25 sites · 9 months",
       "settings": {
@@ -87,14 +87,21 @@
         "sites": 25,
         "months": 9,
         "outliers": "many",
-        "seed": 303
+        "seed": 303,
+        "snapshots": "all"
+      },
+      "build": {
+        "url": "../presets/phase2-many-outliers.study.json.gz",
+        "sha256": "917e5edd2ffab1d25f37bb8243b55de6d28954d884a9367b6f68af9bea6a5cfd",
+        "bytes": 8067830,
+        "key": "sha256:a0eb2e7ffa88d0f639bcdd8036b51e536adbc5d069592c91d775d56741f6002b"
       }
     },
     {
       "id": "preset:phase3-large",
       "kind": "settings",
       "name": "Phase 3, large: 500 participants at 60 sites",
-      "about": "Settings only: the largest study the builder makes, over 12 months. Too large to host, so Build makes it.",
+      "about": "The largest study the builder makes, over 12 months. Only its last monthly snapshot is kept: every month would be too large to fetch.",
       "facts": {
         "study": "LARGE-P3",
         "phase": "P3",
@@ -113,6 +120,12 @@
         "sites": 60,
         "months": 12,
         "seed": 404
+      },
+      "build": {
+        "url": "../presets/phase3-large.study.json.gz",
+        "sha256": "5c43b37af6b735ce8d754200f5d174fb4cc4b9e45494e7dea6b59f360a41de36",
+        "bytes": 4322726,
+        "key": "sha256:896e1396a2759084183fa1eb39609bab5333b07cb746f630ee700745b9ab2205"
       }
     },
     {
@@ -1068,19 +1081,26 @@
       "id": "protocol:cdisc-pilot",
       "kind": "protocol",
       "name": "LZZT (CDISC PILOT - LZZT)",
-      "about": "30 activities scheduled, 6 simulated. From CDISC DDF-RA, CDISC_Pilot_Study.json.",
+      "about": "30 activities scheduled, 6 simulated. From CDISC DDF-RA, CDISC_Pilot_Study.json. Its saved study, SIM-CDISC-PILOT-LZZT, is simulated: 120 participants at 12 sites.",
       "facts": {
         "phase": "P2",
         "indication": "Alzheimer's disease",
         "participants": 300,
         "arms": 3,
-        "visits": 16
+        "visits": 16,
+        "study": "SIM-CDISC-PILOT-LZZT"
       },
       "line": "Phase 2 · 300 participants planned · 3 arms · 16 visits",
       "protocol": {
         "url": "../protocols/cdisc-pilot.protocol.json",
         "sha256": "2a2534f203de2b45ef1eccf379afe2743d3d763f364c2e6e66cbab0ecca2261b",
         "bytes": 21687
+      },
+      "build": {
+        "url": "../protocols/cdisc-pilot.study.json.gz",
+        "sha256": "dee2592b34e10274c4557fed9cce1f384c1e3eed98a481befa1e57860c73085b",
+        "bytes": 2423622,
+        "key": "sha256:d59cca8611e0f69beb11c210a845451b0f5960c41e36cf725c69f5d26744426d"
       },
       "license": "CC-BY-4.0",
       "attribution": "Content based on DDF-RA (GitHub), https://github.com/cdisc-org/DDF-RA, used under the CC-BY-4.0 licence. Changed from CDISC’s file: read by study.builder’s reader and cut down to what a simulated study follows (visits, arms, epochs, objectives, endpoints and activities). Not CDISC’s own form of the protocol, and not endorsed by CDISC or by any sponsor it names."
@@ -1089,19 +1109,26 @@
       "id": "protocol:cdisc-pilot-devices",
       "kind": "protocol",
       "name": "H2Q-MC-LZZT (CDISC PILOT - LZZT)",
-      "about": "30 activities scheduled, 6 simulated. From CDISC DDF-RA, devices.json.",
+      "about": "30 activities scheduled, 6 simulated. From CDISC DDF-RA, devices.json. Its saved study, SIM-LZZT-DEVICES, is simulated: 120 participants at 12 sites.",
       "facts": {
         "phase": "P2",
         "indication": "Indication 1",
         "participants": 300,
         "arms": 3,
-        "visits": 16
+        "visits": 16,
+        "study": "SIM-LZZT-DEVICES"
       },
       "line": "Phase 2 · 300 participants planned · 3 arms · 16 visits",
       "protocol": {
         "url": "../protocols/cdisc-pilot-devices.protocol.json",
         "sha256": "134342038941d20f6cfb4f58ca1d1d1a9153176550a2593e66b9cccc93c59495",
         "bytes": 19544
+      },
+      "build": {
+        "url": "../protocols/cdisc-pilot-devices.study.json.gz",
+        "sha256": "dcefc89f077af5cbd5d7daebcc8ed5afd2bed993046a70f7a1b4b13b039d1ac2",
+        "bytes": 2431418,
+        "key": "sha256:74b0cc16be10f6e4403c3d16693655ae0ebf90de6ea34cacc4aa7960954f414f"
       },
       "license": "CC-BY-4.0",
       "attribution": "Content based on DDF-RA (GitHub), https://github.com/cdisc-org/DDF-RA, used under the CC-BY-4.0 licence. Changed from CDISC’s file: read by study.builder’s reader and cut down to what a simulated study follows (visits, arms, epochs, objectives, endpoints and activities). Not CDISC’s own form of the protocol, and not endorsed by CDISC or by any sponsor it names."
@@ -1110,19 +1137,26 @@
       "id": "protocol:alexion-wilsons",
       "kind": "protocol",
       "name": "Copper and Molybdenum Balance in Participants with Wilson Disease Treated with ALXN1840 (ALXN1840-WD-204)",
-      "about": "35 activities scheduled, 8 simulated. From CDISC DDF-RA, Alexion_NCT04573309_Wilsons.json.",
+      "about": "35 activities scheduled, 8 simulated. From CDISC DDF-RA, Alexion_NCT04573309_Wilsons.json. Its saved study, SIM-ALXN1840-WD-204, is simulated: 20 participants at 2 sites.",
       "facts": {
         "phase": "P2",
         "indication": "Wilson's Disease",
         "participants": 10,
         "arms": 1,
-        "visits": 51
+        "visits": 51,
+        "study": "SIM-ALXN1840-WD-204"
       },
       "line": "Phase 2 · 10 participants planned · 1 arm · 51 visits",
       "protocol": {
         "url": "../protocols/alexion-wilsons.protocol.json",
         "sha256": "caf501792b4f70e62326ba827869c2290cf73a2aa6c372fc4f11be0214b72164",
         "bytes": 35034
+      },
+      "build": {
+        "url": "../protocols/alexion-wilsons.study.json.gz",
+        "sha256": "f3b8952cc3edd6b3d58876811eb423c7c4cea9d1d6a44b3f61b2d9330dd33c1e",
+        "bytes": 261488,
+        "key": "sha256:a5fe1b0a728d8a815b20bc54fd33729a7e66cf6565eeb3a9ebe0c2209e3d08d4"
       },
       "license": "CC-BY-4.0",
       "attribution": "Content based on DDF-RA (GitHub), https://github.com/cdisc-org/DDF-RA, used under the CC-BY-4.0 licence. Changed from CDISC’s file: read by study.builder’s reader and cut down to what a simulated study follows (visits, arms, epochs, objectives, endpoints and activities). Not CDISC’s own form of the protocol, and not endorsed by CDISC or by any sponsor it names."
@@ -1131,19 +1165,26 @@
       "id": "protocol:lilly-nasal-glucagon",
       "kind": "protocol",
       "name": "A Study of Nasal Glucagon (LY900018) in Japanese Participants With Diabetes Mellitus (LY900018)",
-      "about": "26 activities scheduled, 6 simulated. From CDISC DDF-RA, EliLilly_NCT03421379_Diabetes.json.",
+      "about": "26 activities scheduled, 6 simulated. From CDISC DDF-RA, EliLilly_NCT03421379_Diabetes.json. Its saved study, SIM-LY900018, is simulated: 75 participants at 8 sites.",
       "facts": {
         "phase": "P3",
         "indication": "T1DM",
         "participants": 75,
         "arms": 2,
-        "visits": 15
+        "visits": 15,
+        "study": "SIM-LY900018"
       },
       "line": "Phase 3 · 75 participants planned · 2 arms · 15 visits",
       "protocol": {
         "url": "../protocols/lilly-nasal-glucagon.protocol.json",
         "sha256": "56d13dc4c1940be076e2c4ce8fdaa349ab6c5372ffbacbb94593eccdadd5adb5",
         "bytes": 17983
+      },
+      "build": {
+        "url": "../protocols/lilly-nasal-glucagon.study.json.gz",
+        "sha256": "cd88deae7d612084fad340846f34d281f615db27f0e14ea2f52b286900546878",
+        "bytes": 673324,
+        "key": "sha256:9037295622718e01e1a8e9943942f5666b254d4b1680525ffed2afbe7d520231"
       },
       "license": "CC-BY-4.0",
       "attribution": "Content based on DDF-RA (GitHub), https://github.com/cdisc-org/DDF-RA, used under the CC-BY-4.0 licence. Changed from CDISC’s file: read by study.builder’s reader and cut down to what a simulated study follows (visits, arms, epochs, objectives, endpoints and activities). Not CDISC’s own form of the protocol, and not endorsed by CDISC or by any sponsor it names."
@@ -1152,19 +1193,26 @@
       "id": "protocol:observational",
       "kind": "protocol",
       "name": "SIMPLE (SCOPE1)",
-      "about": "4 activities scheduled, 3 simulated. From CDISC DDF-RA, observational.json.",
+      "about": "4 activities scheduled, 3 simulated. From CDISC DDF-RA, observational.json. Its saved study, SIM-SCOPE1, is simulated: 120 participants at 12 sites.",
       "facts": {
         "phase": "P3",
         "indication": "Indication 1",
         "participants": 120,
         "arms": 2,
-        "visits": 6
+        "visits": 6,
+        "study": "SIM-SCOPE1"
       },
       "line": "Phase 3 · 120 participants planned · 2 arms · 6 visits",
       "protocol": {
         "url": "../protocols/observational.protocol.json",
         "sha256": "ccd83d65375bbc04bb530272eef80e361e551f203dfe4c47eb6590997485f61a",
         "bytes": 8506
+      },
+      "build": {
+        "url": "../protocols/observational.study.json.gz",
+        "sha256": "27a6df84abb9068b34be5f66419e57427b2ce0af9c69cbb681537b56d5336a2f",
+        "bytes": 591854,
+        "key": "sha256:c0d7d26f5432973ed6e6620c67d8a2c955db1943081878b87eb910dc4b58e5a0"
       },
       "license": "CC-BY-4.0",
       "attribution": "Content based on DDF-RA (GitHub), https://github.com/cdisc-org/DDF-RA, used under the CC-BY-4.0 licence. Changed from CDISC’s file: read by study.builder’s reader and cut down to what a simulated study follows (visits, arms, epochs, objectives, endpoints and activities). Not CDISC’s own form of the protocol, and not endorsed by CDISC or by any sponsor it names."

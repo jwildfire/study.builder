@@ -39,7 +39,7 @@
     {
       "id": "phase2-many-outliers",
       "name": "Phase 2 virology, many outliers: 200 participants at 25 sites",
-      "about": "Settings only. More sites stand out, for trying site metrics and flags.",
+      "about": "More sites stand out, for trying site metrics and flags. Every monthly snapshot is kept.",
       "settings": {
         "name": "OUTLIERS-P2",
         "phase": "P2",
@@ -48,13 +48,17 @@
         "sites": 25,
         "months": 9,
         "outliers": "many",
-        "seed": 303
-      }
+        "seed": 303,
+        "snapshots": "all"
+      },
+      "study": "phase2-many-outliers.study.json.gz",
+      "key": "sha256:a0eb2e7ffa88d0f639bcdd8036b51e536adbc5d069592c91d775d56741f6002b",
+      "megabytes": 8.1
     },
     {
       "id": "phase3-large",
       "name": "Phase 3, large: 500 participants at 60 sites",
-      "about": "Settings only: the largest study the builder makes, over 12 months. Too large to host, so Build makes it.",
+      "about": "The largest study the builder makes, over 12 months. Only its last monthly snapshot is kept: every month would be too large to fetch.",
       "settings": {
         "name": "LARGE-P3",
         "phase": "P3",
@@ -63,7 +67,10 @@
         "sites": 60,
         "months": 12,
         "seed": 404
-      }
+      },
+      "study": "phase3-large.study.json.gz",
+      "key": "sha256:896e1396a2759084183fa1eb39609bab5333b07cb746f630ee700745b9ab2205",
+      "megabytes": 4.3
     },
     {
       "id": "cdisc-pilot-protocol",

@@ -37,9 +37,19 @@ describe('the studies feed', () => {
     const kinds = new Set(FEED.studies.map((entry) => entry.kind));
     expect([...kinds].sort()).toEqual(SCHEMA.$defs.entry.properties.kind.enum.slice().sort());
     // Every entry is a configuration; a build is a fact on some of them.
-    expect(FEED.studies.filter((entry) => entry.build).map((entry) => entry.kind)).toEqual(
-      Array(3).fill('settings')
-    );
+    // Every ready-made one has its build kept: five from settings, five on a protocol.
+    expect(FEED.studies.filter((entry) => entry.build).map((entry) => entry.kind)).toEqual([
+      ...Array(5).fill('settings'),
+      ...Array(5).fill('protocol')
+    ]);
+    // A protocol's saved study is simulated, and its name says so.
+    for (const entry of FEED.studies.filter((one) => one.kind === 'protocol')) {
+      expect(entry.facts.study).toMatch(/^SIM-/);
+      expect(entry.build.url).toBe(
+        `../protocols/${entry.id.slice('protocol:'.length)}.study.json.gz`
+      );
+      expect(entry.about).toContain('is simulated');
+    }
     const ids = FEED.studies.map((entry) => entry.id);
     expect(new Set(ids).size).toBe(ids.length);
     for (const entry of FEED.studies) {
@@ -66,9 +76,20 @@ describe('the studies feed', () => {
     );
     expect(entries[0]).toMatchObject({ kind: 'settings', mark: 'Data ready' });
     expect(entries[0].build.url).toBe('https://example.org/sb/presets/phase1-small.study.json.gz');
-    expect(entries.find((entry) => entry.id === 'preset:phase3-large')).toMatchObject({
+    expect(entries.find((entry) => entry.id === 'protocol:observational')).toMatchObject({
+      kind: 'protocol',
+      mark: 'Data ready'
+    });
+    // An entry with no build is its configuration alone.
+    const plain = FEED.studies.map(({ build, ...entry }) => entry);
+    const unbuilt = readStudies({ format: STUDIES_FORMAT, studies: plain });
+    expect(unbuilt.find((entry) => entry.id === 'preset:phase3-large')).toMatchObject({
       build: null,
       mark: 'Settings only'
+    });
+    expect(unbuilt.find((entry) => entry.id === 'protocol:observational')).toMatchObject({
+      build: null,
+      mark: 'Protocol'
     });
     expect(
       readStudies({
@@ -86,11 +107,8 @@ describe('the studies feed', () => {
     });
     expect(got.map((entry) => entry.kind)).toEqual(Array(5).fill('protocol'));
     const built = await listStudies('x', { fetch: async () => answer(FEED), built: true });
-    expect(built.map((entry) => entry.id)).toEqual([
-      'preset:phase1-small',
-      'preset:phase2-oncology',
-      'preset:cdisc-pilot-protocol'
-    ]);
+    expect(built.map((entry) => entry.id)).toEqual(FEED.studies.map((entry) => entry.id));
+    expect(built).toHaveLength(10);
     await expect(
       listStudies('x', { fetch: async () => ({ ok: false, status: 404 }) })
     ).rejects.toThrow(/could not be fetched: the page answered 404/);
@@ -207,7 +225,7 @@ describe('the study picker', () => {
     expect(document.querySelector('[role=status]').textContent).toBe('Fetching the studies…');
     await handle.ready;
     expect(fetched).toHaveBeenCalledWith('https://example.org/sb/studies/index.json');
-    expect(handle.studies().map((entry) => entry.mark)).toEqual(Array(3).fill('Data ready'));
+    expect(handle.studies().map((entry) => entry.mark)).toEqual(Array(10).fill('Data ready'));
     handle.destroy();
     const none = mountPicker('#p', { fetch: async () => ({ ok: false, status: 500 }) });
     await none.ready;

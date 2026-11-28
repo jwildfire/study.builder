@@ -3,6 +3,7 @@
 //
 //   presets/index.json         the ready-made studies and settings (npm run presets)
 //   protocols/index.json       the ready-made protocols (npm run protocols)
+//   protocols/built.json       the study kept for each (npm run protocols:build)
 //   studies/index.json         the feed, made here from the two
 //   studies/studies.schema.json  the feed's format, written by hand
 //
@@ -55,6 +56,8 @@ for (const preset of read('presets/index.json').presets) {
   if (preset.study) entry.build = { ...fileOf('presets', preset.study), key: preset.key };
   studies.push(entry);
 }
+// The study kept for a protocol, when one was built (npm run protocols:build).
+const built = read('protocols/built.json').builds;
 for (const protocol of read('protocols/index.json')) {
   const entry = {
     id: `protocol:${protocol.id}`,
@@ -74,6 +77,13 @@ for (const protocol of read('protocols/index.json')) {
   };
   entry.line = factsLine(entry);
   entry.protocol = fileOf('protocols', protocol.file);
+  // The protocol's study, when its build is kept: simulated, and named SIM-.
+  const kept = built.find((one) => one.id === protocol.id);
+  if (kept) {
+    entry.build = { ...fileOf('protocols', kept.study), key: kept.key };
+    entry.facts.study = kept.settings.name;
+    entry.about += ` Its saved study, ${kept.settings.name}, is simulated: ${kept.settings.participants} participants at ${kept.settings.sites} sites.`;
+  }
   // CDISC's attribution travels with the entry, for a host that copies the feed alone.
   entry.license = protocol.license;
   entry.attribution = `${protocol.attribution} ${protocol.changes}`;

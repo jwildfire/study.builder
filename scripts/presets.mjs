@@ -7,6 +7,7 @@
 //   presets/<id>.study.json.gz  a hosted preset's study (made here)
 //
 //   npm run presets            build the hosted studies and write the list
+//   npm run presets -- <id>…   build only those; the others are kept as they are
 //   npm run presets:check      no R: the list and the study files agree with
 //                              presets.json, and every study file opens to its key
 //
@@ -95,6 +96,15 @@ if (process.argv.includes('--check')) {
 const { startR } = await import('./r-node.mjs');
 const started = Date.now();
 const { build, close } = await startR();
+// Ids named on the command line are the only ones built; every other hosted
+// study is kept as it is, file and key, so its checksum does not change.
+const only = process.argv.slice(2).filter((arg) => !arg.startsWith('--'));
+let before = [];
+try {
+  before = JSON.parse(readFileSync(path.join(folder, 'index.json'), 'utf8')).presets;
+} catch {
+  // Not written yet.
+}
 const presets = [];
 for (const preset of source) {
   const entry = {
@@ -103,7 +113,13 @@ for (const preset of source) {
     about: preset.about,
     settings: preset.settings
   };
-  if (preset.hosted) {
+  const kept = before.find((one) => one.id === preset.id && one.study);
+  if (preset.hosted && only.length && !only.includes(preset.id) && kept) {
+    entry.study = kept.study;
+    entry.key = kept.key;
+    entry.megabytes = kept.megabytes;
+    console.log(`✓ ${preset.id}: kept as it is.`);
+  } else if (preset.hosted) {
     const study = await build(preset.settings);
     const text = JSON.stringify(savedOf(study, { name: preset.name, about: preset.about }));
     const packed = gzipSync(Buffer.from(text), { level: 9 });

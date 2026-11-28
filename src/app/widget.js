@@ -452,6 +452,30 @@ export function mount(
           if (s.screen === 'library') draw();
         },
         () => {}
+      )
+      // The study kept for a protocol, when the page has one: its row opens as
+      // a study too. A page without the list has protocols alone.
+      .then(() => fetch(`${withSlash}protocols/built.json`))
+      .then((response) => (response && response.ok ? response.json() : null))
+      .then(
+        (found) => {
+          const builds = found && Array.isArray(found.builds) ? found.builds : [];
+          if (s.destroyed || !builds.length || !s.protocols.length) return;
+          s.protocols = s.protocols.map((one) => {
+            const kept = builds.find((build) => build && build.id === one.id && build.study);
+            return kept
+              ? {
+                  ...one,
+                  study: `${withSlash}protocols/${kept.study}`,
+                  key: kept.key || null,
+                  megabytes: Number.isFinite(kept.megabytes) ? kept.megabytes : null,
+                  built: kept.settings || {}
+                }
+              : one;
+          });
+          if (s.screen === 'library') draw();
+        },
+        () => {}
       );
   }
 

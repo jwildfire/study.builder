@@ -8,7 +8,7 @@ The simulator is not Gilead's release. It is their v2.1.0 with study designs, st
 
 Try it: https://jwildfire.github.io/study.builder/
 
-Status: experimental. v0.5.2 is the latest release. Every row is synthetic.
+Status: experimental. v0.6.0 is the latest release. Every row is synthetic.
 
 ## Three modules
 
@@ -143,6 +143,7 @@ const built = await StudyBuilder.buildStudy(config.settings);
 ```
 
 - **Presets.** `presets/presets.json` lists them, by hand. One marked `hosted` has its study built by `npm run presets` and kept gzipped beside the list; a page opens it at once. The others are settings only. The widget reads `presets/index.json` under its base; pass `presets: 'https://…/index.json'`, a list of your own, or `false`.
+- **A study for each example protocol.** `protocols/builds.json` lists them, by hand. `npm run protocols:build` builds each with real R and keeps it gzipped beside its protocol, named `SIM-…`; the studies feed gives the protocol's entry its `build`.
 
 | Format                    | What it is                                                                     |
 | ------------------------- | ------------------------------------------------------------------------------ |

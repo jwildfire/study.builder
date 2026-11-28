@@ -1,6 +1,6 @@
 {
   "name": "study.builder",
-  "version": "0.5.2",
+  "version": "0.6.0",
   "description": "Simulate a clinical trial in the browser with a modified copy of gsm.datasim and hand its data to any page.",
   "license": "Apache-2.0",
   "private": true,
@@ -18,6 +18,8 @@
     "protocols:all": "node scripts/protocols-all.mjs",
     "protocols": "node scripts/protocols.mjs",
     "protocols:check": "node scripts/protocols.mjs --check",
+    "protocols:build": "node scripts/protocol-builds.mjs",
+    "protocols:build:check": "node scripts/protocol-builds.mjs --check",
     "presets": "node scripts/presets.mjs",
     "presets:check": "node scripts/presets.mjs --check",
     "studies": "node scripts/studies.mjs",

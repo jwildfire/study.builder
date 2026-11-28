@@ -72,7 +72,8 @@
     <script src="./study.builder.js"></script>
     <script>
       // The study view alone. The address names the study: `preset:<id>` for a
-      // ready-made one, `shelf:<id>` for one saved in this browser.
+      // ready-made one, `protocol:<id>` for the one saved for an example
+      // protocol, `shelf:<id>` for one saved in this browser.
       (async () => {
         const said = document.getElementById('said');
         const which = document.getElementById('which');
@@ -89,8 +90,25 @@
         } catch {
           saved = [];
         }
+        // The studies saved for the example protocols, from the studies feed.
+        let followed = [];
+        try {
+          followed = (
+            await StudyBuilder.listStudies('./studies/index.json', {
+              kinds: ['protocol'],
+              built: true
+            })
+          ).map((entry) => ({
+            id: entry.id,
+            name: entry.name + ' (simulated on this protocol)',
+            listed: entry
+          }));
+        } catch {
+          followed = [];
+        }
         const choices = [
           ...presets.map((preset) => ({ id: 'preset:' + preset.id, name: preset.name, preset })),
+          ...followed,
           ...saved.map((entry) => ({
             id: 'shelf:' + entry.id,
             name: entry.name + ' (saved in this browser)',
@@ -124,7 +142,9 @@
           try {
             const study = choice.preset
               ? (await StudyBuilder.openPreset(choice.preset)).study
-              : await StudyBuilder.openStudy(await shelf.open(choice.entry.id));
+              : choice.listed
+                ? (await StudyBuilder.openListed(choice.listed)).study
+                : await StudyBuilder.openStudy(await shelf.open(choice.entry.id));
             said.textContent = '';
             shown = StudyBuilder.mountStudy('#study', { study });
           } catch (error) {
