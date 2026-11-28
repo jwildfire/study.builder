@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Study list · study.builder</title>
+    <meta
+      name="description"
+      content="The studies study.builder offers: ready-made, saved in this browser, or built from settings."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./site.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1><a href="./">study.builder</a></h1>
+        <span>v{{version}} · experimental</span>
+        <nav aria-label="study.builder">
+          <a href="./">Home</a>
+          <a href="./studies.html" aria-current="page">Study list</a>
+          <a href="./builder.html">Study builder</a>
+          <a href="./study.html">Study viewer</a>
+          <a href="https://github.com/jwildfire/study.builder">GitHub</a>
+        </nav>
+      </header>
+
+      <section class="tool">
+        <h2>Study list</h2>
+        <p>
+          Every study you can have, in one table, a row a study's configuration. Any row opens in
+          the study builder. One with its data ready also opens as a study, at once. A protocol a
+          new study can follow is a row too: CDISC's five public USDM examples, the data form of an
+          ICH M11 protocol. Studies and settings you save stay in this browser.
+        </p>
+        <p class="next">
+          Overview takes you to the <a href="./study.html">study viewer</a>. Open in builder and New
+          study take you to the <a href="./builder.html">study builder</a>.
+        </p>
+      </section>
+
+      <div id="portfolio"></div>
+      <noscript>study.builder needs JavaScript.</noscript>
+
+      <footer>
+        Everything runs in this browser, and no study data is sent anywhere; building a study
+        downloads R and its packages from webr.r-wasm.org and repo.r-wasm.org. Data is simulated by
+        <a href="https://github.com/jwildfire/gsm.datasim/tree/safety-results-2.1"
+          >a modified copy</a
+        >
+        of <a href="https://github.com/Gilead-Public/gsm.datasim">gsm.datasim</a> 2.1.0: the
+        additions are not Gilead's. Example protocols: content based on
+        <a href="https://github.com/cdisc-org/DDF-RA">DDF-RA (GitHub)</a>, used under the
+        <a href="https://creativecommons.org/licenses/by/4.0/">CC-BY-4.0</a> licence, read and cut
+        down here.
+      </footer>
+    </main>
+
+    <script src="./study.builder.js"></script>
+    <script>
+      // The study list alone: where it would open a study or the form, this
+      // page goes to the page of that part, naming the row in the address.
+      StudyBuilder.mount('#portfolio', {
+        links: {
+          study: (id) => window.location.assign('./study.html#' + encodeURIComponent(id)),
+          builder: (id, how) =>
+            window.location.assign(
+              './builder.html' +
+                (id ? '#' + encodeURIComponent(id) + (how && how.build ? '&build' : '') : '')
+            )
+        }
+      });
+    </script>
+  </body>
+</html>

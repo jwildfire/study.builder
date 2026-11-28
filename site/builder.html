@@ -23,9 +23,9 @@
         <span>v{{version}} · experimental</span>
         <nav aria-label="study.builder">
           <a href="./">Home</a>
-          <a href="./portfolio.html">Portfolio</a>
-          <a href="./study.html">Study view</a>
+          <a href="./studies.html">Study list</a>
           <a href="./builder.html" aria-current="page">Study builder</a>
+          <a href="./study.html">Study viewer</a>
           <a href="https://github.com/jwildfire/study.builder">GitHub</a>
         </nav>
       </header>
@@ -39,8 +39,8 @@
           about a minute.
         </p>
         <p class="next">
-          When it is built, the study opens here in the study view, where you can save it. Saved
-          studies and settings are listed in the <a href="./portfolio.html">portfolio</a>.
+          When it is built, the study opens here in the study viewer, where you can save it. Saved
+          studies and settings are listed in the <a href="./studies.html">study list</a>.
         </p>
       </section>
 
@@ -88,8 +88,8 @@
           presets: false,
           shelf,
           ...(settings ? { settings } : {}),
-          // The way back to the list is this site's portfolio page.
-          links: { portfolio: () => window.location.assign('./portfolio.html') }
+          // The way back to the list is this site's study list page.
+          links: { portfolio: () => window.location.assign('./studies.html') }
         });
         window.__studyBuilder = handle;
         // A ready-made protocol named in the address is put in the form.

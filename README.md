@@ -8,7 +8,7 @@ The simulator is not Gilead's release. It is their v2.1.0 with study designs, st
 
 Try it: https://jwildfire.github.io/study.builder/
 
-Status: experimental. v0.6.0 is the latest release. Every row is synthetic.
+Status: experimental. v0.6.1 is the latest release. Every row is synthetic.
 
 ## Three modules
 
@@ -16,14 +16,14 @@ study.builder is three things a reader uses, each with its parts. A page takes a
 
 | Module        | What it is                       | Its parts                                                                                                                                                                                                                                                                                                       | On a page                                                                                                 |
 | ------------- | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| Portfolio     | The list of studies you can have | Ready-made studies with their data; studies saved in this browser; settings only, which Build makes; opening a study or settings file                                                                                                                                                                           | The first screen of `StudyBuilder.mount`. A page with its own list reads `fetchPresets` and `createShelf` |
-| Study view    | One study, looked through        | Its facts in a line, then five sections: Overview; Design (Protocol and Schedule, when it followed a protocol); Data (Pipeline, Tables, Columns); Operations (RBQM, Safety, One participant); Reporting (Efficacy and Adverse events, by arm). `operations: false` leaves RBQM and Safety to the page around it | `StudyBuilder.mountStudy(target, { study })`                                                              |
+| Study list    | The list of studies you can have | Ready-made studies with their data; studies saved in this browser; settings only, which Build makes; opening a study or settings file                                                                                                                                                                           | The first screen of `StudyBuilder.mount`. A page with its own list reads `fetchPresets` and `createShelf` |
 | Study builder | A study described, and built     | The trial (phase, area, size, seed); a protocol's schedule of activities, edited as a grid; the layers and raw domains; what building gives, and the build                                                                                                                                                      | The form of `StudyBuilder.mount`; `buildStudy` and `createBuilder` with no page                           |
+| Study viewer  | One study, looked through        | Its facts in a line, then five sections: Overview; Design (Protocol and Schedule, when it followed a protocol); Data (Pipeline, Tables, Columns); Operations (RBQM, Safety, One participant); Reporting (Efficacy and Adverse events, by arm). `operations: false` leaves RBQM and Safety to the page around it | `StudyBuilder.mountStudy(target, { study })`                                                              |
 
 - Planned, not built: a **program builder**, which describes and builds several studies together.
 - **Snapshots.** gsm.datasim makes a study as a snapshot a month. Ask for every month (`snapshots: 'all'`, or Snapshots kept in the form) and the study view has a snapshot picker: the study as it stood at any month, through every layer, and a table of how it grew. `study.history` lists them and `study.at(date)` returns one. The last only is kept unless asked, since every month is several times the work and the size.
 - Each has its own folder under `src/`: `portfolio`, `study` and `builder`.
-- Each has a page of its own on the site: [portfolio](https://jwildfire.github.io/study.builder/portfolio.html), [study view](https://jwildfire.github.io/study.builder/study.html) and [study builder](https://jwildfire.github.io/study.builder/builder.html).
+- Each has a page of its own on the site: [study list](https://jwildfire.github.io/study.builder/studies.html), [study viewer](https://jwildfire.github.io/study.builder/study.html) and [study builder](https://jwildfire.github.io/study.builder/builder.html).
 - Under all three is one engine (settings, the build in R, layers, metadata, saving and opening) that has no page. [ARCHITECTURE.md](ARCHITECTURE.md) has how the code is laid out.
 
 ## What it gives you
@@ -130,7 +130,7 @@ A build that cannot be made rejects with a `StudyBuilderError` whose message is 
 
 A study takes seconds to build after R has started, and about a minute the first time. A saved study opens with no R at all.
 
-- **On the page.** It opens on the portfolio: the page's ready-made studies and what the reader saved in this browser, each a press from open, with the form behind New study. Save and Save settings keep the open study or the form's settings in the browser (IndexedDB; nothing is sent anywhere). Study file and Settings file download them, and Open a file reads either back.
+- **On the page.** It opens on the study list: the page's ready-made studies and what the reader saved in this browser, each a press from open, with the form behind New study. Save and Save settings keep the open study or the form's settings in the browser (IndexedDB; nothing is sent anywhere). Study file and Settings file download them, and Open a file reads either back.
 - **With no page.**
 
 ```js

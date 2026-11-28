@@ -1,3 +1,17 @@
+# study.builder v0.6.1
+
+Names on the site. Nothing changed in the app's functions, the feed or any study.
+
+- **Study list.** The Portfolio page is called the Study list, at `studies.html`. The old address, `portfolio.html`, takes a reader there and keeps the part after the `#`.
+- **Study viewer.** The Study view page is called the Study viewer. Its address is unchanged (`study.html`).
+- **Order.** The menu and the home page read Study list, Study builder, Study viewer.
+- In code nothing is renamed: `mount`'s `links.portfolio`, the `src/portfolio` folder and `mountPicker` are as they were.
+
+## For a page that copied v0.6.0
+
+- Copy `dist/` again only if you want one sentence the app says to read "from the study list". Nothing else a host uses changed.
+- A link to `portfolio.html` on study.builder's site still works.
+
 # study.builder v0.6.0
 
 Every ready-made study now has its data saved: all five example protocols, and the two presets that were settings only. Nothing changed in how a study is built, and the three studies saved before keep their files, checksums and keys.

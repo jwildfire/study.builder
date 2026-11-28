@@ -9,7 +9,7 @@
 //   _site/study.viewer.mjs       the same, as a module
 //   _site/r/, _site/vendor/,     what R in the browser fetches
 //   _site/workflows/
-//   _site/index.html             the home page; portfolio.html, study.html and
+//   _site/index.html             the home page; studies.html, study.html and
 //                                builder.html show each part on a page of its own
 
 import { build } from 'esbuild';

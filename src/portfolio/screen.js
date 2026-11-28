@@ -264,7 +264,7 @@ export function portfolioScreen(app) {
         () => {
           if (links.builder) return links.builder(one.id, {});
           return attempt(async () => {
-            if (isProtocol) return openDocument(await one.fetched(), 'from the portfolio');
+            if (isProtocol) return openDocument(await one.fetched(), 'from the study list');
             take(await one.settings());
             s.problems = [];
             say('');
